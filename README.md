@@ -171,6 +171,14 @@ The full 72-partition ROM backup + tested recovery procedure is documented in
 
 ---
 
+## Full ROM backup
+
+The complete 72-partition stock ROM backup (BROM restore set, 6.06 GB) is
+attached to the [**full-rom-backup** release](../../releases/tag/full-rom-backup).
+See [ROM_README.md](ROM_README.md) for reassembly and restore instructions.
+
+---
+
 ## Credits
 
 - Kernel source: [realme-kernel-opensource](https://github.com/realme-kernel-opensource/realme_C51_C53_Narzo-N53-AndroidT-kernel-source) (Realme C51/C53, same UMS9230 SoC)

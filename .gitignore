@@ -1,0 +1,8 @@
+# Large binaries live in GitHub Releases, not in git
+/bundle/
+/images/
+/kernel_source/
+out/
+*.o
+*.orig
+*.rej

@@ -1,0 +1,197 @@
+Module                  Size  Used by
+turbo_engine           20480  0 
+tran_fpsmgr            20480  0 
+tran_monitor           20480  0 
+tran_turbo            233472  2 turbo_engine,tran_monitor
+tnek                   28672  1 
+memfusion              90112  0 
+sysdumpdb_switch       24576  0 
+transsion_resmonitor    24576  0 
+fpc_fp                 28672  0 
+silead_fp              45056  0 
+fpsensor_fp            40960  0 
+goodix_fp              40960  4 
+fortsense_fp           36864  0 
+tran_gesture           32768  0 [permanent]
+chipone_icnl99xx      323584  0 
+novatek_nt36xxx       348160  0 
+omnivision_td4160     249856  0 
+adaptive_ts            61440  3 chipone_icnl99xx,novatek_nt36xxx,omnivision_td4160
+mipi_driver            24576  0 
+sprd_mipi              20480  1 mipi_driver
+cpufreq_userspace      24576  0 
+sprd_compr_2stage_dma    49152  1 
+sprd_dmaengine_pcm     45056  1 
+snd_soc_sprd_vbc_fe    40960  1 [permanent]
+snd_soc_sprd_vbc_v4   401408  2 snd_soc_sprd_vbc_fe,[permanent]
+sprd_platform_pcm_routing   118784  1 
+snd_soc_sprd_pdm_r2p0    36864  0 
+snd_soc_sprd_pa_ucp1301    65536  0 
+snd_soc_sprd_dummy_codec    20480  0 
+snd_soc_sprd_codec_ump518_power_dev    32768  0 [permanent]
+snd_soc_sprd_codec_ump518_power    40960  0 
+snd_soc_sprd_codec_ump518   229376  0 [permanent]
+snd_soc_sprd_codec_sc2730_power_dev    32768  0 [permanent]
+snd_soc_sprd_codec_sc2730_power    40960  30 
+snd_soc_sprd_codec_sc2730   221184  1 [permanent]
+snd_soc_sprd_card      81920  12 sprd_compr_2stage_dma,sprd_dmaengine_pcm,snd_soc_sprd_vbc_v4,snd_soc_sprd_pdm_r2p0,snd_soc_sprd_codec_ump518_power,snd_soc_sprd_codec_ump518,snd_soc_sprd_codec_sc2730_power,snd_soc_sprd_codec_sc2730,[permanent]
+aw87xxxpa             122880  2 snd_soc_sprd_codec_sc2730,snd_soc_sprd_card
+sprd_audcp_boot        20480  0 
+sprd_audcp_dvfs        36864  0 
+mcdt_hw_r2p0           49152  2 sprd_compr_2stage_dma,snd_soc_sprd_vbc_fe
+audio_pipe             36864  2 
+sprd_apipe             36864  3 
+ax88179_178a           40960  0 
+asix                   90112  0 
+audio_dsp_dump         49152  8 
+audio_sipc             61440  7 sprd_compr_2stage_dma,snd_soc_sprd_vbc_v4,snd_soc_sprd_pdm_r2p0,sprd_audcp_boot,sprd_audcp_dvfs,audio_pipe,audio_dsp_dump
+audio_mem              32768  5 sprd_compr_2stage_dma,sprd_dmaengine_pcm,sprd_audcp_boot,audio_dsp_dump,audio_sipc
+agdsp_access           36864  9 sprd_compr_2stage_dma,sprd_dmaengine_pcm,snd_soc_sprd_vbc_fe,snd_soc_sprd_vbc_v4,snd_soc_sprd_pdm_r2p0,snd_soc_sprd_codec_ump518,snd_soc_sprd_codec_sc2730,audio_dsp_dump,audio_sipc
+sprd_wdf               28672  0 [permanent]
+nvt_nt36xxx_spi_ts     69632  0 
+focaltech_ft8756_spi_ts   286720  0 
+gnss_pmnotify_ctl      20480  1 
+gnss_dbg               28672  1 
+gnss_common_ctl_all    24576  1 gnss_pmnotify_ctl
+sprd_fm                81920  0 
+sprdbt_tty             45056  2 
+sprd_wlan_combo      1036288  0 
+wcn_bsp               557056  4 gnss_common_ctl_all,sprd_fm,sprdbt_tty,sprd_wlan_combo
+sprd_usb_f_rndis       57344  0 
+sprd_u_ether           45056  1 sprd_usb_f_rndis
+misc_sprd_uid          20480  0 
+sprd_pmic_wdt          20480  0 
+ims_bridge            110592  0 
+sprd_map               24576  0 
+sprd_ddr_dvfs          53248  0 
+sprd_cp_dvfs           32768  0 
+tran_charger           49152  0 
+aw32257_charger        49152  1 
+sc27xx_fuel_gauge      73728  0 
+sprd_charger_manager   151552  2 tran_charger,sc27xx_fuel_gauge
+transsion_trancare     77824  8 memfusion,sprd_charger_manager
+sprd_battery_info      24576  3 tran_charger,sc27xx_fuel_gauge,sprd_charger_manager
+musb_sprd              45056  0 
+musb_hdrc             192512  1 musb_sprd
+sc27xx_pd              40960  0 
+sc27xx_typec           28672  2 tran_charger,musb_sprd
+sprd_tcpm              86016  4 tran_charger,sprd_charger_manager,sc27xx_pd,sc27xx_typec
+phy_sprd_qogirl6       28672  6 
+phy_sprd_commonphy     20480  3 musb_sprd,sc27xx_typec,phy_sprd_qogirl6
+sprd_bc1p2             24576  1 phy_sprd_qogirl6
+sprd_usbpinmux_qogirl6    24576  2 musb_sprd,phy_sprd_qogirl6
+sc27xx_vibra           20480  0 
+thermal_generic_adc    20480  0 
+sprd_thermal           20480  0 
+sc27xx_tsensor_thermal    20480  0 
+sc27xx_poweroff        20480  0 
+sc27xx_adc             28672  0 
+pwm_sprd               20480  0 
+spi_sprd               36864  0 
+pinctrl_sprd_qogirl6    45056  0 
+pinctrl_sprd           28672  1 pinctrl_sprd_qogirl6
+zram                   53248  1 
+zsmalloc               45056  1 zram
+ledtrig_pattern        20480  0 
+leds_sc27xx_bltc       20480  0 
+jpg                    49152  0 
+vsp                    65536  0 
+pinctrl                24576  0 
+gpio                   24576  0 
+core                   20480  2 pinctrl,gpio
+microarray_fp          32768  0 
+extcon_usb_gpio        20480  1 tran_charger
+switch_class           24576  2 sc27xx_typec,extcon_usb_gpio
+sprd_soc_thm           20480  0 
+mali_kbase           1196032  64 
+sprd_gpu_cooling       24576  1 mali_kbase
+sprd_cpu_cooling       36864  0 
+sprd_drm              585728  8 tran_turbo,fpc_fp,silead_fp,goodix_fp,adaptive_ts
+sprd_gsp              360448  1 sprd_drm
+apsys_dvfs            176128  3 vsp,sprd_drm,sprd_gsp
+modules_interface      20480  0 
+tran_hwinfo            32768  7 fpc_fp,silead_fp,fpsensor_fp,goodix_fp,fortsense_fp,adaptive_ts,sprd_drm,[permanent]
+twofish_generic        24576  0 
+twofish_common         28672  1 twofish_generic
+arc4                   20480  0 
+aes_neon_blk           40960  0 
+aes_ce_ccm             20480  0 
+ghash_ce               32768  0 
+sha1_ce                20480  0 
+mmdvfs                184320  0 
+sprd_cpp              110592  0 
+sprd_vsp_pw_domain     24576  0 
+sprd_camera          2355200  0 
+sprd_sensor           114688  1 sprd_camera
+unisoc_iommu           86016  6 jpg,vsp,sprd_drm,sprd_gsp,sprd_cpp,sprd_camera
+sprd_ion               32768  2 sprd_cpp,sprd_camera
+ion_cma_heap           28672  0 
+ion_ipc_trusty         24576  1 ion_cma_heap
+sprd_dma               36864  1 
+virt_dma               24576  1 sprd_dma
+sprd_camsys_pw_domain    61440  6 jpg,vsp,mmdvfs,sprd_cpp,sprd_camera,sprd_sensor
+flash_ic_ocp8137       24576  0 
+sprd_flash_drv         73728  2 sprd_camera,flash_ic_ocp8137
+trusty_tui             28672  2 nvt_nt36xxx_spi_ts,focaltech_ft8756_spi_ts
+sprd_top_dvfs          20480  0 [permanent]
+was4780d               20480  0 
+snd_soc_fs1599         90112  0 
+sdcard_debug           20480  0 
+sblock_bridge          24576  0 
+sbuf_bridge            24576  0 
+slog_bridge            28672  0 
+sprd_iq                28672  0 
+usb_f_vser             49152  4 slog_bridge,sprd_iq
+sprd_modem_loader      36864  0 
+seth                   36864  0 
+sipx                   45056  1 seth
+spool                  32768  0 
+spipe                  24576  17 
+sprd_sipc_virt_bus     20480  0 
+sensorhub              61440  4 adaptive_ts
+sipc_core             184320  17 agdsp_access,sprd_wlan_combo,wcn_bsp,sprd_pmic_wdt,ims_bridge,sprd_ddr_dvfs,sprd_cp_dvfs,sblock_bridge,sbuf_bridge,slog_bridge,sprd_iq,sprd_modem_loader,seth,sipx,spool,spipe,sensorhub
+unisoc_mailbox         40960  7 sipc_core,[permanent]
+sprd_power_manager     36864  3 sbuf_bridge,sprd_modem_loader,sipc_core
+kfifo_buf              20480  1 sensorhub
+sprd_power_stat        28672  0 
+sprd_pdbg              24576  0 
+sprd_pmic_syscon       20480  0 
+pn557                  28672  0 
+sdhci_sprd            102400  1 tran_hwinfo
+mmc_hsq                20480  1 sdhci_sprd
+mmc_swcq               49152  1 sdhci_sprd
+gpio_pmic_eic_sprd     20480  10 
+gpio_sprd              20480  20 
+gpio_eic_sprd          32768  6 
+sprd_shm               24576  0 
+trusty_virtio          32768  0 
+trusty_ipc             53248  24 wcn_bsp,sprd_drm,sprd_camera,ion_ipc_trusty
+trusty_irq             32768  0 
+trusty_log             28672  0 
+trusty_pm              20480  0 
+trusty                 40960  8 mali_kbase,sprd_drm,sprd_gsp,sprd_shm,trusty_virtio,trusty_irq,trusty_log,trusty_pm
+sprd_manufacturer_model    20480  0 
+sprd_7sreset           20480  0 
+sprd_cpufreq_public    24576  0 
+sprd_cpufreq_v2        36864  0 [permanent]
+i2c_sprd_hw_v2         28672  0 
+i2c_sprd               40960  0 
+nvmem_sprd_efuse       20480  0 
+nvmem_sprd_cache_efuse    24576  0 
+nvmem_sc27xx_efuse     20480  0 
+sprd_hwspinlock        20480  3 
+ufs_sprd_qogirl6       49152  1 tran_hwinfo
+rpmb                   36864  1 ufs_sprd_qogirl6
+sprd_soc_id            24576  2 apsys_dvfs,ufs_sprd_qogirl6
+ump518_regulator       28672  0 
+sc2730_regulator       28672  10 
+rtc_sc27xx             24576  1 
+sprd_sc27xx_spi        20480  0 
+spi_sprd_adi           20480  0 
+ums9230_clk           163840  214 
+clk_sprd               36864  1 ums9230_clk
+sprd_time_sync_cp      20480  0 
+sprd_time_sync         24576  2 sprd_time_sync_cp
+sprd_systimer          20480  2 sensorhub,sprd_time_sync,[permanent]
+sprd_sip_svc           24576  3 sprd_power_stat,sprd_pdbg,sprd_cpufreq_v2,[permanent]
+sprd_wdt_fiq           28672  1 sprd_wdf

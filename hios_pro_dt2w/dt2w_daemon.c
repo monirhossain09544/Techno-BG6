@@ -16,7 +16,6 @@
 #define BL_PATH       "/sys/class/backlight/sprd_backlight/brightness"
 #define DPMS_PATH     "/sys/class/drm/card0-DSI-1/dpms"
 #define SETTINGS_PATH "/data/system/users/0/settings_system.xml"
-#define STATE_PATH    "/dev/dt2w_state"
 #define LOG_PATH      "/data/local/tmp/dt2w.log"
 
 static long long now_ms(void) {
@@ -39,7 +38,7 @@ static void log_msg(const char *fmt, ...) {
 
 /*
  * Checks the native HiOS Settings toggle:
- * Settings -> Special Function -> Micro Intelligence -> Tapping wake
+ * Settings -> Special Function -> Actions and Gestures -> Tapping Wake
  * (`os_action_tapping_wake` in /data/system/users/0/settings_system.xml)
  */
 static int is_dt2w_setting_enabled(void) {
@@ -53,11 +52,9 @@ static int is_dt2w_setting_enabled(void) {
             size_t klen = 22;
             char *p = memmem(buf, (size_t)n, key, klen);
             if (p && (p + 28 <= buf + n)) {
-                /* In Android 13 ABX binary XML, value byte is at +27 ('0' or '1') */
                 char val = p[27];
                 if (val == '0') return 0;
                 if (val == '1') return 1;
-                /* Fallback scan within next 16 bytes for ASCII XML value="0" */
                 for (int i = 22; i < 36 && (p + i < buf + n); i++) {
                     if (p[i] == '0') return 0;
                     if (p[i] == '1') return 1;
@@ -65,7 +62,7 @@ static int is_dt2w_setting_enabled(void) {
             }
         }
     }
-    return 1; /* Default enabled if file not yet decrypted before first unlock */
+    return 1;
 }
 
 static int get_backlight(void) {
@@ -269,7 +266,7 @@ static void exit_black_standby(int ufd, int touch_fd, int pwr_fd, int *is_black_
 
 int main(void) {
     unlink(LOG_PATH);
-    log_msg("dt2w_daemon v5 starting (Settings-integrated)");
+    log_msg("dt2w_daemon v6 starting (Anti-blink + PIN/Swipe safe)");
 
     /* Ensure backlight is writable on daemon startup */
     chmod(BL_PATH, 0664);
@@ -303,10 +300,10 @@ int main(void) {
     int cur_x = 0, cur_y = 0;
     int start_x = 0, start_y = 0;
     int touch_active = 0;
+    int was_touch_active = 0;
     int start_recorded = 0;
-    int moved_too_much = 0;
+    int max_move_x = 0, max_move_y = 0;
     long long down_ms = 0;
-    long long cur_down_event_ms = 0;
 
     long long prev_tap_ms = 0;
     int prev_tap_x = 0, prev_tap_y = 0;
@@ -333,15 +330,15 @@ int main(void) {
                 if (bl >= 20) saved_bl = bl;
                 bl_zero_since_ms = 0;
             } else if (bl == 0 && dt2w_enabled) {
-                /* Wait 300ms after screen turns off so Android finishes sleep transition */
+                /* Wait 350ms after screen turns off so Android finishes sleep transition */
                 if (bl_zero_since_ms == 0) {
                     bl_zero_since_ms = t;
-                } else if (t - bl_zero_since_ms >= 300 && t - last_wake_ms >= 600) {
+                } else if (t - bl_zero_since_ms >= 350 && t - last_wake_ms >= 1000) {
                     enter_black_standby(ufd, touch_fd, pwr_fd, &is_black_standby,
                                         &standby_enter_ms, &last_keepalive_ms, "SYSTEM_SLEEP");
                     bl_zero_since_ms = 0;
                     touch_active = 0;
-                    cur_down_event_ms = 0;
+                    was_touch_active = 0;
                     prev_tap_ms = 0;
                 }
             }
@@ -356,22 +353,22 @@ int main(void) {
 
         if (ret <= 0) continue;
 
-        /* 1. Handle Touchscreen Events (both in Black Standby and on Lockscreen) */
+        /* 1. Handle Touchscreen Events */
         if (pfds[0].revents & POLLIN) {
             while (read(touch_fd, &ev, sizeof(ev)) == sizeof(ev)) {
                 long long ev_t = now_ms();
 
                 if (!dt2w_enabled && !is_black_standby) {
                     touch_active = 0;
-                    cur_down_event_ms = 0;
+                    was_touch_active = 0;
                     prev_tap_ms = 0;
                     continue;
                 }
 
-                /* Ignore residual buffered touches for 450ms right after entering Black Standby */
-                if (is_black_standby && (ev_t - standby_enter_ms < 450)) {
+                /* Ignore residual buffered touches for 800ms right after entering Black Standby */
+                if (is_black_standby && (ev_t - standby_enter_ms < 800)) {
                     touch_active = 0;
-                    cur_down_event_ms = 0;
+                    was_touch_active = 0;
                     prev_tap_ms = 0;
                     continue;
                 }
@@ -383,9 +380,9 @@ int main(void) {
                         if (ev.value >= 0 && !touch_active) {
                             touch_active = 1;
                             start_recorded = 0;
-                            moved_too_much = 0;
+                            max_move_x = 0;
+                            max_move_y = 0;
                             down_ms = ev_t;
-                            cur_down_event_ms = ev_t;
                         } else if (ev.value == -1 && touch_active) {
                             touch_active = 0;
                         }
@@ -394,9 +391,9 @@ int main(void) {
                     if (ev.value == 1 && !touch_active) {
                         touch_active = 1;
                         start_recorded = 0;
-                        moved_too_much = 0;
+                        max_move_x = 0;
+                        max_move_y = 0;
                         down_ms = ev_t;
-                        cur_down_event_ms = ev_t;
                     } else if (ev.value == 0 && touch_active) {
                         touch_active = 0;
                     }
@@ -411,68 +408,86 @@ int main(void) {
                             if (mdx < 0) mdx = -mdx;
                             int mdy = cur_y - start_y;
                             if (mdy < 0) mdy = -mdy;
-                            if (mdx > 50 || mdy > 50) {
-                                moved_too_much = 1;
+                            if (mdx > max_move_x) max_move_x = mdx;
+                            if (mdy > max_move_y) max_move_y = mdy;
+                            if (mdx > 35 || mdy > 35) {
                                 last_swipe_ms = ev_t;
                             }
                         }
                     }
 
-                    if (touch_active && cur_down_event_ms > 0) {
-                        long long t_down = cur_down_event_ms;
-                        int down_x = cur_x;
-                        int down_y = cur_y;
-                        cur_down_event_ms = 0;
-
-                        long long gap = t_down - prev_tap_ms;
-                        int dx = down_x - prev_tap_x;
-                        if (dx < 0) dx = -dx;
-                        int dy = down_y - prev_tap_y;
-                        if (dy < 0) dy = -dy;
+                    /* Evaluate tap ONLY when finger lifts up (was_touch_active == 1 && touch_active == 0) */
+                    if (was_touch_active && !touch_active) {
+                        long long dur = ev_t - down_ms;
+                        int tap_x = start_x;
+                        int tap_y = start_y;
 
                         if (is_black_standby) {
-                            log_msg("STANDBY_TAP x=%d y=%d gap=%lld dx=%d dy=%d", down_x, down_y, gap, dx, dy);
-                            if (prev_tap_ms > 0 && gap >= 30 && gap <= 800 && dx <= 260 && dy <= 260) {
-                                prev_tap_ms = 0;
-                                touch_active = 0;
-                                last_wake_ms = now_ms();
-                                exit_black_standby(ufd, touch_fd, pwr_fd, &is_black_standby, saved_bl, 1, "DOUBLE_TAP");
-                                break;
+                            /* In Black Standby: stationary tap (dur <= 300ms, move <= 55px) */
+                            if (dur >= 5 && dur <= 300 && max_move_x <= 55 && max_move_y <= 55) {
+                                long long gap = down_ms - prev_tap_ms;
+                                int dx = tap_x - prev_tap_x;
+                                if (dx < 0) dx = -dx;
+                                int dy = tap_y - prev_tap_y;
+                                if (dy < 0) dy = -dy;
+
+                                log_msg("STANDBY_TAP x=%d y=%d dur=%lld gap=%lld dx=%d dy=%d",
+                                        tap_x, tap_y, dur, gap, dx, dy);
+
+                                if (prev_tap_ms > 0 && gap >= 30 && gap <= 750 && dx <= 180 && dy <= 180) {
+                                    prev_tap_ms = 0;
+                                    last_wake_ms = now_ms();
+                                    exit_black_standby(ufd, touch_fd, pwr_fd, &is_black_standby, saved_bl, 0, "DOUBLE_TAP");
+                                    was_touch_active = 0;
+                                    break;
+                                } else {
+                                    prev_tap_ms = down_ms;
+                                    prev_tap_x = tap_x;
+                                    prev_tap_y = tap_y;
+                                }
                             } else {
-                                prev_tap_ms = t_down;
-                                prev_tap_x = down_x;
-                                prev_tap_y = down_y;
+                                prev_tap_ms = 0;
                             }
                         } else if (dt2w_enabled) {
-                            /* Screen is ON: check for Lockscreen Double-Tap to Sleep */
-                            if (!moved_too_much && prev_tap_ms > 0 &&
-                                gap >= 35 && gap <= 500 && dx <= 150 && dy <= 150 &&
-                                (t_down - last_swipe_ms > 2500 || down_y < 750) &&
-                                (t_down - last_wake_ms > 600)) {
-                                if (is_lockscreen_showing()) {
-                                    log_msg("LOCKSCREEN_DT2S x=%d y=%d gap=%lld", down_x, down_y, gap);
+                            /*
+                             * On Lockscreen (screen ON):
+                             * Only trigger Lockscreen DT2S if:
+                             *  1) Both taps are short, stationary taps (dur <= 170ms, move <= 22px)
+                             *  2) Both taps are in the upper Lockscreen/Clock area (y = 90..620),
+                             *     completely avoiding the PIN keypad / Pattern grid (y > 650)
+                             *  3) Taps are at the same spot (dx <= 50, dy <= 50) within 40..380ms
+                             *  4) No swipe occurred in the last 3500ms, and at least 1800ms since wake
+                             */
+                            if (dur >= 8 && dur <= 170 && max_move_x <= 22 && max_move_y <= 22 &&
+                                tap_y >= 90 && tap_y <= 620 &&
+                                (ev_t - last_swipe_ms > 3500) && (ev_t - last_wake_ms > 1800)) {
+                                long long gap = down_ms - prev_tap_ms;
+                                int dx = tap_x - prev_tap_x;
+                                if (dx < 0) dx = -dx;
+                                int dy = tap_y - prev_tap_y;
+                                if (dy < 0) dy = -dy;
+
+                                if (prev_tap_ms > 0 && gap >= 40 && gap <= 380 && dx <= 50 && dy <= 50) {
                                     prev_tap_ms = 0;
-                                    touch_active = 0;
-                                    wait_touch_release(touch_fd, 200);
-                                    enter_black_standby(ufd, touch_fd, pwr_fd, &is_black_standby,
-                                                        &standby_enter_ms, &last_keepalive_ms, "LOCKSCREEN_DOUBLE_TAP");
-                                    break;
+                                    if (is_lockscreen_showing()) {
+                                        log_msg("LOCKSCREEN_DT2S x=%d y=%d gap=%lld", tap_x, tap_y, gap);
+                                        enter_black_standby(ufd, touch_fd, pwr_fd, &is_black_standby,
+                                                            &standby_enter_ms, &last_keepalive_ms, "LOCKSCREEN_DOUBLE_TAP");
+                                        was_touch_active = 0;
+                                        break;
+                                    }
+                                } else {
+                                    prev_tap_ms = down_ms;
+                                    prev_tap_x = tap_x;
+                                    prev_tap_y = tap_y;
                                 }
-                                prev_tap_ms = 0;
-                            } else if (!moved_too_much) {
-                                prev_tap_ms = t_down;
-                                prev_tap_x = down_x;
-                                prev_tap_y = down_y;
                             } else {
                                 prev_tap_ms = 0;
                             }
                         }
                     }
 
-                    /* If finger lifted after moving too much (a swipe), invalidate prev_tap_ms */
-                    if (!touch_active && moved_too_much) {
-                        prev_tap_ms = 0;
-                    }
+                    was_touch_active = touch_active;
                 }
             }
         }

@@ -15,6 +15,7 @@
 
 #define BL_PATH       "/sys/class/backlight/sprd_backlight/brightness"
 #define DPMS_PATH     "/sys/class/drm/card0-DSI-1/dpms"
+#define ESD_PATH      "/sys/devices/platform/soc/soc:ap-ahb/31100000.dsi/31100000.dsi.0/display/panel0/esd_check_enable"
 #define SETTINGS_PATH "/data/system/users/0/settings_system.xml"
 #define LOG_PATH      "/data/local/tmp/dt2w.log"
 
@@ -37,6 +38,18 @@ static void log_msg(const char *fmt, ...) {
 }
 
 /*
+ * Disable periodic MIPI DSI ESD register reads on ICNL9916 video-mode panel
+ * which otherwise stall the DSI lane every 2000ms and cause "[drm] Warning: dpu underflow!"
+ */
+static void disable_esd_check(void) {
+    int fd = open(ESD_PATH, O_WRONLY);
+    if (fd >= 0) {
+        if (write(fd, "0\n", 2) < 0) {}
+        close(fd);
+    }
+}
+
+/*
  * Checks the native HiOS Settings toggle:
  * Settings -> Special Function -> Actions and Gestures -> Tapping Wake
  * (`os_action_tapping_wake` in /data/system/users/0/settings_system.xml)
@@ -55,10 +68,6 @@ static int is_dt2w_setting_enabled(void) {
                 char val = p[27];
                 if (val == '0') return 0;
                 if (val == '1') return 1;
-                for (int i = 22; i < 36 && (p + i < buf + n); i++) {
-                    if (p[i] == '0') return 0;
-                    if (p[i] == '1') return 1;
-                }
             }
         }
     }
@@ -189,36 +198,39 @@ static void write_input_ev(int fd, unsigned short type, unsigned short code, int
 }
 
 /*
- * Injects an imperceptible 5ms touch pulse at the right-edge blank margin
- * (alternating (718, 400) and (717, 401) so the kernel evdev duplicate filter
- * never drops ABS_MT_POSITION_X/Y) on /dev/input/event2.
+ * Injects an imperceptible 8ms horizontal micro-glide (dx=28px, dy=0) at
+ * (680, 500) -> (708, 500) with ABS_MT_TRACKING_ID=99 on /dev/input/event2.
  *
- * Why this is required:
- * On Android 13 Lockscreen (NotificationShade), WindowManager sets
- * INPUT_FEATURE_DISABLE_USER_ACTIVITY on key events and overrides the
- * screen timeout to 10,000ms. Touch events on the touchscreen device
- * ARE counted as user activity by InputDispatcher -> PowerManagerService,
- * resetting lastUserActivityTime to 0ms ago (userActivitySummary=0x1)
- * without clicking any UI element or opening the Lockscreen Bouncer.
+ * Why a 28px horizontal micro-glide instead of a stationary tap:
+ * 1. Resets PowerManagerService lastUserActivityTime to 0ms ago (userActivitySummary=0x1).
+ * 2. Because dx=28px > touchSlop (8px), SystemUI NotificationPanelViewController
+ *    does NOT treat it as an empty-space tap (`onEmptySpaceClick` / `sysui_lockscreen_gesture: [3,0,0]`),
+ *    preventing any Lockscreen bounce animation or unnecessary GPU wakeups.
+ * 3. Because dy=0, it never vertically scrolls the Lockscreen or Notification Shade.
  */
 static void refresh_user_activity_via_touch(int touch_fd, int keep_grabbed) {
     if (touch_fd < 0) return;
     static int alt = 0;
     alt ^= 1;
-    int px = alt ? 718 : 717;
-    int py = alt ? 400 : 401;
+    int py = alt ? 500 : 501;
 
     if (keep_grabbed) {
         ioctl(touch_fd, EVIOCGRAB, 0);
     }
 
     write_input_ev(touch_fd, EV_ABS, ABS_MT_TRACKING_ID, 99);
-    write_input_ev(touch_fd, EV_ABS, ABS_MT_POSITION_X, px);
+    write_input_ev(touch_fd, EV_ABS, ABS_MT_POSITION_X, 680);
     write_input_ev(touch_fd, EV_ABS, ABS_MT_POSITION_Y, py);
     write_input_ev(touch_fd, EV_KEY, BTN_TOUCH, 1);
     write_input_ev(touch_fd, EV_SYN, SYN_REPORT, 0);
 
-    usleep(5000);
+    usleep(4000);
+
+    write_input_ev(touch_fd, EV_ABS, ABS_MT_POSITION_X, 708);
+    write_input_ev(touch_fd, EV_ABS, ABS_MT_POSITION_Y, py);
+    write_input_ev(touch_fd, EV_SYN, SYN_REPORT, 0);
+
+    usleep(4000);
 
     write_input_ev(touch_fd, EV_ABS, ABS_MT_TRACKING_ID, -1);
     write_input_ev(touch_fd, EV_KEY, BTN_TOUCH, 0);
@@ -229,10 +241,6 @@ static void refresh_user_activity_via_touch(int touch_fd, int keep_grabbed) {
     }
 }
 
-/*
- * Releases any active multi-touch slot on the touchscreen before grabbing it
- * so SystemUI never sees a stuck finger down.
- */
 static void release_touch_slot(int touch_fd) {
     if (touch_fd < 0) return;
     write_input_ev(touch_fd, EV_ABS, ABS_MT_TRACKING_ID, -1);
@@ -266,6 +274,8 @@ static void enter_black_standby(int ufd, int touch_fd, int pwr_fd,
                                 long long *standby_enter_ms,
                                 long long *last_keepalive_ms,
                                 const char *reason) {
+    disable_esd_check();
+
     /*
      * 1. Clamp backlight to 0 and lock permissions to 0444 BEFORE waking DPMS
      *    so Android's light HAL cannot illuminate the panel.
@@ -284,14 +294,20 @@ static void enter_black_standby(int ufd, int touch_fd, int pwr_fd,
 
     /*
      * 3. If the panel had already entered DRM DPMS Off, wake it silently
-     *    while backlight is locked at 0 so the ICNL9916 TDDI chip stays active.
+     *    while backlight is locked at 0 so the ICNL9916 TDDI chip stays active,
+     *    and wait 120ms for sprd_dsi_encoder_enable() to finish before poking userActivity.
      */
     if (is_dpms_off()) {
         emit_wakeup(ufd);
+        usleep(120000);
+        chmod(BL_PATH, 0664);
+        set_backlight(0);
+        chmod(BL_PATH, 0444);
+        disable_esd_check();
     }
 
     /*
-     * 4. Refresh PowerManagerService userActivityTime via a 5ms micro-tap at (718,400)
+     * 4. Refresh PowerManagerService userActivityTime via an 8ms micro-glide
      *    so DisplayPowerController never attempts to sleep or blink the panel.
      */
     refresh_user_activity_via_touch(touch_fd, 1);
@@ -315,17 +331,13 @@ static void exit_black_standby(int ufd, int touch_fd, int pwr_fd,
     if (touch_fd >= 0) ioctl(touch_fd, EVIOCGRAB, 0);
     if (pwr_fd >= 0)   ioctl(pwr_fd, EVIOCGRAB, 0);
     *is_black_standby = 0;
+    disable_esd_check();
 
     if (mode == 0 || mode == 2) {
-        int restore = (saved_bl >= 30) ? saved_bl : 180;
+        int restore = (saved_bl >= 40) ? saved_bl : 220;
         chmod(BL_PATH, 0664);
         set_backlight(restore);
         emit_wakeup(ufd);
-        /*
-         * CRITICAL: Refresh PowerManagerService lastUserActivityTime via a 5ms
-         * edge touch at (718,400) so the Lockscreen stays bright for the full
-         * 10-second timeout without ever blinking off after 5-8 seconds!
-         */
         refresh_user_activity_via_touch(touch_fd, 0);
         log_msg("EXIT_BLACK_STANDBY reason=%s restore_bl=%d", reason, restore);
     } else {
@@ -337,10 +349,10 @@ static void exit_black_standby(int ufd, int touch_fd, int pwr_fd,
 
 int main(void) {
     unlink(LOG_PATH);
-    log_msg("dt2w_daemon v8 starting (Precision Lockscreen + Zero-Blink)");
+    log_msg("dt2w_daemon v9 starting (Zero-Underflow + Zero-Blink + Precision DT2S)");
 
-    /* Ensure backlight is writable on daemon startup */
     chmod(BL_PATH, 0664);
+    disable_esd_check();
 
     int ufd = setup_uinput();
     int touch_fd = -1;
@@ -357,10 +369,12 @@ int main(void) {
 
     int is_black_standby = 0;
     int saved_bl = get_backlight();
-    if (saved_bl < 30) {
-        saved_bl = 180;
+    if (saved_bl < 40) {
+        saved_bl = 220;
         set_backlight(saved_bl);
     }
+    int candidate_bl = saved_bl;
+    long long candidate_bl_since_ms = now_ms();
 
     long long bl_zero_since_ms = 0;
     long long standby_enter_ms = 0;
@@ -398,7 +412,25 @@ int main(void) {
 
         if (!is_black_standby) {
             if (bl > 0) {
-                if (bl >= 30) saved_bl = bl;
+                /*
+                 * Only save backlight when it has been stable for >= 600ms
+                 * (or increased), so Android's fade-to-sleep ramp never
+                 * overwrites saved_bl with a dim intermediate value.
+                 */
+                if (bl >= 40) {
+                    if (bl > saved_bl) {
+                        saved_bl = bl;
+                        candidate_bl = bl;
+                        candidate_bl_since_ms = t;
+                    } else if (bl == candidate_bl) {
+                        if (t - candidate_bl_since_ms >= 600) {
+                            saved_bl = bl;
+                        }
+                    } else {
+                        candidate_bl = bl;
+                        candidate_bl_since_ms = t;
+                    }
+                }
                 bl_zero_since_ms = 0;
             } else if (bl == 0 && dt2w_enabled) {
                 /* Wait 350ms after screen turns off so Android finishes sleep transition */
@@ -415,6 +447,11 @@ int main(void) {
                 }
             }
         } else {
+            if (!dt2w_enabled) {
+                exit_black_standby(ufd, touch_fd, pwr_fd, &is_black_standby,
+                                   saved_bl, 1, "SETTING_DISABLED");
+                continue;
+            }
             /*
              * Keep MIPI DSI clock running continuously without ever letting
              * Android's 10s Lockscreen userActivityTimeout expire.
@@ -424,9 +461,11 @@ int main(void) {
                 if (is_dpms_off()) {
                     chmod(BL_PATH, 0444);
                     emit_wakeup(ufd);
+                    usleep(120000);
+                    disable_esd_check();
                     refresh_user_activity_via_touch(touch_fd, 1);
-                    last_keepalive_ms = t;
-                } else if (t - last_keepalive_ms >= 5500) {
+                    last_keepalive_ms = now_ms();
+                } else if (t - last_keepalive_ms >= 6000) {
                     chmod(BL_PATH, 0444);
                     refresh_user_activity_via_touch(touch_fd, 1);
                     last_keepalive_ms = t;

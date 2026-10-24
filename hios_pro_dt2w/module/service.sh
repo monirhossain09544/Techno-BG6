@@ -6,6 +6,9 @@ while [ "$(getprop sys.boot_completed)" != "1" ]; do
     sleep 2
 done
 
+# Remove any legacy conflicting dt2w service script
+rm -f /data/adb/service.d/dt2w.sh 2>/dev/null
+
 # Re-assert properties after system_server/init post-boot
 resetprop -n ro.config.low_ram false
 resetprop -n ro.os_2g_go.support 0
@@ -37,8 +40,16 @@ settings put global os_lck_noti_sw 1
 settings put system os_lck_noti_sw 1
 settings put system test_split_topbottom 1
 settings put system three_finger_split_screen 1
-settings put system key_edge_flash 1
+settings put system key_edge_flash 0
 settings put system tran_DualApp_support 1
+
+# Lock refresh rate to 60Hz and disable DSI ESD BTA check to eliminate DPU underflow blinking
+settings put system tran_refresh_mode 60
+settings put system min_refresh_rate 60.0
+settings put system peak_refresh_rate 60.0
+if [ -e /sys/devices/platform/soc/soc:ap-ahb/31100000.dsi/31100000.dsi.0/display/panel0/esd_check_enable ]; then
+    echo 0 > /sys/devices/platform/soc/soc:ap-ahb/31100000.dsi/31100000.dsi.0/display/panel0/esd_check_enable
+fi
 
 # Initialize Tapping Wake setting to 1 only if not yet set by user in Settings
 CUR_TW=$(settings get system os_action_tapping_wake)
@@ -55,7 +66,7 @@ if [ -e /proc/gesture_function ]; then
     mount -o bind /dev/dt2w_state /proc/gesture_function 2>/dev/null
 fi
 
-# Enable TRAN_PS_SUSPEND_MODE + start dt2w_daemon v5
+# Enable TRAN_PS_SUSPEND_MODE + start dt2w_daemon v9
 if [ -e /sys/devices/virtual/sprd_sensorhub_tp/device/psensor_enable ]; then
     echo 1 > /sys/devices/virtual/sprd_sensorhub_tp/device/psensor_enable
 fi

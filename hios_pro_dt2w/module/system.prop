@@ -54,3 +54,5 @@ ro.transsion.appturbo.setting.support=1
 ro.tran_batterylab_support=1
 ro.os_ultra_power_support=1
 ro.tran.aipowerlab.support=1
+ro.tapping_wake_support=1
+ro.os_micro_gesture_functions_support=1

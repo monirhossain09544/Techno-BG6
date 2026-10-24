@@ -17,6 +17,9 @@ resetprop -n ro.griffin.app_lite 0
 resetprop -n ro.os_settings_lite_custom 0
 resetprop -n persist.sys.tran_split_screen.force_disable 0
 resetprop -n persist.sys.traneffect.enable 1
+resetprop -n ro.tapping_wake_support 1
+resetprop -n ro.os_micro_intelligence_support 1
+resetprop -n ro.os_micro_gesture_functions_support 1
 
 # Apply Global/Secure/System settings for Full HiOS features
 settings put global enable_freeform_support 1
@@ -37,9 +40,22 @@ settings put system three_finger_split_screen 1
 settings put system key_edge_flash 1
 settings put system tran_DualApp_support 1
 
-# Enable Double-Tap to Wake (DT2W) via TRAN_PS_SUSPEND_MODE + dt2w_daemon v3
-settings put system os_action_tapping_wake 1
-settings put global os_action_tapping_wake 1
+# Initialize Tapping Wake setting to 1 only if not yet set by user in Settings
+CUR_TW=$(settings get system os_action_tapping_wake)
+if [ "$CUR_TW" != "0" ] && [ "$CUR_TW" != "1" ]; then
+    settings put system os_action_tapping_wake 1
+    settings put global os_action_tapping_wake 1
+fi
+
+# Shield /proc/gesture_function from kernel gesture_wakeup_enabled SRAM trap
+if [ -e /proc/gesture_function ]; then
+    umount /proc/gesture_function 2>/dev/null
+    echo -n "cc0" > /dev/dt2w_state
+    chmod 0666 /dev/dt2w_state
+    mount -o bind /dev/dt2w_state /proc/gesture_function 2>/dev/null
+fi
+
+# Enable TRAN_PS_SUSPEND_MODE + start dt2w_daemon v5
 if [ -e /sys/devices/virtual/sprd_sensorhub_tp/device/psensor_enable ]; then
     echo 1 > /sys/devices/virtual/sprd_sensorhub_tp/device/psensor_enable
 fi
@@ -61,7 +77,8 @@ pm enable com.transsion.ossettingsext/com.transsion.compatiblemode.SettingsActiv
 pm enable com.transsion.ossettingsext/com.transsion.screenrelay.SettingsActivity
 pm enable com.transsion.ossettingsext/com.transsion.displaycutoutmode.SettingsActivity
 
-# Enable SmartPanel Video Assistant & DualApp activities
+# Enable SmartPanel Video Assistant, MicroIntelligence TappingWake & DualApp activities
 pm enable com.transsion.smartpanel/com.transsion.gamemode.video.activity.VideoMainActivity
 pm enable com.transsion.smartpanel/com.transsion.gamemode.activity.FrameInterpolationSettingsActivity
+pm enable com.transsion.microintelligence/com.transsion.microintelligence.TappingWakeActivity
 pm enable com.transsion.dualapp/com.transsion.dualapp.MainActivity

@@ -1,0 +1,7 @@
+key 158     BACK              VIRTUAL
+key 172     HOME              VIRTUAL
+key 0x244   APP_SWITCH        VIRTUAL
+key 143     WAKEUP            WAKE
+key 183     WAKEUP            WAKE
+key 195     FINGER            WAKE
+key 190     WAKEUP            WAKE

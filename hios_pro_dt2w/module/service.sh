@@ -269,8 +269,64 @@ for heavy in     com.ea.gp.fifamobile     com.bilibili.app.in     com.spotify.mu
     cmd appops set $heavy RUN_IN_BACKGROUND ignore 2>/dev/null
 done
 
-# 8. Ensure official TECNO HiOS 13 Pro MagicFont (com.transsion.magicfont) is installed & Personalization enabled
+# 8. Ensure official TECNO HiOS 13 Pro MagicFont (com.transsion.magicfont) & TransSansVF typeface are provisioned
+mkdir -p /data/typeface/default 2>/dev/null
+if [ ! -s /data/typeface/default/TransSansVF.ttf ]; then
+    HL_APK=$(pm path com.transsion.hilauncher 2>/dev/null | head -n 1 | cut -d: -f2)
+    [ -n "$HL_APK" ] && unzip -p "$HL_APK" assets/card/TransSansVF.ttf > /data/typeface/default/TransSansVF.ttf 2>/dev/null
+fi
+chown -R system:system /data/typeface 2>/dev/null
+chmod 0755 /data/typeface /data/typeface/default 2>/dev/null
+chmod 0644 /data/typeface/default/*.ttf 2>/dev/null
+restorecon -R /data/typeface 2>/dev/null
+
 if ! pm path com.transsion.magicfont >/dev/null 2>&1; then
     pm install -r /data/adb/modules/bg6_hios_pro/system_ext/app/MagicFont/MagicFont.apk >/dev/null 2>&1
 fi
 pm enable 'com.android.settings/com.android.settings.Settings$TranIndividualizationActivity' 2>/dev/null
+
+# 9. Enable built-in Bold text toggle (FontWeightAdjustmentPreferenceController) in Settings -> Accessibility -> Text and display
+TS_DEX="/data/dalvik-cache/arm64/system_ext@priv-app@TranSettings@TranSettings.apk@classes.dex"
+TS_VDEX="/data/dalvik-cache/arm64/system_ext@priv-app@TranSettings@TranSettings.apk@classes.vdex"
+TS_ART="/data/dalvik-cache/arm64/system_ext@priv-app@TranSettings@TranSettings.apk@classes.art"
+if [ -f "$TS_DEX" ] && [ -f "$TS_VDEX" ]; then
+    rm -f "$TS_ART" 2>/dev/null
+    CUR_BYTE=$(dd if="$TS_VDEX" bs=1 skip=5161273 count=1 2>/dev/null | od -An -tx1 | tr -d ' \n')
+    if [ "$CUR_BYTE" = "30" ]; then
+        chattr -i "$TS_DEX" "$TS_VDEX" 2>/dev/null
+        printf '\x00' | dd of="$TS_VDEX" bs=1 seek=5161273 count=1 conv=notrunc 2>/dev/null
+        printf '\x00\x48\x16\x00' | dd of="$TS_DEX" bs=1 seek=134688 count=4 conv=notrunc 2>/dev/null
+        chown system:system "$TS_DEX" "$TS_VDEX" 2>/dev/null
+        chmod 0640 "$TS_DEX" "$TS_VDEX" 2>/dev/null
+        restorecon "$TS_DEX" "$TS_VDEX" 2>/dev/null
+        chattr +i "$TS_DEX" "$TS_VDEX" 2>/dev/null
+        am force-stop com.android.settings 2>/dev/null
+    fi
+fi
+
+# 10. Patch MagicFont (com.transsion.magicfont) OAT/VDEX for Android 13 Roboto/TransSans/Custom selection & start real-time font sync
+MF_APK=$(pm path com.transsion.magicfont 2>/dev/null | sed 's/^package://')
+if [ -n "$MF_APK" ]; then
+    MF_DIR=$(dirname "$MF_APK")
+    MF_OAT="$MF_DIR/oat/arm64"
+    if [ -f "/data/adb/modules/bg6_hios_pro/magicfont_oat/base.vdex" ] && [ -f "/data/adb/modules/bg6_hios_pro/magicfont_oat/base.odex" ]; then
+        CUR_SIZE=$(stat -c %s "$MF_OAT/base.vdex" 2>/dev/null)
+        if [ "$CUR_SIZE" != "5458132" ]; then
+            mkdir -p "$MF_OAT"
+            chattr -i "$MF_OAT/base.vdex" "$MF_OAT/base.odex" 2>/dev/null
+            rm -f "$MF_OAT"/* 2>/dev/null
+            cp /data/adb/modules/bg6_hios_pro/magicfont_oat/base.odex "$MF_OAT/base.odex"
+            cp /data/adb/modules/bg6_hios_pro/magicfont_oat/base.vdex "$MF_OAT/base.vdex"
+            APK_GRP=$(stat -c %G "$MF_APK" 2>/dev/null)
+            chown "1000:${APK_GRP:-system}" "$MF_OAT/base.odex" "$MF_OAT/base.vdex" 2>/dev/null
+            chmod 0644 "$MF_OAT/base.odex" "$MF_OAT/base.vdex" 2>/dev/null
+            restorecon -R "$MF_OAT" 2>/dev/null
+            chattr +i "$MF_OAT/base.odex" "$MF_OAT/base.vdex" 2>/dev/null
+            am force-stop com.transsion.magicfont 2>/dev/null
+        fi
+    fi
+fi
+/system/bin/sh /data/adb/modules/bg6_hios_pro/sync_font.sh 2>/dev/null
+pkill -f '[i]notifyd.*sync_font' 2>/dev/null
+mkdir -p /data/data/com.transsion.magicfont/shared_prefs 2>/dev/null
+setsid /system/bin/inotifyd /data/adb/modules/bg6_hios_pro/sync_font.sh /data/data/com.transsion.magicfont/shared_prefs:wmn </dev/null >/dev/null 2>&1 &

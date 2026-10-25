@@ -7,6 +7,9 @@ ro.os_4g_go.support=0
 ro.os_go.support=0
 ro.griffin.app_lite=0
 ro.os_settings_lite_custom=0
+ro.tran.slim_device=0
+fw.max_users=4
+fw.show_multiuserui=1
 
 # Multi-Window, Split-Screen & Freeform (Exact keys from TranSplitHelper & TsFeatureOption)
 ro.os_freeform_support=1
@@ -28,12 +31,26 @@ ro.os_status_bar_support=1
 ro.tran.effectengine.dynamicblur.support=1
 persist.sys.traneffect.enable=1
 ro.os.recent.blur=1
+ro.os_independent_tiles_anim.support=1
+ro.product.multitask_anim_arc.support=1
+ro.tran.privacy.dot.dynamic.support=1
+ro.os_bt_battery_display=1
+ro.os_single_hand_support=1
+ro.os_read_mode_support=1
+ro.os_bike_mode_support=1
+ro.os_ges_for_sp_support=1
+ro.os_fingerprint_quickapp_support=1
+ro.os_fingerprint_dismissalarm_support=1
+ro.tran_livewallpaper.support=1
+
+# Game Mode, Smart Panel, App Twin, App Lock, Kids Mode & MemFusion
 ro.os_gamemode_support=1
 ro.os_game_mode_support=1
 ro.os_videomode_support=1
 ro.os_smartpanel_support=1
 ro.os_smartpanel_def_status=1
 ro.os_dual_app_support=1
+ro.os_dualapp_fp_start_support=1
 ro.os_app_twin_support=1
 ro.os_app_lock_support=1
 ro.os_double_clock_support=1
@@ -47,12 +64,36 @@ ro.os_dynamicbar_support=1
 ro.os_dynamic_bar_resident_plane_support=1
 ro.os_floatingtoolbar_version=2
 ro.os_dragdrop_support=true
-ro.os_gesture_support=1
-ro.os_threefingerslideup_support=1
 ro.os_white_navigation_bar_support=1
 ro.transsion.appturbo.setting.support=1
+ro.transsion.appturbo.support=1
 ro.tran_batterylab_support=1
 ro.os_ultra_power_support=1
 ro.tran.aipowerlab.support=1
-ro.tapping_wake_support=1
+ro.os_call_edge_flash_support=1
+ro.os_notification_edge_flash_support=1
+ro.os_settingsext_flash_support=1
+ro.os_inadvertent_support=1
+ro.os_privacy_hub_support=1
+ro.os_permission_stats_support=1
+ro.os_secure_charge_support=1
+
+# Launcher & Animation Enhancements
+ro.os_badge_rule_support=1
+ro.os_zeroscreen_ai.support=1
+ro.transsion_launch_start_exit_support=1
+
+# Micro Intelligence (Actions and Gestures) Full Suite
+ro.os_gesture_support=1
+ro.os_threefingerslideup_support=1
+ro.os_triplefingerscreenshot_support=1
+ro.os_micro_intelligence_support=1
 ro.os_micro_gesture_functions_support=1
+ro.tapping_wake_support=1
+ro.tapping_broadcast_support=1
+ro.tran_lift_wake_up_support=1
+ro.music_gesture_support=1
+ro.quick_start_support=1
+ro.cover_silent_support=1
+ro.os.raiseforcall.support=1
+ro.os_gesture_answer_support=1

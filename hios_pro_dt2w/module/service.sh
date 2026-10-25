@@ -18,11 +18,49 @@ resetprop -n ro.os_4g_go.support 0
 resetprop -n ro.os_go.support 0
 resetprop -n ro.griffin.app_lite 0
 resetprop -n ro.os_settings_lite_custom 0
+resetprop -n ro.tran.slim_device 0
+resetprop -n fw.max_users 4
+resetprop -n fw.show_multiuserui 1
 resetprop -n persist.sys.tran_split_screen.force_disable 0
 resetprop -n persist.sys.traneffect.enable 1
+
+# Micro Intelligence & Gesture properties
 resetprop -n ro.tapping_wake_support 1
+resetprop -n ro.tapping_broadcast_support 1
 resetprop -n ro.os_micro_intelligence_support 1
 resetprop -n ro.os_micro_gesture_functions_support 1
+resetprop -n ro.os_triplefingerscreenshot_support 1
+resetprop -n ro.tran_lift_wake_up_support 1
+resetprop -n ro.music_gesture_support 1
+resetprop -n ro.quick_start_support 1
+resetprop -n ro.cover_silent_support 1
+resetprop -n ro.os.raiseforcall.support 1
+resetprop -n ro.os_gesture_answer_support 1
+
+# SystemUI, Launcher & Settings Pro properties
+resetprop -n ro.os_independent_tiles_anim.support 1
+resetprop -n ro.product.multitask_anim_arc.support 1
+resetprop -n ro.tran.privacy.dot.dynamic.support 1
+resetprop -n ro.os_bt_battery_display 1
+resetprop -n ro.os_single_hand_support 1
+resetprop -n ro.os_read_mode_support 1
+resetprop -n ro.os_bike_mode_support 1
+resetprop -n ro.os_ges_for_sp_support 1
+resetprop -n ro.os_fingerprint_quickapp_support 1
+resetprop -n ro.os_fingerprint_dismissalarm_support 1
+resetprop -n ro.tran_livewallpaper.support 1
+resetprop -n ro.transsion.appturbo.support 1
+resetprop -n ro.os_call_edge_flash_support 1
+resetprop -n ro.os_notification_edge_flash_support 1
+resetprop -n ro.os_settingsext_flash_support 1
+resetprop -n ro.os_inadvertent_support 1
+resetprop -n ro.os_privacy_hub_support 1
+resetprop -n ro.os_permission_stats_support 1
+resetprop -n ro.os_secure_charge_support 1
+resetprop -n ro.os_dualapp_fp_start_support 1
+resetprop -n ro.os_badge_rule_support 1
+resetprop -n ro.os_zeroscreen_ai.support 1
+resetprop -n ro.transsion_launch_start_exit_support 1
 
 # Apply Global/Secure/System settings for Full HiOS features
 settings put global enable_freeform_support 1
@@ -43,13 +81,16 @@ settings put system three_finger_split_screen 1
 settings put system key_edge_flash 0
 settings put system tran_DualApp_support 1
 
-# Lock refresh rate to 60Hz and disable DSI ESD BTA check to eliminate DPU underflow blinking
+# Lock refresh rate to 60Hz, disable DSI ESD BTA check, and set DPU 384MHz / DDR lcdon to eliminate DPU underflow blinking
 settings put system tran_refresh_mode 60
 settings put system min_refresh_rate 60.0
 settings put system peak_refresh_rate 60.0
 if [ -e /sys/devices/platform/soc/soc:ap-ahb/31100000.dsi/31100000.dsi.0/display/panel0/esd_check_enable ]; then
     echo 0 > /sys/devices/platform/soc/soc:ap-ahb/31100000.dsi/31100000.dsi.0/display/panel0/esd_check_enable
 fi
+echo 4 > /sys/class/devfreq/dpu/dpu_governor/work_index 2>/dev/null
+echo 4 > /sys/class/devfreq/dpu/dpu_governor/idle_index 2>/dev/null
+echo 384000000 > /sys/class/devfreq/23100000.gpu/min_freq 2>/dev/null
 
 # Initialize Tapping Wake setting to 1 only if not yet set by user in Settings
 CUR_TW=$(settings get system os_action_tapping_wake)
@@ -66,7 +107,7 @@ if [ -e /proc/gesture_function ]; then
     mount -o bind /dev/dt2w_state /proc/gesture_function 2>/dev/null
 fi
 
-# Enable TRAN_PS_SUSPEND_MODE + start dt2w_daemon v9
+# Enable TRAN_PS_SUSPEND_MODE + start dt2w_daemon v11
 if [ -e /sys/devices/virtual/sprd_sensorhub_tp/device/psensor_enable ]; then
     echo 1 > /sys/devices/virtual/sprd_sensorhub_tp/device/psensor_enable
 fi
@@ -76,20 +117,50 @@ if [ -x "$MODDIR/bin/dt2w_daemon" ]; then
 fi
 
 # Enable all hidden Full HiOS activities in OSSettingsExt
-pm enable com.transsion.ossettingsext/com.transsion.splitscreensetting.SplitSettingsMainActivity
-pm enable com.transsion.ossettingsext/com.transsion.splitscreensetting.SplitSettingsDetailActivity
-pm enable com.transsion.ossettingsext/com.transsion.ossettingsext.noticenter.activity.NotificationCenterActivity
-pm enable com.transsion.ossettingsext/com.transsion.ossettingsext.noticenter.activity.NotificationDisplaySettingsActivity
-pm enable com.transsion.ossettingsext/com.transsion.ossettingsext.lock.pop.LockPopActivity
-pm enable com.transsion.ossettingsext/com.transsion.ossettingsext.lock.notify.LockScreenNotifyActivity
-pm enable com.transsion.ossettingsext/com.transsion.ossettingsext.flash.main.MainActivity
-pm enable com.transsion.ossettingsext/com.transsion.activityembedding.SettingsActivity
-pm enable com.transsion.ossettingsext/com.transsion.compatiblemode.SettingsActivity
-pm enable com.transsion.ossettingsext/com.transsion.screenrelay.SettingsActivity
-pm enable com.transsion.ossettingsext/com.transsion.displaycutoutmode.SettingsActivity
+for act in     com.transsion.splitscreensetting.SplitSettingsMainActivity     com.transsion.splitscreensetting.SplitSettingsDetailActivity     com.transsion.ossettingsext.noticenter.activity.NotificationCenterActivity     com.transsion.ossettingsext.noticenter.activity.NotificationDisplaySettingsActivity     com.transsion.ossettingsext.noticenter.activity.BadgeNotificationsActivity     com.transsion.ossettingsext.noticenter.activity.FloatNotificationsActivity     com.transsion.ossettingsext.noticenter.activity.LockScreenPullDownActivity     com.transsion.ossettingsext.lock.pop.LockPopActivity     com.transsion.ossettingsext.lock.notify.LockScreenNotifyActivity     com.transsion.ossettingsext.flash.main.MainActivity     com.transsion.ossettingsext.flash.flasheffect.DetailFlashEffectActivity     com.transsion.ossettingsext.flash.flasheffect.NotiFlashEffectActivity     com.transsion.ossettingsext.flash.flasheffect.IncomingFlashEffectActivity     com.transsion.ossettingsext.flash.flasheffect.MusicFlashEffectActivity     com.transsion.ossettingsext.flash.appmusiclist.MusicAppListActivity     com.transsion.ossettingsext.flash.appnotilist.NotiAppListActivity     com.transsion.activityembedding.SettingsActivity     com.transsion.compatiblemode.SettingsActivity     com.transsion.screenrelay.SettingsActivity     com.transsion.displaycutoutmode.SettingsActivity     com.transsion.minilauncher.MainActivity; do
+    pm enable com.transsion.ossettingsext/$act 2>/dev/null
+done
 
-# Enable SmartPanel Video Assistant, MicroIntelligence TappingWake & DualApp activities
-pm enable com.transsion.smartpanel/com.transsion.gamemode.video.activity.VideoMainActivity
-pm enable com.transsion.smartpanel/com.transsion.gamemode.activity.FrameInterpolationSettingsActivity
-pm enable com.transsion.microintelligence/com.transsion.microintelligence.TappingWakeActivity
-pm enable com.transsion.dualapp/com.transsion.dualapp.MainActivity
+# Enable all MicroIntelligence (Actions and Gestures) activities
+for act in     MicroIntelligence     TappingWakeActivity     MusicGestureActivity     CaptureScreenActivity     LiftWakeUpActivity     SmartAnswerActivity     CallGestureActivity     FlipMuteActivity     QuickStartActivity     SystemNavigationActivity     GestureNavigationActivity     KeyNavigationActivity     TappingBroadcastActivity; do
+    pm enable com.transsion.microintelligence/com.transsion.microintelligence.$act 2>/dev/null
+done
+
+# Enable SmartPanel, GameMode, AskAI, ZaHooc, Thunderback, Social Turbo, Kids Mode, DualApp, AppLock, MultiWindow & Multi-User
+pm enable com.transsion.smartpanel/com.transsion.smartpanel.MainActivity 2>/dev/null
+pm enable com.transsion.smartpanel/com.transsion.askai.AskAiActivity 2>/dev/null
+pm enable com.transsion.smartpanel/com.transsion.gamemode.activity.MainSettingsActivity 2>/dev/null
+pm enable com.transsion.smartpanel/com.transsion.gamemode.activity.GameManageActivity 2>/dev/null
+pm enable com.transsion.smartpanel/com.transsion.gamemode.activity.GameSpaceSettingsActivity 2>/dev/null
+pm enable com.transsion.smartpanel/com.transsion.gamemode.activity.PqeSettingsActivity 2>/dev/null
+pm enable com.transsion.smartpanel/com.transsion.gamemode.activity.BypassChargingActivity 2>/dev/null
+pm enable com.transsion.smartpanel/com.transsion.gamemode.activity.FrameInterpolationSettingsActivity 2>/dev/null
+pm enable com.transsion.smartpanel/com.transsion.gamemode.video.activity.VideoMainActivity 2>/dev/null
+pm enable com.transsion.smartpanel/com.transsion.turbomode.app.activity.FeatureSettingActivity 2>/dev/null
+pm enable com.transsion.smartpanel/com.transsion.turbomode.app.activity.notisave.PeekModeIntroActivity 2>/dev/null
+pm enable com.transsion.smartpanel/com.transsion.transfer.TransferSettingsActivity 2>/dev/null
+
+pm enable com.transsion.zahooc/com.transsion.zahooc.MainActivity 2>/dev/null
+pm enable com.transsion.zahooc/com.transsion.privacydashboard.PrivacyHubActivity 2>/dev/null
+pm enable com.transsion.zahooc/com.transsion.theftalert.view.TheftAlertActivity 2>/dev/null
+pm enable com.transsion.zahooc/com.transsion.theftalert.model.receiver.TABootReceiver 2>/dev/null
+pm enable com.transsion.zahooc/com.transsion.theftalert.model.service.TheftAlertTileService 2>/dev/null
+pm enable com.transsion.zahooc/com.transsion.peekproof.PeekProofActivity 2>/dev/null
+pm enable com.transsion.zahooc/com.transsion.peekproof.service.PeekProofTileService 2>/dev/null
+pm enable com.transsion.zahooc/com.transsion.securecard.ui.SecureCardActivity 2>/dev/null
+pm enable com.transsion.zahooc/com.transsion.repairmode.RepairModeActivity 2>/dev/null
+
+pm enable com.transsion.thunderback/com.transsion.thunderback.activity.TBSettingActivity 2>/dev/null
+pm enable com.transsion.videocallenhancer/com.transsion.whatsapputils.activity.WelcomeActivity 2>/dev/null
+pm enable com.transsion.videocallenhancer/com.transsion.whatsapputils.activity.notisave.PeekModeIntroActivity 2>/dev/null
+pm enable com.transsion.videocallenhancer/com.transsion.whatsapputils.activity.record.SoundRecordActivity 2>/dev/null
+pm enable com.transsion.videocallenhancer/com.transsion.whatsapputils.activity.SoundIntroActivity 2>/dev/null
+pm enable com.transsion.childmode/com.transsion.childmode.SplashActivity 2>/dev/null
+pm enable com.transsion.childmode/com.transsion.childmode.ChildSettingsActivity 2>/dev/null
+pm enable com.transsion.childmode/com.transsion.childmode.service.QsControlService 2>/dev/null
+pm enable com.transsion.dualapp/com.transsion.dualapp.MainActivity 2>/dev/null
+pm enable com.transsion.applock/com.transsion.applock.activity.MainActivity 2>/dev/null
+pm enable com.transsion.multiwindow/com.transsion.multiwindow.MainActivity 2>/dev/null
+pm enable com.transsion.multiwindow/com.transsion.multiwindow.MultiWindowSplashActivity 2>/dev/null
+pm enable com.transsion.multiwindow/com.transsion.multiwindow.MultiWindowGuideSplashActivity 2>/dev/null
+pm enable 'com.android.settings/com.android.settings.Settings$UserSettingsActivity' 2>/dev/null

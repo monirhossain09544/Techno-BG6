@@ -152,7 +152,13 @@ static int is_dpms_off(void) {
     return (strncmp(buf, "Off", 3) == 0);
 }
 
-static int is_lockscreen_ready_for_dt2s(void) {
+/*
+ * Returns:
+ *   0 = Do NOT sleep (inside an app, PIN pad bouncer, or Quick Settings shade)
+ *   1 = Clean Lockscreen -> enter Black Standby directly
+ *   2 = Unlocked Home Screen (QuickstepLauncher) or Status Bar -> lock & enter Black Standby
+ */
+static int is_screen_ready_for_dt2s(int tap_y) {
     FILE *fp = popen("/system/bin/dumpsys activity service com.android.systemui/.SystemUIService SysUiState PulseExpansionHandler KeyguardViewMediator", "r");
     if (!fp) return 0;
     char line[512];
@@ -171,7 +177,31 @@ static int is_lockscreen_ready_for_dt2s(void) {
     }
     pclose(fp);
 
-    return (keyguard_showing && !occluded && !bouncer_showing && !qs_expanded);
+    if (bouncer_showing || qs_expanded) return 0;
+    if (keyguard_showing && !occluded) return 1;
+
+    /* Unlocked screen: allow Status Bar (y < 90) or Home Screen (QuickstepLauncher) */
+    if (tap_y < 90) return 2;
+
+    /* Brief 70ms settle so single-tap app launch changes focus before we check */
+    usleep(70000);
+    FILE *wfp = popen("/system/bin/dumpsys window displays", "r");
+    if (!wfp) return 0;
+    int on_home_launcher = 0;
+    int ime_showing = 0;
+    while (fgets(line, sizeof(line), wfp) != NULL) {
+        if (strstr(line, "mCurrentFocus=") != NULL &&
+            strstr(line, "com.transsion.hilauncher/com.android.quickstep.src.com.android.launcher3.uioverrides.QuickstepLauncher") != NULL) {
+            on_home_launcher = 1;
+        }
+        if (strstr(line, "mIsImeShowing=true") != NULL || strstr(line, "mImeShowing=true") != NULL) {
+            ime_showing = 1;
+        }
+    }
+    pclose(wfp);
+
+    if (on_home_launcher && !ime_showing) return 2;
+    return 0;
 }
 
 static int setup_uinput_keys(void) {
@@ -479,7 +509,7 @@ static void exit_black_standby(int bl_real_fd, int ufd, int utouch_fd,
 
 int main(void) {
     unlink(LOG_PATH);
-    log_msg("dt2w_daemon v12 starting (Smart Standby CPU Power-Save + Zero-Freeze Uinput + Bind-Mount BL)");
+    log_msg("dt2w_daemon v13 starting (Lockscreen + Home Desktop DT2S + Smart Standby CPU Power-Save)");
 
     while (umount2(BL_PATH, MNT_DETACH) == 0) {}
     chmod(BL_PATH, 0664);
@@ -728,7 +758,7 @@ int main(void) {
                             }
                         } else if (dt2w_enabled) {
                             if (dur >= 5 && dur <= 320 && max_move_x <= 55 && max_move_y <= 55 &&
-                                tap_y >= 80 && tap_y <= 1480 && (ev_t - last_wake_ms > 450)) {
+                                tap_y >= 10 && tap_y <= 1480 && (ev_t - last_wake_ms > 450)) {
                                 long long gap = down_ms - prev_tap_ms;
                                 int dx = tap_x - prev_tap_x;
                                 if (dx < 0) dx = -dx;
@@ -737,7 +767,8 @@ int main(void) {
 
                                 if (prev_tap_ms > 0 && gap >= 20 && gap <= 600 && dx <= 140 && dy <= 140) {
                                     prev_tap_ms = 0;
-                                    if (is_lockscreen_ready_for_dt2s()) {
+                                    int dt2s_mode = is_screen_ready_for_dt2s(tap_y);
+                                    if (dt2s_mode == 1) {
                                         log_msg("LOCKSCREEN_DT2S x=%d y=%d dur=%lld gap=%lld",
                                                 tap_x, tap_y, dur, gap);
                                         enter_black_standby(bl_real_fd, ufd, utouch_fd, touch_fd, pwr_fd,
@@ -746,8 +777,22 @@ int main(void) {
                                                             "LOCKSCREEN_DOUBLE_TAP");
                                         was_touch_active = 0;
                                         break;
+                                    } else if (dt2s_mode == 2) {
+                                        log_msg("HOMESCREEN_DT2S x=%d y=%d dur=%lld gap=%lld",
+                                                tap_x, tap_y, dur, gap);
+                                        /* Lock the device via virtual power key, then enter Black Standby */
+                                        emit_key(ufd, KEY_POWER, 1);
+                                        usleep(15000);
+                                        emit_key(ufd, KEY_POWER, 0);
+                                        usleep(80000);
+                                        enter_black_standby(bl_real_fd, ufd, utouch_fd, touch_fd, pwr_fd,
+                                                            slot_active, &is_black_standby, saved_bl,
+                                                            &standby_enter_ms, &last_keepalive_ms,
+                                                            "HOMESCREEN_DOUBLE_TAP");
+                                        was_touch_active = 0;
+                                        break;
                                     } else {
-                                        log_msg("AWAKE_DT_IGNORED (not on clean lockscreen) x=%d y=%d",
+                                        log_msg("AWAKE_DT_IGNORED (not on lockscreen/homescreen) x=%d y=%d",
                                                 tap_x, tap_y);
                                     }
                                 } else {

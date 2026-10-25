@@ -330,3 +330,33 @@ fi
 pkill -f '[i]notifyd.*sync_font' 2>/dev/null
 mkdir -p /data/data/com.transsion.magicfont/shared_prefs 2>/dev/null
 setsid /system/bin/inotifyd /data/adb/modules/bg6_hios_pro/sync_font.sh /data/data/com.transsion.magicfont/shared_prefs:wmn </dev/null >/dev/null 2>&1 &
+
+# Disable unused 4.10 GB flash swapfile.db (keep fast in-RAM zram0 active) to save 4.1 GB storage & eMMC wear
+setprop persist.vendor.swapfile_enable false 2>/dev/null
+setprop persist.vendor.swapfile_size_mb 0 2>/dev/null
+setprop persist.vendor.memfusion_ui_enable false 2>/dev/null
+if [ -f /data/swapfile.db ]; then
+    swapoff /data/swapfile.db 2>/dev/null
+    rm -f /data/swapfile.db 2>/dev/null
+fi
+
+# 11. Flagship / iOS-Grade Storage Engine (F2FS Transparent LZ4 Compression, UFS Queue & Smart Idle Maintenance)
+echo 4 > /sys/fs/f2fs/dm-44/discard_granularity 2>/dev/null
+echo 20 > /sys/fs/f2fs/dm-44/dirty_nats_ratio 2>/dev/null
+echo 0 > /sys/block/sda/queue/iostats 2>/dev/null
+echo 0 > /sys/block/sda/queue/add_random 2>/dev/null
+echo 2 > /sys/block/sda/queue/rq_affinity 2>/dev/null
+echo 256 > /sys/block/sda/queue/read_ahead_kb 2>/dev/null
+echo 256 > /sys/block/dm-44/queue/read_ahead_kb 2>/dev/null
+
+device_config put storage_native_boot smart_idle_maint_enabled true 2>/dev/null
+device_config put storage_native_boot smart_idle_maint_period 60 2>/dev/null
+device_config put storage_native_boot dirty_reclaim_rate 0.8 2>/dev/null
+device_config put storage_native_boot target_dirty_ratio 50 2>/dev/null
+device_config put app_hibernation app_hibernation_enabled true 2>/dev/null
+device_config put app_hibernation app_hibernation_targets_pre_s_apps true 2>/dev/null
+
+chattr +c /data/app /data/dalvik-cache/arm64 /data/user_de/0/com.google.android.gms/app_chimera 2>/dev/null
+if [ -x "$MODDIR/bin/f2fs_opt" ]; then
+    "$MODDIR/bin/f2fs_opt" /data/app /data/user_de/0/com.google.android.gms/app_chimera >/dev/null 2>&1 &
+fi

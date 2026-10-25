@@ -53,7 +53,7 @@ resetprop -n ro.transsion.appturbo.support 1
 resetprop -n ro.os_call_edge_flash_support 1
 resetprop -n ro.os_notification_edge_flash_support 1
 resetprop -n ro.os_settingsext_flash_support 1
-resetprop -n ro.os_inadvertent_support 1
+resetprop -n ro.os_inadvertent_support 0
 resetprop -n ro.os_privacy_hub_support 1
 resetprop -n ro.os_permission_stats_support 1
 resetprop -n ro.os_secure_charge_support 1
@@ -140,6 +140,12 @@ settings put system test_split_topbottom 1
 settings put system three_finger_split_screen 1
 settings put system key_edge_flash 0
 settings put system tran_DualApp_support 1
+settings put system show_inadvertent 0
+settings put system transsion_anti_inadvertently 0
+settings put global show_inadvertent 0
+settings put global transsion_anti_inadvertently 0
+settings put secure show_inadvertent 0
+settings put secure transsion_anti_inadvertently 0
 
 # Lock refresh rate to 60Hz, disable DSI ESD BTA check, and set DPU 384MHz / DDR lcdon to eliminate DPU underflow blinking
 settings put system tran_refresh_mode 60

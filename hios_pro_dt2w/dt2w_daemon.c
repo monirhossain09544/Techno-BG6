@@ -374,6 +374,22 @@ static int find_input_by_name(const char *target) {
     return -1;
 }
 
+static void set_standby_cpu_power_save(int standby) {
+    if (standby) {
+        /* Cap Big Cortex-A75 cluster to minimum 768MHz & Little Cortex-A55 cluster to 884MHz during Black Standby */
+        write_sysfs_str("/sys/devices/system/cpu/cpufreq/policy6/scaling_max_freq", "768000\n");
+        write_sysfs_str("/sys/devices/system/cpu/cpufreq/policy0/scaling_max_freq", "884000\n");
+        write_sysfs_str("/dev/cpuset/background/cpus", "0-1\n");
+        write_sysfs_str("/dev/cpuset/system-background/cpus", "0-2\n");
+    } else {
+        /* Restore full 1.61GHz performance immediately before waking display */
+        write_sysfs_str("/sys/devices/system/cpu/cpufreq/policy0/scaling_max_freq", "1612000\n");
+        write_sysfs_str("/sys/devices/system/cpu/cpufreq/policy6/scaling_max_freq", "1612000\n");
+        write_sysfs_str("/dev/cpuset/background/cpus", "0-2\n");
+        write_sysfs_str("/dev/cpuset/system-background/cpus", "0-3\n");
+    }
+}
+
 static void enter_black_standby(int bl_real_fd, int ufd, int utouch_fd,
                                 int touch_fd, int pwr_fd,
                                 int slot_active[10],
@@ -409,17 +425,19 @@ static void enter_black_standby(int bl_real_fd, int ufd, int utouch_fd,
     }
 
     /*
-     * 4. Ensure DDR `lcdon` (768MHz) & DPU 384MHz and refresh userActivityTime
-     *    via the separate virtual uinput touchscreen `utouch_fd`.
+     * 4. Ensure DDR `lcdon` (768MHz) & DPU 384MHz, refresh userActivityTime
+     *    via the separate virtual uinput touchscreen `utouch_fd`, and engage
+     *    Standby CPU Power-Save (Big cores 768MHz, Little cores 884MHz).
      */
     ensure_dpu_ddr_bandwidth();
     refresh_user_activity_via_uinput(utouch_fd);
+    set_standby_cpu_power_save(1);
 
     long long t = now_ms();
     *is_black_standby = 1;
     *standby_enter_ms = t;
     *last_keepalive_ms = t;
-    log_msg("ENTER_BLACK_STANDBY reason=%s", reason);
+    log_msg("ENTER_BLACK_STANDBY reason=%s (CPU power-save active)", reason);
 }
 
 static void exit_black_standby(int bl_real_fd, int ufd, int utouch_fd,
@@ -427,6 +445,11 @@ static void exit_black_standby(int bl_real_fd, int ufd, int utouch_fd,
                                int slot_active[10],
                                int *is_black_standby, int saved_bl,
                                int mode, const char *reason) {
+    /*
+     * 0. Restore full CPU performance (1.61GHz) immediately on wake!
+     */
+    set_standby_cpu_power_save(0);
+
     /*
      * 1. While touch_fd is STILL grabbed, clear any kernel MT slots (0..9) and BTN_TOUCH
      *    that were touched during standby, then release EVIOCGRAB cleanly.
@@ -456,11 +479,12 @@ static void exit_black_standby(int bl_real_fd, int ufd, int utouch_fd,
 
 int main(void) {
     unlink(LOG_PATH);
-    log_msg("dt2w_daemon v11 starting (Zero-Freeze Separate Uinput + Bind-Mount BL + DDR lcdon)");
+    log_msg("dt2w_daemon v12 starting (Smart Standby CPU Power-Save + Zero-Freeze Uinput + Bind-Mount BL)");
 
     while (umount2(BL_PATH, MNT_DETACH) == 0) {}
     chmod(BL_PATH, 0664);
     write_sysfs_str(GPU_MIN_FREQ, "384000000\n");
+    set_standby_cpu_power_save(0);
     ensure_dpu_ddr_bandwidth();
 
     int bl_real_fd = open(BL_PATH, O_RDWR);

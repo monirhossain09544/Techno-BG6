@@ -224,3 +224,47 @@ pm enable com.transsion.multiwindow/com.transsion.multiwindow.MainActivity 2>/de
 pm enable com.transsion.multiwindow/com.transsion.multiwindow.MultiWindowSplashActivity 2>/dev/null
 pm enable com.transsion.multiwindow/com.transsion.multiwindow.MultiWindowGuideSplashActivity 2>/dev/null
 pm enable 'com.android.settings/com.android.settings.Settings$UserSettingsActivity' 2>/dev/null
+
+# ============================================================================
+# LONG BATTERY BACKUP & POWER-SAVER SUITE (Unisoc T606 / TECNO BG6)
+# ============================================================================
+# 1. Tune CPU schedutil governor to prevent unnecessary 1.61GHz spikes on background load
+echo 10 > /sys/devices/system/cpu/cpufreq/policy0/schedutil/freq_margin 2>/dev/null
+echo 2000 > /sys/devices/system/cpu/cpufreq/policy0/schedutil/rate_limit_us 2>/dev/null
+echo 5 > /sys/devices/system/cpu/cpufreq/policy6/schedutil/freq_margin 2>/dev/null
+echo 3000 > /sys/devices/system/cpu/cpufreq/policy6/schedutil/rate_limit_us 2>/dev/null
+
+# 2. Pin background cpusets to Little Cortex-A55 cores (cpu0-3) so background tasks never wake Big Cortex-A75 cores
+echo "0-2" > /dev/cpuset/background/cpus 2>/dev/null
+echo "0-3" > /dev/cpuset/system-background/cpus 2>/dev/null
+echo "0-3" > /dev/cpuset/restricted/cpus 2>/dev/null
+
+# 3. Enable Android 13 Cached Apps Freezer (cgroup freezer) & Adaptive Battery
+settings put global cached_apps_freezer enabled
+device_config put activity_manager_native_boot use_freezer true 2>/dev/null
+settings put global adaptive_battery_management_enabled 1
+settings put global app_standby_enabled 1
+settings put global forced_app_standby_enabled 1
+
+# 4. Disable background Wi-Fi / BLE scanning & always-on mobile data drain
+settings put global wifi_scan_always_enabled 0
+settings put global ble_scan_always_enabled 0
+settings put global network_recommendations_enabled 0
+settings put global mobile_data_always_on 0
+
+# 5. Fast Doze (Light Doze in 15s, Deep Doze in 5m when screen is off)
+settings put global device_idle_constants "inactive_to=30000,sensing_to=0,locating_to=0,location_accuracy=20.0,motion_inactive_to=0,idle_after_inactive_to=0,light_after_inactive_to=15000,light_pre_idle_to=30000,light_idle_to=300000,light_idle_factor=2.0,light_max_idle_to=900000"
+
+# 6. Stop Unisoc background debug logger (ylog) & disable factory/telemetry drainers
+stop ylog 2>/dev/null
+stop yloglite 2>/dev/null
+setprop persist.sys.ylog.enabled 0 2>/dev/null
+for bloat in     com.sprd.logmanager     com.transsion.agingfunction     com.transsion.autotest.factory     com.transsion.statisticalsales     com.transsion.tabe     com.transsion.teop; do
+    pm disable-user --user 0 $bloat 2>/dev/null
+done
+
+# 7. Restrict heavy 3rd-party games/video apps from holding background CPU/audio wakelocks when closed
+for heavy in     com.ea.gp.fifamobile     com.bilibili.app.in     com.spotify.music; do
+    cmd appops set $heavy RUN_ANY_IN_BACKGROUND ignore 2>/dev/null
+    cmd appops set $heavy RUN_IN_BACKGROUND ignore 2>/dev/null
+done

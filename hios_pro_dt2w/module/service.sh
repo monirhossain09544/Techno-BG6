@@ -87,6 +87,41 @@ resetprop -n ro.os_game_phone.support 1
 resetprop -n ro.os_game_pova.support 1
 resetprop -n ro.os_gamemode_pubg_support 1
 
+# TECNO AI Suite (Notes AI, AI Gallery, Ask AI, Social Turbo AI, Kolun AI)
+resetprop -n ro.os_note_ai_bg_support 1
+resetprop -n ro.os_note_ai_draw_support 1
+resetprop -n ro.os_note_canvas_support 1
+resetprop -n ro.tr_note.ai_bg.support 1
+resetprop -n ro.tr_note.ai_draw.support 1
+resetprop -n ro.tr_note.canvas.support 1
+resetprop -n ro.gallery.eraser.v2.support 1
+resetprop -n ro.tr_gallery.eraser.v2.support 1
+resetprop -n ro.os_quick_hide_support 1
+resetprop -n ro.aicore.offline_llm_support 1
+resetprop -n ro.sys.tran.aicore_llm_support 1
+resetprop -n ro.tr_aiservice.aicorellm.feature.support 1
+resetprop -n ro.tr_aiservice.aisettings_offlinellm.feature.support 1
+resetprop -n ro.tr_aiservice.kolun.feature.support 1
+resetprop -n ro.tr_aiservice.kolungo.feature.support 1
+resetprop -n ro.os_kolun_support 1
+resetprop -n ro.os_kolun_go_support 1
+resetprop -n ro.os_kolun_exocr_support 1
+resetprop -n ro.tr_aiassistant.feature.support 1
+resetprop -n ro.tr_aiassistant.online.feature.support 1
+resetprop -n ro.tr_aiassistant.aiphone.feature.support 1
+resetprop -n ro.tr_aiassistant.aiphone_summany.feature.support 1
+resetprop -n ro.sys.tran.aiphone_support 1
+resetprop -n ro.sys.tran.aiphone_summary_support 1
+resetprop -n ro.sys.tran.assist_support 1
+resetprop -n ro.product.assist_online 1
+resetprop -n ro.os_social_turbo_call_summary 1
+resetprop -n ro.os_social_turbo_translator 1
+resetprop -n ro.tr_social.call_summary.support 1
+resetprop -n ro.tr_social.call_translator.support 1
+resetprop -n ro.sys.tran.ai_subtitles_support 1
+resetprop -n ro.tr_aiservice.aicorespeech_subtitle.feature.support 1
+resetprop -n ro.tr_smartrecognition.feature.support 1
+
 # Apply Global/Secure/System settings for Full HiOS features
 settings put global enable_freeform_support 1
 settings put global force_resizable_activities 1

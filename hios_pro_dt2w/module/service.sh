@@ -61,6 +61,31 @@ resetprop -n ro.os_dualapp_fp_start_support 1
 resetprop -n ro.os_badge_rule_support 1
 resetprop -n ro.os_zeroscreen_ai.support 1
 resetprop -n ro.transsion_launch_start_exit_support 1
+resetprop -n ro.os_ask_ai.support 1
+resetprop -n ro.os_game_bypass_charging_support 1
+resetprop -n ro.os_game_auto_bypass.support 1
+resetprop -n ro.os_game_enhancement_support 1
+resetprop -n ro.product.tran_pq_support 1
+resetprop -n ro.os_game_anti_accidental.support 1
+resetprop -n ro.os_game_barrage_support 1
+resetprop -n ro.os_game_changer.support 1
+resetprop -n ro.os_game_data_support 1
+resetprop -n ro.os_game_reverse_color.support 1
+resetprop -n ro.os_game_tp_optimization.support 1
+resetprop -n ro.os_magic_button_support 1
+resetprop -n ro.tran.game_e_sport_mode.support 1
+resetprop -n ro.os_smartpanel_recentapp_support 1
+resetprop -n ro.os_turboomode_support 1
+resetprop -n ro.os_social_turbo_makeup 1
+resetprop -n ro.os_social_turbo_record 1
+resetprop -n ro.os_social_turbo_soundchange 1
+resetprop -n ro.os_ai_sutitiles_support 1
+resetprop -n ro.os_anti_addiction_support 1
+resetprop -n ro.os_game_lock_support 1
+resetprop -n ro.os_game_noti_list.support 1
+resetprop -n ro.os_game_phone.support 1
+resetprop -n ro.os_game_pova.support 1
+resetprop -n ro.os_gamemode_pubg_support 1
 
 # Apply Global/Secure/System settings for Full HiOS features
 settings put global enable_freeform_support 1

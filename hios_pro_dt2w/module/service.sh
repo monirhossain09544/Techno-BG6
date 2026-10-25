@@ -269,19 +269,8 @@ for heavy in     com.ea.gp.fifamobile     com.bilibili.app.in     com.spotify.mu
     cmd appops set $heavy RUN_IN_BACKGROUND ignore 2>/dev/null
 done
 
-# 8. HiOS 13 Pro System-Wide Typeface & Font Pack Provisioning
-mkdir -p /data/typeface/default
-HL_APK=$(pm path com.transsion.hilauncher 2>/dev/null | head -n 1 | cut -d: -f2)
-if [ -n "$HL_APK" ] && [ ! -s /data/typeface/default/TransSansVF.ttf ]; then
-    unzip -p "$HL_APK" assets/card/TransSansVF.ttf > /data/typeface/default/TransSansVF.ttf 2>/dev/null
-    unzip -p "$HL_APK" assets/ArialMTPro-Medium.ttf > /data/typeface/default/ArialMTPro.ttf 2>/dev/null
+# 8. Ensure official TECNO HiOS 13 Pro MagicFont (com.transsion.magicfont) is installed & Personalization enabled
+if ! pm path com.transsion.magicfont >/dev/null 2>&1; then
+    pm install -r /data/adb/modules/bg6_hios_pro/system_ext/app/MagicFont/MagicFont.apk >/dev/null 2>&1
 fi
-[ ! -s /data/typeface/default/SourceSansPro.ttf ] && cp /system/fonts/SourceSansPro-Regular.ttf /data/typeface/default/SourceSansPro.ttf 2>/dev/null
-[ ! -s /data/typeface/default/NotoSerif.ttf ] && cp /system/fonts/NotoSerif-Regular.ttf /data/typeface/default/NotoSerif.ttf 2>/dev/null
-[ ! -s /data/typeface/default/CarroisGothic.ttf ] && cp /system/fonts/CarroisGothicSC-Regular.ttf /data/typeface/default/CarroisGothic.ttf 2>/dev/null
-[ ! -s /data/typeface/default/DancingScript.ttf ] && cp /system/fonts/DancingScript-Regular.ttf /data/typeface/default/DancingScript.ttf 2>/dev/null
-[ ! -s /data/typeface/default/ComingSoon.ttf ] && cp /system/fonts/ComingSoon.ttf /data/typeface/default/ComingSoon.ttf 2>/dev/null
-chown -R system:system /data/typeface 2>/dev/null
-chmod 0755 /data/typeface /data/typeface/default 2>/dev/null
-chmod 0644 /data/typeface/default/*.ttf 2>/dev/null
-restorecon -R /data/typeface 2>/dev/null
+pm enable 'com.android.settings/com.android.settings.Settings$TranIndividualizationActivity' 2>/dev/null

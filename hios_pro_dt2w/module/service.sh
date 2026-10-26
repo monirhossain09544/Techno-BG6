@@ -1,4 +1,5 @@
 #!/system/bin/sh
+resetprop -n persist.sys.disable_rescue true
 MODDIR=${0%/*}
 
 # Wait until boot completes

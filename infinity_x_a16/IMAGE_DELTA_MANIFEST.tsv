@@ -1,0 +1,69 @@
+# STATUS	PATH	SIZE_OR_TARGET	MODE	SELINUX	SHA256
+DELETED	system/framework/framework.jar.fsv_meta
+DELETED	system/framework/services.jar.fsv_meta
+DELETED	system/framework/services.jar.prof
+DELETED	system/product/etc/permissions/com.android.contacts.xml
+DELETED	system/product/etc/permissions/com.android.dialer.xml
+DELETED	system/product/etc/permissions/privapp_whitelist_com.android.dialer-ext.xml
+DELETED	system/product/overlay/Dialer__infinity_gsi__auto_generated_rro_product.apk
+DELETED	system/product/priv-app/Contacts
+DELETED	system/product/priv-app/Contacts/Contacts.apk
+DELETED	system/product/priv-app/Dialer
+DELETED	system/product/priv-app/Dialer/Dialer.apk
+DELETED	system/system_ext/apex/com.android.vndk.v28.apex
+DELETED	system/system_ext/apex/com.android.vndk.v29.apex
+DELETED	system/system_ext/apex/com.android.vndk.v30.apex
+DELETED	system/system_ext/apex/com.android.vndk.v31.apex
+DELETED	system/system_ext/apex/com.android.vndk.v32.apex
+DELETED	system/system_ext/apex/com.android.vndk.v34.apex
+ADDED_DIR	system/app/KernelGnssSettings	0o755	u:object_r:system_file:s0
+ADDED_FILE	system/app/KernelGnssSettings/KernelGnssSettings.apk	29232	0o644	u:object_r:system_file:s0	bb9b2593f19a3875cfb7170cab36425fa0848eb2ddc17f8d15ad60d393e258c0
+ADDED_FILE	system/bin/bg6-perf-tune.sh	2091	0o755	u:object_r:phhsu_exec:s0	750cbde3bbf966fcaf933253da4f62bc2137fac53b223de9e4fb702b0a59f582
+ADDED_FILE	system/bin/bg6_perf_engine	13160	0o755	u:object_r:system_file:s0	5e6f72fa7dd7b4936a978891516c4383b4c760795ed31de113623dad1d410d50
+ADDED_FILE	system/bin/gnss_kernel_engine	13096	0o755	u:object_r:phhsu_exec:s0	3f5a9822750b09c08919c0807d132124b1ed2283da240feb93a7be4f1bc0e0f2
+ADDED_FILE	system/bin/kernel-gps	1422	0o755	u:object_r:system_file:s0	ab06d346466e71e35e57b895b2bb0438f335390fab80cc4d59a8d41ff9cfda05
+ADDED_FILE	system/etc/init/init.bg6.rc	2690	0o644	u:object_r:system_file:s0	9074df06b736db8562594e90612ba14d5330f9d8342094414f9102429094c198
+ADDED_FILE	system/etc/permissions/android.hardware.ram.normal.xml	1756	0o644	u:object_r:vendor_configs_file:s0	c0233efe48437f432e2f44faaf2e4c1317a3d75a6677429f26894bbb8f8eaf78
+ADDED_FILE	system/etc/vendor_build_bg6.prop	16161	0o644	u:object_r:vendor_file:s0	434cfc62fbe2004caa533d6d8b6f387032fa2527e3372bbc84a5b659d543ba43
+ADDED_DIR	system/product/app/TranssionFileManager	0o755	u:object_r:system_file:s0
+ADDED_FILE	system/product/app/TranssionFileManager/TranssionFileManager.apk	21341803	0o644	u:object_r:system_file:s0	0b3a4190b4926ce472d842982562d4c61fe58450feb96215c5266485ba2dbdf1
+ADDED_DIR	system/product/app/TranssionFileManager/lib	0o755	u:object_r:system_file:s0
+ADDED_DIR	system/product/app/TranssionFileManager/lib/arm64	0o755	u:object_r:system_file:s0
+ADDED_FILE	system/product/app/TranssionFileManager/lib/arm64/lib7-Zip-JBinding.so	2522032	0o644	u:object_r:system_file:s0	f8b9946c6e1e5e16eae1d7396350fea96a403e6a4665db640d29af4ffab4bb28
+ADDED_FILE	system/product/app/TranssionFileManager/lib/arm64/libmmkv.so	734224	0o644	u:object_r:system_file:s0	c0740aca7d78b120378458990c53dd6897f1015883ccea9379a960e0a35fa074
+ADDED_FILE	system/product/app/TranssionFileManager/lib/arm64/libtiff.so	657984	0o644	u:object_r:system_file:s0	8388a58bbc77f54beb9a45c06213617087764ec164856c0f43b06f0ca7165c10
+ADDED_FILE	system/product/app/TranssionFileManager/lib/arm64/libtiffconverter.so	673880	0o644	u:object_r:system_file:s0	3a0eb224f646224338888c0679ff667387b1cae242cfe82a6d3012f794f84f0f
+ADDED_FILE	system/product/app/TranssionFileManager/lib/arm64/libtifffactory.so	247864	0o644	u:object_r:system_file:s0	f3a6ea38ef0e9e7d6ec80bffb83e51f848f7d17c0cdd57d8782454a185737bce
+ADDED_FILE	system/product/app/TranssionFileManager/lib/arm64/libtiffsaver.so	14088	0o644	u:object_r:system_file:s0	352841893de9391c33c85a966e270068c92d1945b836c610caf7bb5e23efe35b
+ADDED_DIR	system/product/app/TranssionNote	0o755	u:object_r:system_file:s0
+ADDED_FILE	system/product/app/TranssionNote/TranssionNote.apk	7215076	0o644	u:object_r:system_file:s0	03eaa5a02e883d0569f01370d64a4723d28b52aa300bbea11cdf882febfacd9e
+ADDED_FILE	system/product/etc/permissions/android.hardware.ram.normal.xml	1756	0o644	u:object_r:system_file:s0	c0233efe48437f432e2f44faaf2e4c1317a3d75a6677429f26894bbb8f8eaf78
+ADDED_FILE	system/product/etc/sysconfig/launcher_documentsui_icon_disable.xml	393	0o644	u:object_r:system_file:s0	9c4ac6df3d4a2f9d501d23a81ab130a78dabd23890deeb210bd8f7bd8081727d
+ADDED_FILE	system/product/overlay/treble-overlay-tecno-bg6.apk	102817	0o644	u:object_r:system_file:s0	4dc630083223a43b668ecb3e19ea94b848f56e1137654015e7b8115cbfa5c273
+ADDED_FILE	system/system_ext/etc/permissions/com.sh.smart.caller.xml	1287	0o644	u:object_r:system_file:s0	77b9175ab23e23a8ae7332ad521e8bf2ec9f77a86b29f770036cefafa25d910b
+ADDED_FILE	system/system_ext/etc/sysconfig/preinstalled-packages-smartcaller.xml	226	0o644	u:object_r:system_file:s0	cbc4f67a73e71b8871161df3239a0e6f9e902febaecd5c0c9dfef3e4fa4cfb04
+ADDED_DIR	system/system_ext/priv-app/SmartCaller	0o755	u:object_r:system_file:s0
+ADDED_FILE	system/system_ext/priv-app/SmartCaller/SmartCaller.apk	60726005	0o644	u:object_r:system_file:s0	c549789fb70463221a0d9f0ed54de844289a5ac97247bf184dc2cb07a840603a
+ADDED_DIR	system/system_ext/priv-app/SmartCaller/lib	0o755	u:object_r:system_file:s0
+ADDED_DIR	system/system_ext/priv-app/SmartCaller/lib/arm64	0o755	u:object_r:system_file:s0
+ADDED_FILE	system/system_ext/priv-app/SmartCaller/lib/arm64/libjni_stmobile_hand.so	18344	0o644	u:object_r:system_file:s0	74b6aefa12897ed2345d794d4f994814ae476e089e8f7b0daf457e2029b8fbce
+ADDED_FILE	system/system_ext/priv-app/SmartCaller/lib/arm64/libmarisamatch.so	948592	0o644	u:object_r:system_file:s0	cdc4b8d86e2811b2ebfd9bb0838f8429d7f71f0e219fcd4a57934fec3244b10b
+ADDED_FILE	system/system_ext/priv-app/SmartCaller/lib/arm64/libmmkv.so	458448	0o644	u:object_r:system_file:s0	b4d9cf70050305bf82d6db14fd2c4fc9929559bf1527f8fc6d62b91470d70a8b
+ADDED_FILE	system/system_ext/priv-app/SmartCaller/lib/arm64/libsecure-lib.so	206912	0o644	u:object_r:system_file:s0	f98f1d56607c8dd1251ae0a873f2dea956dd5db9a464201fc5b0c733e691457e
+ADDED_FILE	system/system_ext/priv-app/SmartCaller/lib/arm64/libstmobile_hand.so	12033224	0o644	u:object_r:system_file:s0	31aacd8eb350fa77d5a57b3643105ce61233813fb1a726e7cd6a97ea58265bce
+MOD_FILE	system/bin/init	2725064	0o755	u:object_r:init_exec:s0	ac26c7384b71547389645662dba6c9ade51a9d6bdd20cd4f083242b9693bd240
+MOD_FILE	system/bin/rw-system.sh	55360	0o755	u:object_r:phhsu_exec:s0	af123aae0db4273ca00403c7ab64b8f9102e88be88ed3956f858d8b6bfe20dcd
+MOD_FILE	system/build.prop	9585	0o644	u:object_r:system_file:s0	719cf6638634cc200ffe497571c49c4317596e69cd059b68632f066eacd12bcb
+MOD_FILE	system/etc/init/hw/init.rc	60280	0o644	u:object_r:system_file:s0	49e0e833bceb45ba48a1f9c3c4cd47e069f48c7389c0e828f58edbde5aa94cb1
+MOD_FILE	system/etc/selinux/mapping/33.0.cil	150227	0o644	u:object_r:sepolicy_file:s0	1ab5d82a34865d8ac716170f473cef3052ec6113e380031bdb6724e68f2e8540
+MOD_FILE	system/etc/selinux/plat_hwservice_contexts	8761	0o644	u:object_r:hwservice_contexts_file:s0	62097ff5ae77ac294a1a8c97e4acc30147f7f0c626227a01a40502baa2c84a41
+MOD_FILE	system/etc/selinux/plat_property_contexts	124565	0o644	u:object_r:property_contexts_file:s0	fcee9308d53e2cc1e9a24e7c7620fb85e44581f70443cfe527f6edb26a225b31
+MOD_FILE	system/etc/selinux/plat_sepolicy.cil	3015729	0o644	u:object_r:sepolicy_file:s0	bd96f7de500a38b9358e4f001a9967a02686a57ec1e66e0750ed84a522d0cce7
+MOD_FILE	system/etc/selinux/plat_sepolicy_and_mapping.sha256	65	0o644	u:object_r:system_file:s0	a7b0e0ca60962d0699ec23a02841101ac205b43506b2e6aad419bc63374de088
+MOD_FILE	system/framework/framework.jar	45005344	0o644	u:object_r:system_file:s0	3e8dcc4c46421135f8cd22e020e07acccd0d93ea153e4a7837d2dfbcf46cb3ec
+MOD_FILE	system/framework/services.jar	23320058	0o644	u:object_r:system_file:s0	a3dd3f1fbbd14feda8915ec93b05c3df116cbd46f1a5050c95b3f215c66f51fe
+MOD_FILE	system/product/etc/apns-conf.xml	944491	0o644	u:object_r:system_file:s0	440967ab83092c6f7c9e1dfaacdb3bbf9520c3efce203ea75084a7a4943eed18
+MOD_FILE	system/product/etc/build.prop	6198	0o600	u:object_r:system_file:s0	6160d16bb63ab61b0a6845f03652063f7169aebd7967f54cebf4a46df7c89ef5
+MOD_FILE	system/product/etc/sysconfig/preinstalled-packages-platform-handheld-product.xml	3063	0o644	u:object_r:system_file:s0	9a6034212dde96722507ef2274d31d8457bb718c69f156b06c06ff94880b6c42
+MOD_FILE	system/product/etc/sysconfig/preinstalled-packages-platform-telephony-product.xml	960	0o644	u:object_r:system_file:s0	a02ccc07a320148d7cc9c37252df96eba91d17072b9935bca748de7b905ae2e0
+MOD_FILE	system/system_ext/etc/build.prop	2399	0o644	u:object_r:system_file:s0	bb31c29708b697bec0e0419491e5d716001d50ba856f1f3853ad58caf45de5f3

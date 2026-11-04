@@ -1,0 +1,11 @@
+from check_c0b import dump_code
+dump_code("Lf9/l$j;->a", 0x350e54)
+dump_code("Lf9/l$k;->a", 0x350eec)
+dump_code("Lf9/l$l;->a", 0x350f78)
+dump_code("Lf9/l$m;->a", 0x351020)
+dump_code("Lf9/l$n;->a", 0x35107c)
+dump_code("Lf9/l$o;->a", 0x3510d0)
+dump_code("Lf9/l$p;->a", 0x351258)
+dump_code("Lf9/l$q;->a", 0x3512ac)
+dump_code("Lf9/l$r;->a", 0x351364)
+dump_code("Lf9/l;->m2", 0x352928)

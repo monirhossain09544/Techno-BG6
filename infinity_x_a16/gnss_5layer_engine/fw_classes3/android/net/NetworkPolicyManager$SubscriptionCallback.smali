@@ -1,0 +1,41 @@
+.class public Landroid/net/NetworkPolicyManager$SubscriptionCallback;
+.super Ljava/lang/Object;
+.source "NetworkPolicyManager.java"
+
+
+# annotations
+.annotation system Ldalvik/annotation/EnclosingClass;
+    value = Landroid/net/NetworkPolicyManager;
+.end annotation
+
+.annotation system Ldalvik/annotation/InnerClass;
+    accessFlags = 0x9
+    name = "SubscriptionCallback"
+.end annotation
+
+
+# direct methods
+.method public constructor blacklist <init>()V
+    .registers 1
+
+    .line 1114
+    invoke-direct {p0}, Ljava/lang/Object;-><init>()V
+
+    return-void
+.end method
+
+
+# virtual methods
+.method public blacklist onSubscriptionOverride(III[I)V
+    .registers 5
+
+    .line 1124
+    return-void
+.end method
+
+.method public blacklist onSubscriptionPlansChanged(I[Landroid/telephony/SubscriptionPlan;)V
+    .registers 3
+
+    .line 1132
+    return-void
+.end method

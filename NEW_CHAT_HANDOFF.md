@@ -1,3 +1,27 @@
+# TECNO BG6 COMPLETE ENGINEERING PROJECT — FULL HANDOFF (`v7` ANDROID 16 QPR2 + `v6` + `v5`)
+# (Paste this message into any new chat to continue the project even with zero prior server)
+
+## LATEST MILESTONE (`v7-infinity-x-3.12-a16-complete` — Nov 2026): LIVE ON PHONE & 100% STORED ON GITHUB
+
+The phone (**TECNO SPARK Go 2024 / `TECNO-BG6`**, ADB serial `1099738415003670`, Unisoc T606 / `ums9230`) is running **Project Infinity-X v3.12 (`Android 16 QPR2 / BP4A.251205.006`)** with:
+1. **5-Layer Undetectable Kernel & Framework GNSS Location Engine** (`infinity_x_a16/gnss_5layer_engine/` + `gnss_app_build/KernelGnssSettings.apk` + patched `framework.jar` & `services.jar` + `/system/bin/gnss_kernel_engine` + `/system/bin/kernel-gps`).
+2. **Official TECNO BG6 Native Suite (Stock AOSP Dialer & Contacts Physically Removed)**:
+   - **Smart Caller & Contacts (`com.sh.smart.caller` V6.0.1.123 — Android 16 Patched)**:
+     - Green Dual-SIM call pill + green circular **WhatsApp** dialpad button + built-in **Call Recordings**.
+     - Fixed `"The contact doesn't exist"` (`tv$b.smali` + `tv.smali` aligned to 63-column AOSP `Contacts.Entity` projection by removing Unisoc-only `"is_read_only"` at `0x3f`).
+     - Fixed Android 16 `Import/Export Contacts` crash (`hp0.smali` migrated from removed `StorageVolume.getPath()`/`getPathFile()` to `StorageVolume.getDirectory()`, plus `oz2.smali` SIM column mapping).
+     - Added automatic Dual-SIM USIM/ADN contact importer (`com.transsion.contacts.SimAutoSyncHelper` in `smartcaller_v6_a16_patches/sim_helper_src/`, hooked into `PeopleActivity` & `DialerApplication`).
+   - **TECNO HiOS 14 System File Manager (`com.transsion.filemanagerx` v17.0.0.104, zero ads)** + `launcher_documentsui_icon_disable.xml`.
+   - **TECNO Notes (`com.transsion.notebook` v2.5.1.718)**.
+3. **Full Non-Go Android 16 + Performance Engine**: `init_fixed` (`/system/bin/init`), `bg6_perf_engine` (4GB Physical RAM + 4GB LZ4 ZRAM), `treble-overlay-tecno-bg6.apk`, `trust_warnings=0`, `navigation_bar_hint=0`, `navbar_ime_space=0`, AVB `SHA256_RSA2048` signed (`3,423,481,856` bytes, `MD5: 8446097a33b12884a5b42ca5056751a6`).
+4. **Everything Stored on GitHub (`https://github.com/monirhossain09544/Techno-BG6`)**:
+   - **Git `main` branch**: `infinity_x_a16/` (exact 68-entry `IMAGE_DELTA_MANIFEST.tsv`, `rebuild_ready_img_from_vanilla.sh`, `signing_keys_and_avb/`, `gnss_5layer_engine/`, `gnss_app_build/`, `smartcaller_v6_a16_patches/`, `bg6_overlay_src/`, `core/`, `system_image_delta_small/`), `shunno_os_aosp/` (8 AOSP repo patches + `vendor/transsion/bg6_suite`), `brom_super_flasher/`, `bg6_device_reference/`, `hios14_port_tools/`, `engineering_scripts/`, and `docs/INFINITY_X_A16_COMPLETE_GUIDE.md`.
+   - **GitHub Release `v7-infinity-x-3.12-a16-complete`**: `infinity_x_bg6_ready.img.xz` (ready-to-flash `system_a`), `release_assets_payload.tar.xz` (standalone patched `framework.jar`, `services.jar`, `SmartCaller.apk`, `TranssionFileManager.apk`, `TranssionNote.apk`, etc.), `infinity_x_3.12_gapps_vanilla_base.img.xz`, `sunno_system.img.xz`, and `bg6_brom_flash_kit.tar.xz`.
+
+---
+
+## PREVIOUS KERNEL & BROM HANDOFF (`v5` / `v6` — PRESERVED FOR REFERENCE)
+
 ﻿# TECNO BG6 CUSTOM KERNEL PROJECT — COMPLETE HANDOFF
 # (Paste this whole message into a new chat to continue the project)
 
@@ -64,9 +88,9 @@ and NO app can launch. **Enter the PIN.** Not a kernel problem.
 ### Server A (currently in use) — ALIVE as of this handoff
 ```
 host     : gpu-kmsm
-ip       : 173.208.247.17   port 22
+ip       : ${BG6_OLD_SERVER_IP}   port 22
 user     : administrator
-password : 6wq%x9ryT$
+password : ${BG6_OLD_SERVER_PASS}
 home     : ~/tecno_bg6_kernel/
 disk     : 219G total, ~187G free
 ```
@@ -79,8 +103,8 @@ Do not rely on it. Everything needed to rebuild is on GitHub + local PC.
 import paramiko
 c = paramiko.SSHClient()
 c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-c.connect("173.208.247.17", port=22, username="administrator",
-          password="6wq%x9ryT$", timeout=25)
+c.connect("${BG6_OLD_SERVER_IP}", port=22, username="administrator",
+          password="${BG6_OLD_SERVER_PASS}", timeout=25)
 def run(cmd, t=300):
     si, so, se = c.exec_command(cmd, timeout=t)
     return so.read().decode(errors='replace').rstrip(), se.read().decode(errors='replace').strip()
@@ -497,7 +521,7 @@ adb shell "uiautomator dump /sdcard/u.xml >/dev/null; cat /sdcard/u.xml" | grep 
 adb reboot bootloader && fastboot flash boot_a boot_a_stock.img && fastboot reboot
 
 # server reachable?
-ssh administrator@173.208.247.17   # password 6wq%x9ryT$
+ssh administrator@${BG6_OLD_SERVER_IP}   # password ${BG6_OLD_SERVER_PASS}
 
 # rebuild (on server)
 cd ~/tecno_bg6_kernel && bash phase11_v5_ksu_kprobes.sh
@@ -521,7 +545,7 @@ The project can be fully rebuilt on a brand-new server using only
 ```
 1. Check the phone:   adb devices && adb shell "uname -r; dumpsys user | grep State:"
 2. Check root:        adb shell su -c id
-3. Check the server:  (paramiko to 173.208.247.17, see section 3)
+3. Check the server:  (paramiko to ${BG6_OLD_SERVER_IP}, see section 3)
 4. Ask the user what they want to do next.
 ```
 If the phone shows RUNNING_LOCKED, tell the user to unlock it with their PIN.

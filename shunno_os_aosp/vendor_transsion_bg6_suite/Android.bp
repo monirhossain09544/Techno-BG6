@@ -1,0 +1,32 @@
+android_app_import {
+    name: "SmartCaller",
+    apk: "prebuilt/SmartCaller.apk",
+    privileged: true,
+    system_ext_specific: true,
+    presigned: true,
+    dex_preopt: { enabled: false },
+    overrides: ["Dialer", "Contacts"],
+}
+
+android_app_import {
+    name: "TranssionFileManager",
+    apk: "prebuilt/TranssionFileManager.apk",
+    product_specific: true,
+    presigned: true,
+    dex_preopt: { enabled: false },
+}
+
+android_app_import {
+    name: "TranssionNote",
+    apk: "prebuilt/TranssionNote.apk",
+    product_specific: true,
+    presigned: true,
+    dex_preopt: { enabled: false },
+}
+
+android_app_import {
+    name: "KernelGnssSettings",
+    apk: "prebuilt/KernelGnssSettings.apk",
+    presigned: true,
+    dex_preopt: { enabled: false },
+}

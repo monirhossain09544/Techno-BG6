@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="config_chooserActivity">com.transsion.resolver/.ChooserActivity</string>
+    <string name="config_customResolverActivity">com.transsion.resolver/.ResolverActivity</string>
+    <string name="config_defaultCaptivePortalLoginPackageName">com.google.android.go.captiveportallogin</string>
+    <string name="config_defaultDialer">com.sh.smart.caller</string>
+    <string name="config_dozeComponent">com.android.systemui/com.android.systemui.doze.DozeService</string>
+    <string name="config_mainBuiltInDisplayCutout">M -24,0 L -24,40 L 24,40 L 24,0 Z @dp</string>
+    <string name="config_persistentDataPackageName">com.google.android.gms</string>
+    <string name="config_qualified_networks_service_package">com.spreadtrum.ims</string>
+    <string name="config_recentsComponentName">com.transsion.hilauncher/com.android.quickstep.recents_ui_overrides.src.com.android.quickstep.RecentsActivity</string>
+    <string name="config_systemContacts">com.sh.smart.caller</string>
+    <string name="config_wallpaperCropperPackage">com.android.wallpaperpicker</string>
+    <string name="config_wlan_data_service_package">com.spreadtrum.ims</string>
+    <string name="config_wlan_network_service_package">com.spreadtrum.ims</string>
+    <string name="default_browser">com.android.chrome</string>
+    <string name="default_galler">com.google.android.apps.photosgo</string>
+    <string name="default_sms_application">com.transsion.smartmessage</string>
+    <string name="tran_display_cutout_center_point">(334,48)</string>
+</resources>

@@ -1,0 +1,63 @@
+.class Landroid/preference/PreferenceActivity$3;
+.super Ljava/lang/Object;
+.source "PreferenceActivity.java"
+
+# interfaces
+.implements Landroid/view/View$OnClickListener;
+
+
+# annotations
+.annotation system Ldalvik/annotation/EnclosingMethod;
+    value = Landroid/preference/PreferenceActivity;->onCreate(Landroid/os/Bundle;)V
+.end annotation
+
+.annotation system Ldalvik/annotation/InnerClass;
+    accessFlags = 0x0
+    name = null
+.end annotation
+
+
+# instance fields
+.field final synthetic blacklist this$0:Landroid/preference/PreferenceActivity;
+
+
+# direct methods
+.method constructor blacklist <init>(Landroid/preference/PreferenceActivity;)V
+    .registers 2
+    .annotation system Ldalvik/annotation/MethodParameters;
+        accessFlags = {
+            0x8010
+        }
+        names = {
+            null
+        }
+    .end annotation
+
+    .line 674
+    iput-object p1, p0, Landroid/preference/PreferenceActivity$3;->this$0:Landroid/preference/PreferenceActivity;
+
+    invoke-direct {p0}, Ljava/lang/Object;-><init>()V
+
+    return-void
+.end method
+
+
+# virtual methods
+.method public whitelist onClick(Landroid/view/View;)V
+    .registers 3
+
+    .line 676
+    iget-object p1, p0, Landroid/preference/PreferenceActivity$3;->this$0:Landroid/preference/PreferenceActivity;
+
+    const/4 v0, -0x1
+
+    invoke-virtual {p1, v0}, Landroid/preference/PreferenceActivity;->setResult(I)V
+
+    .line 677
+    iget-object p1, p0, Landroid/preference/PreferenceActivity$3;->this$0:Landroid/preference/PreferenceActivity;
+
+    invoke-virtual {p1}, Landroid/preference/PreferenceActivity;->finish()V
+
+    .line 678
+    return-void
+.end method

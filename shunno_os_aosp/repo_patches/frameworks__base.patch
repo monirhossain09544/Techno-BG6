@@ -1,0 +1,235 @@
+diff --git a/core/res/res/drawable-nodpi/default_wallpaper.png b/core/res/res/drawable-nodpi/default_wallpaper.png
+index f366ce667..edb3f01b7 100644
+Binary files a/core/res/res/drawable-nodpi/default_wallpaper.png and b/core/res/res/drawable-nodpi/default_wallpaper.png differ
+diff --git a/core/res/res/drawable-sw600dp-nodpi/default_wallpaper.png b/core/res/res/drawable-sw600dp-nodpi/default_wallpaper.png
+index ec6d12c8e..edb3f01b7 100644
+Binary files a/core/res/res/drawable-sw600dp-nodpi/default_wallpaper.png and b/core/res/res/drawable-sw600dp-nodpi/default_wallpaper.png differ
+diff --git a/core/res/res/drawable-sw720dp-nodpi/default_wallpaper.png b/core/res/res/drawable-sw720dp-nodpi/default_wallpaper.png
+index 8fc95ec2a..edb3f01b7 100644
+Binary files a/core/res/res/drawable-sw720dp-nodpi/default_wallpaper.png and b/core/res/res/drawable-sw720dp-nodpi/default_wallpaper.png differ
+diff --git a/core/res/res/values/config.xml b/core/res/res/values/config.xml
+index 7af64afa6..97e1d4d2a 100644
+--- a/core/res/res/values/config.xml
++++ b/core/res/res/values/config.xml
+@@ -2358,7 +2358,7 @@
+     <!-- Whether the default assistant settings should be shown. -->
+     <bool name="config_showDefaultAssistant">true</bool>
+     <!-- The name of the package that will hold the browser role by default. -->
+-    <string name="config_defaultBrowser" translatable="false">@string/default_browser</string>
++    <string name="config_defaultBrowser" translatable="false">com.android.chrome</string>
+     <!-- The name of the package that will hold the dialer role by default. -->
+     <string name="config_defaultDialer" translatable="false">com.android.dialer</string>
+     <!-- The name of the package that will hold the SMS role by default. -->
+@@ -4200,7 +4200,7 @@
+          0: 3 button mode (back, home, overview buttons)
+          1: 2 button mode (back, home buttons + swipe up for overview)
+          2: gestures only for back, home and overview -->
+-    <integer name="config_navBarInteractionMode">0</integer>
++    <integer name="config_navBarInteractionMode">2</integer>
+ 
+     <!-- Controls whether the nav bar can move from the bottom to the side in landscape.
+          Only applies if the device display is not square. -->
+@@ -5023,7 +5023,7 @@
+     <!-- Corner radius of system dialogs -->
+     <dimen name="config_dialogCornerRadius">28dp</dimen>
+     <!-- Corner radius of system buttons -->
+-    <dimen name="config_buttonCornerRadius">4dp</dimen>
++    <dimen name="config_buttonCornerRadius">24dp</dimen>
+     <!-- Corner radius for bottom sheet system dialogs -->
+     <dimen name="config_bottomDialogCornerRadius">16dp</dimen>
+     <!-- Corner radius of system progress bars -->
+@@ -5070,7 +5070,7 @@
+     <bool name="config_battery_percentage_setting_available">true</bool>
+ 
+     <!-- Default value set for battery percentage in status bar false = disabled, true = enabled -->
+-    <bool name="config_defaultBatteryPercentageSetting">false</bool>
++    <bool name="config_defaultBatteryPercentageSetting">true</bool>
+ 
+     <!-- Model of potentially misprovisioned devices. If none is specified in an overlay, an
+          empty string is passed in. -->
+@@ -5418,7 +5418,7 @@
+          the framework from using higher refresh rates, even if display modes with higher refresh
+          rates are available from hardware composer. Only has an effect if the value is
+          non-zero. -->
+-    <integer name="config_defaultPeakRefreshRate">0</integer>
++    <integer name="config_defaultPeakRefreshRate">60</integer>
+ 
+     <!-- External display peak refresh rate for the given device. Change this value if you want to
+          prevent the framework from using higher refresh rates, even if display modes with higher
+diff --git a/core/res/res/values/dimens.xml b/core/res/res/values/dimens.xml
+index 291a59363..eb6d0fe2c 100644
+--- a/core/res/res/values/dimens.xml
++++ b/core/res/res/values/dimens.xml
+@@ -49,7 +49,7 @@
+     <!-- Height of the status bar in portrait.
+          Do not read this dimen directly. Use {@link SystemBarUtils#getStatusBarHeight} instead.
+          -->
+-    <dimen name="status_bar_height_portrait">24dp</dimen>
++    <dimen name="status_bar_height_portrait">40dp</dimen>
+     <!-- Height of the status bar in landscape.
+          Do not read this dimen directly. Use {@link SystemBarUtils#getStatusBarHeight} instead.
+          -->
+diff --git a/packages/SystemUI/res/values/config.xml b/packages/SystemUI/res/values/config.xml
+index e181d079f..856af9d29 100644
+--- a/packages/SystemUI/res/values/config.xml
++++ b/packages/SystemUI/res/values/config.xml
+@@ -87,9 +87,7 @@
+     <!-- The number of columns that the top level tiles span in the QuickSettings -->
+ 
+     <!-- The default tiles to display in QuickSettings -->
+-    <string name="quick_settings_tiles_default" translatable="false">
+-        internet,bt,flashlight,dnd,alarm,airplane,controls,wallet,rotation,battery,cast,screenrecord,mictoggle,cameratoggle,custom(com.android.permissioncontroller/.permission.service.v33.SafetyCenterQsTileService)
+-    </string>
++    <string name="quick_settings_tiles_default" translatable="false">internet,bt,flashlight,dnd,hotspot,rotation,battery,location,dark,screenrecord,airplane,alarm</string>
+ 
+     <!-- The class path of the Safety Quick Settings Tile -->
+     <string name="safety_quick_settings_tile_class" translatable="false">
+@@ -653,7 +651,7 @@
+     <bool name="config_playHomeSoundAfterAssistant">false</bool>
+ 
+     <!-- Whether to use window background blur for the volume dialog. -->
+-    <bool name="config_volumeDialogUseBackgroundBlur">false</bool>
++    <bool name="config_volumeDialogUseBackgroundBlur">true</bool>
+ 
+     <!-- The properties of the face auth front camera for outer display in pixels -->
+     <integer-array name="config_face_auth_props">
+diff --git a/packages/SystemUI/res/values/dimens.xml b/packages/SystemUI/res/values/dimens.xml
+index b7eff38aa..957dded84 100644
+--- a/packages/SystemUI/res/values/dimens.xml
++++ b/packages/SystemUI/res/values/dimens.xml
+@@ -601,7 +601,7 @@
+ 
+     <dimen name="volume_dialog_elevation">9dp</dimen>
+ 
+-    <dimen name="volume_dialog_background_blur_radius">0dp</dimen>
++    <dimen name="volume_dialog_background_blur_radius">40dp</dimen>
+ 
+     <dimen name="volume_tool_tip_right_margin">76dp</dimen>
+ 
+@@ -645,7 +645,7 @@
+     <dimen name="pull_span_min">25dp</dimen>
+ 
+     <dimen name="qs_corner_radius">28dp</dimen>
+-    <dimen name="qs_tile_height">80dp</dimen>
++    <dimen name="qs_tile_height">74dp</dimen>
+     <dimen name="qs_tile_margin_horizontal">8dp</dimen>
+     <dimen name="qs_tile_margin_vertical">@dimen/qs_tile_margin_horizontal</dimen>
+     <dimen name="qs_tile_margin_top_bottom">4dp</dimen>
+@@ -685,7 +685,7 @@
+          Scaled @dimen/qs_page_indicator-width by .4f.
+     -->
+     <dimen name="qs_page_indicator_dot_width">6.4dp</dimen>
+-    <dimen name="qs_tile_text_size">14sp</dimen>
++    <dimen name="qs_tile_text_size">13sp</dimen>
+     <dimen name="qs_panel_padding">16dp</dimen>
+     <dimen name="qs_dual_tile_padding_horizontal">6dp</dimen>
+     <dimen name="qs_panel_elevation">4dp</dimen>
+@@ -1147,7 +1147,7 @@
+ 
+     <!--  Blur radius on status bar window and power menu  -->
+     <dimen name="min_window_blur_radius">1px</dimen>
+-    <dimen name="max_window_blur_radius">23px</dimen>
++    <dimen name="max_window_blur_radius">64px</dimen>
+ 
+     <!-- How much into a DisplayCutout's bounds we can go, on each side -->
+     <dimen name="display_cutout_margin_consumption">0px</dimen>
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/BlurUtils.kt b/packages/SystemUI/src/com/android/systemui/statusbar/BlurUtils.kt
+index 6bbd4a504..f5afb1ad7 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/BlurUtils.kt
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/BlurUtils.kt
+@@ -141,9 +141,7 @@ open class BlurUtils @Inject constructor(
+      * @return {@code true} when supported.
+      */
+     open fun supportsBlursOnWindows(): Boolean {
+-        return CROSS_WINDOW_BLUR_SUPPORTED && ActivityManager.isHighEndGfx() &&
+-                crossWindowBlurListeners.isCrossWindowBlurEnabled() &&
+-                !SystemProperties.getBoolean("persist.sysui.disableBlur", false)
++        return !SystemProperties.getBoolean("persist.sysui.disableBlur", false)
+     }
+ 
+     override fun dump(pw: PrintWriter, args: Array<out String>) {
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/phone/ScrimController.java b/packages/SystemUI/src/com/android/systemui/statusbar/phone/ScrimController.java
+index d2e36b88f..8d95bfa16 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/phone/ScrimController.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/phone/ScrimController.java
+@@ -189,7 +189,7 @@ public class ScrimController implements ViewTreeObserver.OnPreDrawListener, Dump
+      * The default scrim under the shade and dialogs.
+      * This should not be lower than 0.54, otherwise we won't pass GAR.
+      */
+-    public static final float BUSY_SCRIM_ALPHA = 1f;
++    public static final float BUSY_SCRIM_ALPHA = 0.68f;
+ 
+     /**
+      * Scrim opacity that can have text on top.
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/phone/ScrimState.java b/packages/SystemUI/src/com/android/systemui/statusbar/phone/ScrimState.java
+index f2a649ba2..6ff64fb43 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/phone/ScrimState.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/phone/ScrimState.java
+@@ -83,7 +83,7 @@ public enum ScrimState {
+             mBehindAlpha = mClipQsScrim ? 1 : mScrimBehindAlphaKeyguard;
+             mNotifAlpha = mClipQsScrim ? mScrimBehindAlphaKeyguard : 0;
+             if (mClipQsScrim) {
+-                updateScrimColor(mScrimBehind, 1f /* alpha */, mBackgroundColor);
++                updateScrimColor(mScrimBehind, 0.68f /* alpha */, mBackgroundColor);
+             }
+         }
+     },
+@@ -122,7 +122,7 @@ public enum ScrimState {
+     BOUNCER {
+         @Override
+         public void prepare(ScrimState previousState) {
+-            mBehindAlpha = mClipQsScrim ? 1 : mDefaultScrimAlpha;
++            mBehindAlpha = mClipQsScrim ? 0.68f : mDefaultScrimAlpha;
+             mBehindTint = mClipQsScrim ? mBackgroundColor : mSurfaceColor;
+             mNotifAlpha = mClipQsScrim ? mDefaultScrimAlpha : 0;
+             mNotifTint = Color.TRANSPARENT;
+@@ -152,13 +152,13 @@ public enum ScrimState {
+     SHADE_LOCKED {
+         @Override
+         public void prepare(ScrimState previousState) {
+-            mBehindAlpha = mClipQsScrim ? 1 : mDefaultScrimAlpha;
++            mBehindAlpha = mClipQsScrim ? 0.68f : mDefaultScrimAlpha;
+             mNotifAlpha = 1f;
+             mFrontAlpha = 0f;
+             mBehindTint = mClipQsScrim ? Color.TRANSPARENT : mBackgroundColor;
+ 
+             if (mClipQsScrim) {
+-                updateScrimColor(mScrimBehind, 1f /* alpha */, mBackgroundColor);
++                updateScrimColor(mScrimBehind, 0.68f /* alpha */, mBackgroundColor);
+             }
+         }
+     },
+@@ -243,7 +243,7 @@ public enum ScrimState {
+         @Override
+         public void prepare(ScrimState previousState) {
+             // State that UI will sync to.
+-            mBehindAlpha = mClipQsScrim ? 1 : 0;
++            mBehindAlpha = mClipQsScrim ? 0.68f : 0;
+             mNotifAlpha = 0;
+             mFrontAlpha = 0;
+             mAnimationDuration = mKeyguardFadingAway
+@@ -274,7 +274,7 @@ public enum ScrimState {
+             }
+ 
+             if (mClipQsScrim) {
+-                updateScrimColor(mScrimBehind, 1f /* alpha */, mBackgroundColor);
++                updateScrimColor(mScrimBehind, 0.68f /* alpha */, mBackgroundColor);
+             }
+         }
+     },
+@@ -287,13 +287,13 @@ public enum ScrimState {
+             mNotifTint = mClipQsScrim ? mBackgroundColor : Color.TRANSPARENT;
+ 
+             mFrontAlpha = 0;
+-            mBehindAlpha = mClipQsScrim ? 1 : 0;
++            mBehindAlpha = mClipQsScrim ? 0.68f : 0;
+             mNotifAlpha = 0;
+ 
+             mBlankScreen = false;
+ 
+             if (mClipQsScrim) {
+-                updateScrimColor(mScrimBehind, 1f /* alpha */, mBackgroundColor);
++                updateScrimColor(mScrimBehind, 0.68f /* alpha */, mBackgroundColor);
+             }
+         }
+     },

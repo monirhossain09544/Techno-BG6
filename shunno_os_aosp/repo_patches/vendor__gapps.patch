@@ -1,0 +1,29 @@
+diff --git a/arm64/arm64-vendor.mk b/arm64/arm64-vendor.mk
+index 1f42576..8da1c9f 100644
+--- a/arm64/arm64-vendor.mk
++++ b/arm64/arm64-vendor.mk
+@@ -17,8 +17,7 @@ PRODUCT_PACKAGES += \
+     MarkupGoogle \
+     SpeechServicesByGoogle \
+     talkback \
+-    Velvet \
+-    SetupWizard
++    Velvet
+ endif
+ 
+ ifneq ($(filter %tangorpro,$(TARGET_PRODUCT)),)
+diff --git a/common/common-vendor.mk b/common/common-vendor.mk
+index 779ffae..811a6fd 100644
+--- a/common/common-vendor.mk
++++ b/common/common-vendor.mk
+@@ -34,9 +34,8 @@ PRODUCT_COPY_FILES += \
+     vendor/gapps/common/proprietary/product/etc/sysconfig/wellbeing.xml:$(TARGET_COPY_OUT_PRODUCT)/etc/sysconfig/wellbeing.xml
+ 
+ PRODUCT_PACKAGES += \
+-    GoogleRestore \
+     Wellbeing
+ endif
+ 
+ PRODUCT_SOONG_NAMESPACES += vendor/gapps/overlay
+-PRODUCT_PACKAGES += GmsOverlay GmsSettingsOverlay GmsSettingsProviderOverlay GmsSetupWizardOverlay
++PRODUCT_PACKAGES += GmsOverlay GmsSettingsOverlay GmsSettingsProviderOverlay 

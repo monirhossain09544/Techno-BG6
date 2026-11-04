@@ -1,0 +1,148 @@
+####################################
+# from generate-common-build-props
+# These properties identify this partition image.
+####################################
+ro.product.product.brand=google
+ro.product.product.device=tdgsi_arm64_ab
+ro.product.product.manufacturer=google
+ro.product.product.model=Infinity X GSI TrebleDroid
+ro.product.product.name=infinity_gsi
+ro.product.build.date=Sun Sep 20 21:26:06 UTC 2026
+ro.product.build.date.utc=1789939566
+ro.product.build.fingerprint=google/infinity_gsi/tdgsi_arm64_ab:16/BP4A.251205.006/eng.androi.20260920.212606:user/release-keys
+ro.product.build.id=BP4A.251205.006
+ro.product.build.tags=release-keys
+ro.product.build.type=user
+ro.product.build.version.incremental=1789939566
+ro.product.build.version.release=16
+ro.product.build.version.release_or_codename=16
+ro.product.build.version.sdk=36
+ro.product.build.version.sdk_full=36.1
+####################################
+# from gen_build_prop.py:generate_build_info
+####################################
+# begin build properties
+ro.build.fingerprint=google/infinity_gsi/tdgsi_arm64_ab:16/BP4A.251205.006/eng.androi.20260920.212606:user/release-keys
+ro.build.id=BP4A.251205.006
+ro.build.display.id=BP4A.251205.006 release-keys
+ro.build.version.incremental=1789939566
+ro.build.version.sdk=36
+ro.build.version.sdk_full=36.1
+ro.build.version.preview_sdk=0
+ro.build.version.preview_sdk_fingerprint=REL
+ro.build.version.codename=REL
+ro.build.version.all_codenames=REL
+ro.build.version.known_codenames=Base,Base11,Cupcake,Donut,Eclair,Eclair01,EclairMr1,Froyo,Gingerbread,GingerbreadMr1,Honeycomb,HoneycombMr1,HoneycombMr2,IceCreamSandwich,IceCreamSandwichMr1,JellyBean,JellyBeanMr1,JellyBeanMr2,Kitkat,KitkatWatch,Lollipop,LollipopMr1,M,N,NMr1,O,OMr1,P,Q,R,S,Sv2,Tiramisu,UpsideDownCake,VanillaIceCream,Baklava
+ro.build.version.release=16
+ro.build.version.release_or_codename=16
+ro.build.version.release_or_preview_display=16
+ro.build.version.security_patch=2026-09-01
+ro.build.version.base_os=
+ro.build.version.min_supported_target_sdk=28
+ro.build.date=Sun Sep 20 21:26:06 UTC 2026
+ro.build.date.utc=1789939566
+ro.build.type=user
+ro.build.user=android-build
+ro.build.host=r-09e8dc22c827d68f-91pf
+ro.build.tags=release-keys
+ro.build.flavor=infinity_gsi-user
+# ro.product.cpu.abi and ro.product.cpu.abi2 are obsolete,
+# use ro.product.cpu.abilist instead.
+ro.product.cpu.abi=arm64-v8a
+ro.product.locale=en-US
+ro.wifi.channels=
+# Do not try to parse description or thumbprint
+ro.build.description=infinity_gsi-user 16 BP4A.251205.006 eng.androi.20260920.212606 release-keys
+# end build properties
+####################################
+# from device/phh/treble/product.prop
+####################################
+#blur active
+ro.surface_flinger.supports_background_blur=1
+ro.sf.blurs_are_expensive=0
+ro.launcher.blur.appLaunch=0
+# Enable Material Design 3 Expressive
+is_expressive_design_enabled=true
+####################################
+# from variable ADDITIONAL_PRODUCT_PROPERTIES
+####################################
+ro.product.build.16k_page.enabled=false
+ro.product.page_size=4096
+ro.build.characteristics=device
+ro.product.ab_ota_partitions=system
+ro.product.cpu.pagesize.max=16384
+ro.product.build.no_bionic_page_size_macro=true
+ro.dalvik.vm.enable_uffd_gc=true
+####################################
+# from variable PRODUCT_PRODUCT_PROPERTIES
+####################################
+traced.relay_producer_port=vsock://-1:2010
+# Removed by post_process_props.py because overridden by ro.config.ringtone=Your_new_adventure.ogg
+#ro.config.ringtone?=Ring_Synth_04.ogg
+# Removed by post_process_props.py because overridden by ro.config.notification_sound=Eureka.ogg
+#ro.config.notification_sound?=pixiedust.ogg
+ro.com.android.dataroaming=true
+persist.wm.extensions.enabled=true
+ro.setupwizard.mode=OPTIONAL
+ro.crypto.metadata_init_delete_all_keys.enabled=false
+debug.codec2.bqpool_dealloc_after_stop=1
+persist.wm.extensions.activity_embedding_guard_with_android_15=false
+persist.settings.large_screen_opt.enabled=true
+ro.config.ringtone=Your_new_adventure.ogg
+ro.config.notification_sound=Eureka.ogg
+ro.config.alarm_alert=Fresh_start.ogg
+ro.com.google.clientidbase=android-google
+persist.sys.strictmode.disable=true
+is_expressive_design_enabled=true
+persist.sys.activity_anim_perf_override=false
+persist.sys.battery_bypass_supported=false
+ro.ota.allow_downgrade=true
+ro.control_privapp_permissions=log
+debug.graphics.game_default_frame_rate.disabled=true
+ro.com.google.gmsversion=15_202408
+ro.setupwizard.rotation_locked=true
+# Removed by post_process_props.py because overridden by setupwizard.theme=glif_v4
+#setupwizard.theme?=glif_v4_light
+ro.com.google.clientidbase=android-google
+persist.sys.ax_emoji_style=android
+dalvik.vm.debug.alloc=0
+ro.error.receiver.system.apps=com.google.android.gms
+ro.atrace.core.services=com.google.android.gms,com.google.android.gms.ui,com.google.android.gms.persistent
+ro.com.google.ime.theme_id=5
+ro.opa.eligible_device=true
+ro.com.android.wifi-watchlist=GoogleGuest
+drm.service.enabled=true
+persist.sys.dun.override=0
+persist.sys.disable_rescue=true
+ro.input.video_enabled=false
+persist.sys.disable_rescue=true
+remote_provisioning.enable_rkpd=true
+remote_provisioning.hostname=remoteprovisioning.googleapis.com
+ro.storage_manager.enabled=true
+ro.boot.wificountrycode=00
+ro.input.video_enabled=false
+dalvik.vm.systemuicompilerfilter=speed
+debug.sf.enable_transaction_tracing=false
+setupwizard.theme=glif_v4
+setupwizard.feature.day_night_mode_enabled=true
+ro.infinity.android.version=16
+ro.infinity.build.version=Project_Infinity-X-3.12-gsi-20.09.2026
+ro.infinity.build.status=OFFICIAL
+ro.modversion=Project_Infinity-X-3.12-gsi-20.09.2026
+ro.infinity.build.date=20.09.2026
+ro.infinity.buildtype=OFFICIAL
+ro.infinity.fingerprint=Project_Infinity//gsi/20.09.2026
+ro.infinity.device=gsi
+ro.infinity.version=3.12
+ro.infinity.maintainer=Doze-off
+media.recorder.show_manufacturer_and_model=true
+ro.support_one_handed_mode=true
+net.tethering.noprovisioning=true
+ro.com.android.mobiledata=false
+# end of file
+ro.config.low_ram=false
+ro.com.google.acsa=true
+persist.sys.phh.unisoc_color_transform_workaround=1
+persist.vendor.hwc.display.modeid=0
+ro.adb.secure=0
+persist.sys.usb.config=mtp,adb

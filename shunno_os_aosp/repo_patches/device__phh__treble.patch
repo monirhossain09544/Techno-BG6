@@ -1,0 +1,197 @@
+diff --git a/base.mk b/base.mk
+index 43e261b..19187bc 100644
+--- a/base.mk
++++ b/base.mk
+@@ -214,10 +214,10 @@ PRODUCT_PACKAGES += \
+ PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
+ 	debug.fdsan=warn_once \
+ 	persist.sys.fflag.override.settings_provider_model=false \
+-	ro.setupwizard.mode=OPTIONAL \
++	ro.setupwizard.mode=DISABLED \
+ 
+ PRODUCT_PRODUCT_PROPERTIES += \
+-	ro.setupwizard.mode=OPTIONAL \
++	ro.setupwizard.mode=DISABLED \
+ 
+ # AOSP overlays
+ PRODUCT_PACKAGES += \
+@@ -266,4 +266,19 @@ $(call inherit-product, $(SRC_TARGET_DIR)/product/window_extensions.mk)
+ PRODUCT_PRODUCT_PROPERTIES += \
+     persist.settings.large_screen_opt.enabled=true
+ 
+-PRODUCT_EXTRA_VNDK_VERSIONS += 28 29
++PRODUCT_EXTRA_VNDK_VERSIONS += 33
++
++# === Sunno OS (Android 14) Official Branding & TECNO-BG6 Optimization ===
++PRODUCT_BRAND := Sunno
++PRODUCT_MODEL := Sunno OS
++PRODUCT_SYSTEM_NAME := Sunno
++PRODUCT_SYSTEM_BRAND := Sunno
++PRODUCT_SYSTEM_MODEL := Sunno OS
++
++PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
++    ro.sunno.version=Sunno-1.0-Android14 \
++    ro.sunno.maintainer=Monir \
++    ro.build.display.id=Sunno-OS-1.0-Android14 \
++    persist.sys.pq.cabc.enabled=0 \
++    persist.sys.pq.dci.enabled=0 \
++    ro.surface_flinger.use_content_detection_for_refresh_rate=false
+diff --git a/gapps.mk b/gapps.mk
+index 15e12a9..427cf8f 100644
+--- a/gapps.mk
++++ b/gapps.mk
+@@ -47,6 +47,6 @@ IS_PHONE := true
+ $(call inherit-product,vendor/gapps/config.mk)
+ PRODUCT_PACKAGES += \
+        phh-overrides \
+-	   com.simplemobiletools.gallery.pro \
++	    \
+ 
+ endif
+diff --git a/phh-on-boot.sh b/phh-on-boot.sh
+old mode 100644
+new mode 100755
+index d2d5b0a..338cbb8
+--- a/phh-on-boot.sh
++++ b/phh-on-boot.sh
+@@ -60,3 +60,27 @@ getprop | \
+     while read -r svc ;do
+         setprop ctl.stop "$svc"
+     done
++
++
++# === SUNNO OS ON-BOOT DISPLAY & PROVISIONING GUARD ===
++if [ -e /sys/class/display/dispc0/PQ/cm ]; then
++    chmod 0644 /sys/class/display/dispc0/PQ/cm 2>/dev/null || true
++    cat /system/etc/sunno_cm_identity.bin > /sys/class/display/dispc0/PQ/cm 2>/dev/null || true
++    chmod 0444 /sys/class/display/dispc0/PQ/cm 2>/dev/null || true
++fi
++if [ -e /sys/class/display/dispc0/PQ/disable ]; then
++    echo 1 > /sys/class/display/dispc0/PQ/disable 2>/dev/null || true
++fi
++if [ -e /proc/ankai/shutdown_flag ]; then
++    echo 0 > /proc/ankai/shutdown_flag 2>/dev/null || true
++fi
++settings put system min_refresh_rate 60.0 2>/dev/null || true
++settings put system peak_refresh_rate 60.0 2>/dev/null || true
++settings put global device_provisioned 1 2>/dev/null || true
++settings put secure user_setup_complete 1 2>/dev/null || true
++cmd statusbar add-tile com.sunno.ridertile/.RiderModeTileService 2>/dev/null || true
++for pkg in com.google.android.gms com.android.vending; do
++    for perm in android.permission.ACCESS_FINE_LOCATION android.permission.ACCESS_COARSE_LOCATION android.permission.READ_PHONE_STATE android.permission.GET_ACCOUNTS android.permission.READ_CONTACTS android.permission.WRITE_CONTACTS android.permission.POST_NOTIFICATIONS; do
++        pm grant $pkg $perm 2>/dev/null || true
++    done
++done
+diff --git a/phh-on-data.sh b/phh-on-data.sh
+old mode 100644
+new mode 100755
+index 472d16e..232514f
+--- a/phh-on-data.sh
++++ b/phh-on-data.sh
+@@ -29,3 +29,27 @@ if [ "$vndk" = 28 ];then
+     mount $minijailSrc64 /vendor/lib64/libminijail.so
+     mount $minijailSrc /vendor/lib/libminijail.so
+ fi
++
++
++# === SUNNO OS EARLY-BOOT DISPLAY & PANEL GUARD ===
++if [ -e /sys/class/display/dispc0/PQ/cm ]; then
++    chmod 0644 /sys/class/display/dispc0/PQ/cm 2>/dev/null || true
++    cat /system/etc/sunno_cm_identity.bin > /sys/class/display/dispc0/PQ/cm 2>/dev/null || true
++    chmod 0444 /sys/class/display/dispc0/PQ/cm 2>/dev/null || true
++fi
++if [ -e /proc/ankai/shutdown_flag ]; then
++    echo 0 > /proc/ankai/shutdown_flag 2>/dev/null || true
++fi
++(
++    for i in $(seq 1 60); do
++        if [ -e /sys/class/display/dispc0/PQ/cm ]; then
++            chmod 0644 /sys/class/display/dispc0/PQ/cm 2>/dev/null || true
++            cat /system/etc/sunno_cm_identity.bin > /sys/class/display/dispc0/PQ/cm 2>/dev/null || true
++            chmod 0444 /sys/class/display/dispc0/PQ/cm 2>/dev/null || true
++        fi
++        if [ -e /proc/ankai/shutdown_flag ]; then
++            echo 0 > /proc/ankai/shutdown_flag 2>/dev/null || true
++        fi
++        sleep 1
++    done
++) </dev/null >/dev/null 2>&1 &
+diff --git a/rw-system.sh b/rw-system.sh
+old mode 100644
+new mode 100755
+index 7c7838a..af486f0
+--- a/rw-system.sh
++++ b/rw-system.sh
+@@ -1,4 +1,32 @@
+ #!/system/bin/sh
++resetprop_phh ro.config.low_ram false
++sed 's/ro.config.low_ram=true/ro.config.low_ram=false/g' /vendor/build.prop > /dev/vendor_build.prop && chmod 644 /dev/vendor_build.prop && mount -o bind /dev/vendor_build.prop /vendor/build.prop
++# === SUNNO OS DISPLAY & PANEL PROTECTION FIX (TECNO-BG6 / qogirl6_dpu / ICNL9916) ===
++if [ -e /sys/class/display/dispc0/PQ/cm ]; then
++    cat /system/etc/sunno_cm_identity.bin > /sys/class/display/dispc0/PQ/cm 2>/dev/null || true
++    chmod 0444 /sys/class/display/dispc0/PQ/cm 2>/dev/null || true
++fi
++if [ -e /sys/class/display/dispc0/PQ/disable ]; then
++    echo 1 > /sys/class/display/dispc0/PQ/disable 2>/dev/null || true
++fi
++if [ -e /proc/ankai/shutdown_flag ]; then
++    echo 0 > /proc/ankai/shutdown_flag 2>/dev/null || true
++fi
++resetprop_phh ro.surface_flinger.use_color_management false
++resetprop_phh persist.sys.sf.color_saturation 1.0
++resetprop_phh persist.sys.sf.native_mode 0
++resetprop_phh ro.surface_flinger.use_content_detection_for_refresh_rate false
++resetprop_phh ro.surface_flinger.set_idle_timer_ms 0
++resetprop_phh ro.surface_flinger.set_touch_timer_ms 0
++resetprop_phh ro.surface_flinger.set_display_power_timer_ms 0
++resetprop_phh persist.vendor.hwc.display.modeid 0
++resetprop_phh vendor.display.res_switch_en 0
++resetprop_phh ro.sr.displaysize.defaultresolution 1
++resetprop_phh ro.sr.displaysize.lowresolution 1
++resetprop_phh ro.sprd.displayenhance true
++resetprop_phh ro.sprd.nightdisplay.enhance true
++resetprop_phh ro.vendor.display.enhance.BootComplete 1
++# === END SUNNO OS DISPLAY FIX ===
+ 
+ if [ -z "$debug" ] && [ -f /cache/phh-log ];then
+ 	mkdir -p /cache/phh
+@@ -1055,7 +1083,7 @@ if getprop ro.vendor.build.fingerprint |grep -q vsmart/V620A_open;then
+     setprop persist.sys.fp.fod.size.width_height 186,186
+ fi
+ 
+-setprop vendor.display.res_switch_en 1
++setprop vendor.display.res_switch_en 0
+ 
+ if getprop ro.bionic.cpu_variant |grep -q kryo300;then
+     resetprop_phh ro.bionic.cpu_variant cortex-a75
+@@ -1212,3 +1240,30 @@ fi
+ if getprop ro.vendor.build.fingerprint | grep -iq -e Rebecco/K70_ROW; then
+     resetprop_phh ro.surface_flinger.primary_display_orientation ORIENTATION_0
+ fi
++
++# === SUNNO OS DISPLAY & PANEL PROTECTION FIX (TECNO-BG6 / qogirl6_dpu / ICNL9916) ===
++if [ -e /sys/class/display/dispc0/PQ/cm ]; then
++    cat /system/etc/sunno_cm_identity.bin > /sys/class/display/dispc0/PQ/cm 2>/dev/null || true
++    chmod 0444 /sys/class/display/dispc0/PQ/cm 2>/dev/null || true
++fi
++if [ -e /sys/class/display/dispc0/PQ/disable ]; then
++    echo 1 > /sys/class/display/dispc0/PQ/disable 2>/dev/null || true
++fi
++if [ -e /proc/ankai/shutdown_flag ]; then
++    echo 0 > /proc/ankai/shutdown_flag 2>/dev/null || true
++fi
++resetprop_phh ro.surface_flinger.use_color_management false
++resetprop_phh persist.sys.sf.color_saturation 1.0
++resetprop_phh persist.sys.sf.native_mode 0
++resetprop_phh ro.surface_flinger.use_content_detection_for_refresh_rate false
++resetprop_phh ro.surface_flinger.set_idle_timer_ms 0
++resetprop_phh ro.surface_flinger.set_touch_timer_ms 0
++resetprop_phh ro.surface_flinger.set_display_power_timer_ms 0
++resetprop_phh persist.vendor.hwc.display.modeid 0
++resetprop_phh vendor.display.res_switch_en 0
++resetprop_phh ro.sr.displaysize.defaultresolution 1
++resetprop_phh ro.sr.displaysize.lowresolution 1
++resetprop_phh ro.sprd.displayenhance true
++resetprop_phh ro.sprd.nightdisplay.enhance true
++resetprop_phh ro.vendor.display.enhance.BootComplete 1
++# === END SUNNO OS DISPLAY FIX ===

@@ -1,0 +1,62 @@
+Signature-Version: 1.0
+Created-By: 1.0 (Android SignApk)
+SHA-256-Digest-Manifest: ohvTfqcDZurEtrpVVcSlnDqTg/HDfoaxK4k89gD/AKI=
+X-Android-APK-Signed: 2, 3
+
+Name: AndroidManifest.xml
+SHA-256-Digest: c4+oxQFMhJicDeMNaiw/r5mQk5b5o9QCMgPxTuMikrA=
+
+Name: res/drawable-night-v8/perm_group_location.xml
+SHA-256-Digest: yKCHh+Ve++Rbym2greELqBwUyscyE0gycVM5u8ohsd4=
+
+Name: res/drawable-nodpi-v4/default_lock_wallpaper.png
+SHA-256-Digest: psx47T3LNNNw9O27cRWGBVUvdMr0vp85DoB3SP7fTec=
+
+Name: res/drawable-nodpi-v4/default_wallpaper.png
+SHA-256-Digest: awAmj6dbaKK7tC711cLRHZNRaFIvy3BntVdCj9Ps8Xc=
+
+Name: res/drawable-sw600dp-nodpi-v13/default_lock_wallpaper.png
+SHA-256-Digest: z3MPru9sSKRdas5BXQ+a8+bVJrfIQMGacIVHrVLAhPw=
+
+Name: res/drawable-sw600dp-nodpi-v13/default_wallpaper.png
+SHA-256-Digest: OUV8PfyfnKr7qlTTXi6SNsVuGg2UWNPE1RXv4DZv0ZM=
+
+Name: res/drawable/perm_group_activity_recognition.xml
+SHA-256-Digest: uXXOxRJqWrbTWGcJfILEg6KN5A2i2st4jYo8/NvLzls=
+
+Name: res/drawable/perm_group_calendar.xml
+SHA-256-Digest: SPp4YrTSW01eu1kFwtSvRGApX3jKwe8PTyyNW6BBw4g=
+
+Name: res/drawable/perm_group_call_log.xml
+SHA-256-Digest: neeRmedjEdpCg1XfhzMK3fo9Lx7dPNSEIZLwE2jAQZ0=
+
+Name: res/drawable/perm_group_camera.xml
+SHA-256-Digest: UMCQokGTHwUs8lLk9l8aX8ETrQlDipKLnRuW6hmzcrY=
+
+Name: res/drawable/perm_group_contacts.xml
+SHA-256-Digest: xytIjTaSGlHsfx9XLwcj0QOvDNSrVEOGhsIPUEAPoeg=
+
+Name: res/drawable/perm_group_location.xml
+SHA-256-Digest: EZVOswobQewZNmxdossPAoeQZDwEBBq49qZog5a9A0Y=
+
+Name: res/drawable/perm_group_microphone.xml
+SHA-256-Digest: tuQnCLQ2XhNt6SusOj1D2k/dHPpF2Xycgs8GsFDk4FQ=
+
+Name: res/drawable/perm_group_phone_calls.xml
+SHA-256-Digest: xZDp+KIo8rkOFEApzv7WHmNUsYTfRCf+yoQ6gl37QA4=
+
+Name: res/drawable/perm_group_read_media_aural.xml
+SHA-256-Digest: fCT+Db0UPMew7QSCH+jBe0mKQt+INRRMslRA6FewjKs=
+
+Name: res/drawable/perm_group_sms.xml
+SHA-256-Digest: +dyuqEru1/N23PNxbQSC5wZBY2PvTI2SiLDSfxfmjXo=
+
+Name: res/drawable/perm_group_storage.xml
+SHA-256-Digest: qCV/DyS/58xtm3aXwc4VNlDWWRnbFqVeqeR2XyB5vrA=
+
+Name: res/xml/power_profile.xml
+SHA-256-Digest: NcDiPxoDP/YPQ8ahk4HA+/XuGIhJloGEMBa64WeEXow=
+
+Name: resources.arsc
+SHA-256-Digest: HX+Va3Kx7iYqX4xfN+ke64NbzfMpckUBiHRRx8Tx4u0=
+

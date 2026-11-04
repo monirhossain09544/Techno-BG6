@@ -23,7 +23,7 @@ Realme C51/C53 (same UMS9230 SoC) open-source kernel, with:
 
 | Role | Where | Notes |
 |---|---|---|
-| **Build server** | `gpu-kmsm` · 173.208.247.17:22 · user `administrator` | 72 threads, 256 GB RAM, A100 (unused for kernel) |
+| **Build server** | `gpu-kmsm` · ${BG6_OLD_SERVER_IP}:22 · user `administrator` | 72 threads, 256 GB RAM, A100 (unused for kernel) |
 | **Local PC** | `C:\Users\Monir\Documents\deepseek-harness\default-workspace\tecno_bg6_kernel\` | This preservation copy |
 | **Phone backup** | `D:\Tecno_BG6_Full_ROM_Backup\` | 6.06 GB, 72 partitions, verified |
 | **Phone** | adb serial `1099738415003670` | fastboot + adb |

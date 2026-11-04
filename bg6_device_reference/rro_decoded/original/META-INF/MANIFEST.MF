@@ -1,0 +1,59 @@
+Manifest-Version: 1.0
+
+Name: AndroidManifest.xml
+SHA-256-Digest: cJwTA8HrpMLKSSGlvIz5fIBfQmXbifnD3JRnYJBnFkE=
+
+Name: res/drawable-night-v8/perm_group_location.xml
+SHA-256-Digest: IZjfWpCHd49LAt97QyKTzE9DXprmU5OwKffv3hrQ+ag=
+
+Name: res/drawable-nodpi-v4/default_lock_wallpaper.png
+SHA-256-Digest: VHSGwee7ebVJwImXPDYXPAdvw2Y32J1Al4h+G1gTt54=
+
+Name: res/drawable-nodpi-v4/default_wallpaper.png
+SHA-256-Digest: VHSGwee7ebVJwImXPDYXPAdvw2Y32J1Al4h+G1gTt54=
+
+Name: res/drawable-sw600dp-nodpi-v13/default_lock_wallpaper.png
+SHA-256-Digest: VHSGwee7ebVJwImXPDYXPAdvw2Y32J1Al4h+G1gTt54=
+
+Name: res/drawable-sw600dp-nodpi-v13/default_wallpaper.png
+SHA-256-Digest: VHSGwee7ebVJwImXPDYXPAdvw2Y32J1Al4h+G1gTt54=
+
+Name: res/drawable/perm_group_activity_recognition.xml
+SHA-256-Digest: vCDGEdln4ea9lDooTjaTTzpN1pKMcAEs4PAieZL8Bu0=
+
+Name: res/drawable/perm_group_calendar.xml
+SHA-256-Digest: 2s9WLmM4hzQjYw9Pf+JepuR/QpPudOP0GoKOiRQqIus=
+
+Name: res/drawable/perm_group_call_log.xml
+SHA-256-Digest: fykNubGgtR9Z88hu2JPEQO9wfq2QvANq/BWntgKfsSI=
+
+Name: res/drawable/perm_group_camera.xml
+SHA-256-Digest: 10yQBG7arFKgdR3zGv3sM1rqmpWgj5JjNwes09GCEbo=
+
+Name: res/drawable/perm_group_contacts.xml
+SHA-256-Digest: WnIAjIOPFkpvakruK6g28+I/8KTLFFGYgpO1fV6yL6w=
+
+Name: res/drawable/perm_group_location.xml
+SHA-256-Digest: //MnKg8SdZ1ssyLOgpBy3qANGIhEO1q9+aY3VDCiWsA=
+
+Name: res/drawable/perm_group_microphone.xml
+SHA-256-Digest: s7YnX77KsxCzD+pkn270FHEZrPooCP6CyQWlCmVQrZ0=
+
+Name: res/drawable/perm_group_phone_calls.xml
+SHA-256-Digest: mvTsHOpyka6H4CYa+lNsmOVmIL+QgZrrlOlSgUHeQ8I=
+
+Name: res/drawable/perm_group_read_media_aural.xml
+SHA-256-Digest: 2HzEQXCbcSWRnh6D7JTZKd/Y3sBmWjTy50cPMdY3zjc=
+
+Name: res/drawable/perm_group_sms.xml
+SHA-256-Digest: oaMmZbYQety9TxnZIeMbrAiyAEUODSmmnJDcdEQxF9Q=
+
+Name: res/drawable/perm_group_storage.xml
+SHA-256-Digest: 6ijVd24X8u2GrA9jsC+ZG70wunDJDNYkvtpyPfVQ4dE=
+
+Name: res/xml/power_profile.xml
+SHA-256-Digest: 7PWYw3GMynwyhCtG1dHLBya0FpZLEvXmLVNFTFHAt1k=
+
+Name: resources.arsc
+SHA-256-Digest: +zWfxptMowna/kxXM5aH8zrD8b+MPv/65bZzuW1A4Ds=
+

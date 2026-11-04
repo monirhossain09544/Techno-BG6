@@ -1,0 +1,238 @@
+####################################
+# from generate-common-build-props
+# These properties identify this partition image.
+####################################
+ro.product.system.brand=google
+ro.product.system.device=generic
+ro.product.system.manufacturer=google
+ro.product.system.model=mainline
+ro.product.system.name=mainline
+ro.system.product.cpu.abilist=arm64-v8a,armeabi-v7a,armeabi
+ro.system.product.cpu.abilist32=armeabi-v7a,armeabi
+ro.system.product.cpu.abilist64=arm64-v8a
+ro.system.build.date=Sun Sep 20 21:26:06 UTC 2026
+ro.system.build.date.utc=1789939566
+ro.system.build.fingerprint=google/infinity_gsi/tdgsi_arm64_ab:16/BP4A.251205.006/eng.androi.20260920.212606:user/release-keys
+ro.system.build.id=BP4A.251205.006
+ro.system.build.tags=release-keys
+ro.system.build.type=user
+ro.system.build.version.incremental=1789939566
+ro.system.build.version.release=16
+ro.system.build.version.release_or_codename=16
+ro.system.build.version.sdk=36
+ro.system.build.version.sdk_full=36.1
+####################################
+# from gen_build_prop.py:generate_build_info
+####################################
+# begin build properties
+ro.build.fingerprint=google/infinity_gsi/tdgsi_arm64_ab:16/BP4A.251205.006/eng.androi.20260920.212606:user/release-keys
+ro.build.id=BP4A.251205.006
+ro.build.display.id=BP4A.251205.006 release-keys
+ro.build.version.incremental=1789939566
+ro.build.version.sdk=36
+ro.build.version.sdk_full=36.1
+ro.build.version.preview_sdk=0
+ro.build.version.preview_sdk_fingerprint=REL
+ro.build.version.codename=REL
+ro.build.version.all_codenames=REL
+ro.build.version.known_codenames=Base,Base11,Cupcake,Donut,Eclair,Eclair01,EclairMr1,Froyo,Gingerbread,GingerbreadMr1,Honeycomb,HoneycombMr1,HoneycombMr2,IceCreamSandwich,IceCreamSandwichMr1,JellyBean,JellyBeanMr1,JellyBeanMr2,Kitkat,KitkatWatch,Lollipop,LollipopMr1,M,N,NMr1,O,OMr1,P,Q,R,S,Sv2,Tiramisu,UpsideDownCake,VanillaIceCream,Baklava
+ro.build.version.release=16
+ro.build.version.release_or_codename=16
+ro.build.version.release_or_preview_display=16
+ro.build.version.security_patch=2026-09-01
+ro.build.version.base_os=
+ro.build.version.min_supported_target_sdk=28
+ro.build.date=Sun Sep 20 21:26:06 UTC 2026
+ro.build.date.utc=1789939566
+ro.build.type=user
+ro.build.user=android-build
+ro.build.host=r-09e8dc22c827d68f-91pf
+ro.build.tags=release-keys
+ro.build.flavor=infinity_gsi-user
+# ro.product.cpu.abi and ro.product.cpu.abi2 are obsolete,
+# use ro.product.cpu.abilist instead.
+ro.product.cpu.abi=arm64-v8a
+ro.product.locale=en-US
+ro.wifi.channels=
+# Do not try to parse description or thumbprint
+ro.build.description=infinity_gsi-user 16 BP4A.251205.006 eng.androi.20260920.212606 release-keys
+# end build properties
+####################################
+# from device/phh/treble/system.prop
+####################################
+# Removed by post_process_props.py because overridden by ro.adb.secure=1
+#ro.adb.secure?=0
+#Some devices have sdcardfs kernel panicing on 8.0
+#Disable for everyone for the moment
+ro.sys.sdcardfs=0
+persist.sys.overlay.nightmode=true
+#Disable debugging strict mode toasts
+persist.sys.strictmode.disable=true
+persist.sys.phh.mainkeys=0
+fw.max_users=10
+persist.sys.max_profiles=10
+ro.boot.realme.lockstate=0
+#Fixes fingerprint unlock delay
+persist.wm.enable_remote_keyguard_animation=0
+# Enable support of one-handed mode
+ro.support_one_handed_mode=true
+# Set the Bluetooth Class of Device
+# Service Field: 0x5A -> 90
+#    Bit 17: Networking
+#    Bit 19: Capturing
+#    Bit 20: Object Transfer
+#    Bit 22: Telephony
+# MAJOR_CLASS: 0x02 -> 2 (Phone)
+# MINOR_CLASS: 0x0C -> 12 (Smart Phone)
+bluetooth.device.class_of_device=90,2,12
+# Enable system-side generic bluetooth audio HAL
+persist.bluetooth.system_audio_hal.enabled=true
+# Set commonly-supported Bluetooth profiles to enabled
+# TODO: Enable BLE Audio profiles on newer vendors
+bluetooth.profile.asha.central.enabled=true
+bluetooth.profile.a2dp.source.enabled=true
+bluetooth.profile.avrcp.target.enabled=true
+bluetooth.profile.bas.client.enabled=true
+bluetooth.profile.gatt.enabled=true
+bluetooth.profile.hfp.ag.enabled=true
+bluetooth.profile.hid.device.enabled=true
+bluetooth.profile.hid.host.enabled=true
+bluetooth.profile.map.server.enabled=true
+bluetooth.profile.opp.enabled=true
+bluetooth.profile.pan.nap.enabled=true
+bluetooth.profile.pan.panu.enabled=true
+bluetooth.profile.pbap.server.enabled=true
+bluetooth.profile.sap.server.enabled=true
+# Samsung vendors default to a Samsung-specific gadget for MTP. Set this to use AOSP's functionfs MTP
+vendor.usb.use_ffs_mtp=1
+# lmkd tuning: safe defaults for GSI across diverse hardware
+# Disable critical_upgrade to prevent overly aggressive kills on devices
+# where memory pressure detection may not work correctly (e.g., older kernels)
+ro.lmk.critical_upgrade=false
+# Kill heaviest task first for more predictable memory management
+ro.lmk.kill_heaviest_task=true
+# Heap floor: vendor build.prop values as low as 16m are seen in the wild.
+# Android 16 system_server needs ~200m+ to initialise; override with a safe
+# minimum while preserving larger vendor values via the ? default operator.
+dalvik.vm.heapgrowthlimit=256m
+dalvik.vm.heapsize=512m
+# disable QPR2 vsync omission optimisation for GSI compatibility.
+# on GSI builds, vendor HWCs may not properly initialise DRM vblank
+# events during the boot power-on sequence, leaving hardware vsync
+# unavailable.  with this flag enabled, the EventThread enters Idle
+# state and composition stalls.  disabling it restores QPR0 behaviour
+# where synthetic vsync keeps composition alive as a fallback.
+debug.sf.no_vsyncs_on_screen_off=false
+ro.hwui.use_vulkan=0
+persist.sys.activity_anim_perf_override=0
+####################################
+# from variable ADDITIONAL_SYSTEM_PROPERTIES
+####################################
+ro.treble.enabled=true
+ro.llndk.api_level=202504
+ro.actionable_compatible_property.enabled=true
+persist.debug.dalvik.vm.core_platform_api_policy=just-warn
+ro.postinstall.fstab.prefix=/system
+ro.secure=1
+security.perf_harden=1
+ro.appcompat_override.ro.boot.verifiedbootstate=green
+ro.adb.secure=0
+ro.allow.mock.location=0
+ro.debuggable=0
+net.bt.name=Android
+ro.force.debuggable=0
+####################################
+# from variable PRODUCT_SYSTEM_PROPERTIES
+####################################
+debug.atrace.tags.enableflags=0
+persist.traced.enable=1
+ro.surface_flinger.game_default_frame_rate_override=120
+dalvik.vm.image-dex2oat-Xms=64m
+dalvik.vm.image-dex2oat-Xmx=64m
+dalvik.vm.dex2oat-Xms=64m
+dalvik.vm.dex2oat-Xmx=512m
+dalvik.vm.usejit=true
+dalvik.vm.dexopt.secondary=true
+dalvik.vm.dexopt.thermal-cutoff=2
+dalvik.vm.appimageformat=lz4
+ro.dalvik.vm.native.bridge=0
+pm.dexopt.post-boot=verify
+pm.dexopt.first-boot=verify
+pm.dexopt.boot-after-ota=verify
+pm.dexopt.boot-after-mainline-update=verify
+pm.dexopt.install=speed-profile
+pm.dexopt.install-fast=skip
+pm.dexopt.install-bulk=speed-profile
+pm.dexopt.install-bulk-secondary=verify
+pm.dexopt.install-bulk-downgraded=verify
+pm.dexopt.install-bulk-secondary-downgraded=verify
+pm.dexopt.bg-dexopt=speed-profile
+pm.dexopt.ab-ota=speed-profile
+pm.dexopt.inactive=verify
+pm.dexopt.cmdline=verify
+pm.dexopt.shared=speed
+dalvik.vm.dex2oat-resolve-startup-strings=true
+dalvik.vm.dex2oat-max-image-block-size=524288
+dalvik.vm.minidebuginfo=true
+dalvik.vm.dex2oat-minidebuginfo=true
+dalvik.vm.madvise.vdexfile.size=104857600
+dalvik.vm.madvise.odexfile.size=104857600
+dalvik.vm.usap_pool_enabled=false
+dalvik.vm.usap_refill_threshold=1
+dalvik.vm.usap_pool_size_max=3
+dalvik.vm.usap_pool_size_min=1
+dalvik.vm.usap_pool_refill_delay_ms=3000
+dalvik.vm.useartservice=true
+dalvik.vm.enable_pr_dexopt=true
+ro.cp_system_other_odex=1
+ro.apex.updatable=true
+apexd.config.compressed_apex=true
+####################################
+# from variable PRODUCT_SYSTEM_DEFAULT_PROPERTIES
+####################################
+ro.build.version.sdk=36
+ro.build.version.codename=REL
+ro.build.version.all_codenames=REL
+ro.build.version.release=16
+ro.build.version.security_patch=2026-09-01
+# Removed by post_process_props.py because overridden by ro.adb.secure=1
+#ro.adb.secure?=0
+ro.logd.auditd=true
+ro.logd.kernel=true
+ro.cust.cdrom=/dev/null
+debug.fdsan=warn_once
+debug.stagefright.c2inputsurface=-1
+persist.sys.fflag.override.settings_provider_model=false
+ro.setupwizard.mode=OPTIONAL
+# Auto-added by post_process_props.py
+persist.sys.usb.config=mtp,adb
+####################################
+# Adding footer from :applied_backported_fixes
+# with path out/soong/.intermediates/build/make/backported_fixes/applied_backported_fixes/gen/applied_backported_fixes.prop
+####################################
+# The following backported fixes have been applied
+# https://issuetracker.google.com/issues/350037023 with alias 1
+# https://issuetracker.google.com/issues/385124056 with alias 4
+ro.build.backported_fixes.alias_bitset.long_list=18
+# end of file
+
+
+# TECNO-BG6 Hardware & Display Optimizations (Unisoc T606 / ums9230 / Mali-G57)
+persist.vendor.hwc.display.modeid=0
+persist.sys.fuse.bpf.override=false
+ro.surface_flinger.use_content_detection_for_refresh_rate=false
+ro.surface_flinger.max_frame_buffer_acquired_buffers=3
+debug.sf.latch_unsignaled=1
+debug.sf.auto_latch_unsignaled=false
+debug.sf.disable_backpressure=1
+dalvik.vm.isa.arm64.variant=cortex-a75
+dalvik.vm.isa.arm64.features=default
+dalvik.vm.isa.arm.variant=cortex-a55
+dalvik.vm.isa.arm.features=default
+pm.dexopt.bg-dexopt=speed-profile
+pm.dexopt.shared=speed
+ro.config.low_ram=false
+ro.com.google.acsa=true
+ro.opa.eligible_device=true
+persist.sys.phh.unisoc_color_transform_workaround=1
+persist.sys.override_mock_location=true

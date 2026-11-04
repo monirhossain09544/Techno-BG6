@@ -1,0 +1,35 @@
+#!/system/bin/sh
+# Native Kernel-Level Hardware GNSS Location Controller (TECNO-BG6)
+
+ACTION="$1"
+case "$ACTION" in
+    set)
+        LAT="$2"
+        LON="$3"
+        ALT="${4:-15.2}"
+        ACC="${5:-3.4}"
+        if [ -z "$LAT" ] || [ -z "$LON" ]; then
+            echo "Usage: kernel-gps set <lat> <lon> [alt] [acc]"
+            exit 1
+        fi
+        mkdir -p /mnt/phh
+        echo "${LAT},${LON},${ALT},${ACC}" > /mnt/phh/kernel_gps.conf
+        chmod 0644 /mnt/phh/kernel_gps.conf
+        setprop persist.sys.override_mock_location true
+        setprop persist.sys.kernel.gps.coords "${LAT},${LON},${ALT},${ACC}"
+        cmd location providers send-extra-command gps kernel_inject >/dev/null 2>&1
+        echo "[KERNEL-GNSS] Active hardware GNSS coordinates locked to: ${LAT}, ${LON} (alt=${ALT}m, acc=${ACC}m)"
+        ;;
+    off|stop|clear)
+        rm -f /mnt/phh/kernel_gps.conf
+        setprop persist.sys.kernel.gps.coords ""
+        echo "[KERNEL-GNSS] Hardware coordinate override disabled (Mock locations remain stealth-masked)."
+        ;;
+    status|*)
+        COORDS="$(getprop persist.sys.kernel.gps.coords)"
+        STEALTH="$(getprop persist.sys.override_mock_location)"
+        echo "=== TECNO-BG6 Native Kernel GNSS Engine ==="
+        echo "Stealth Mock Masking : ${STEALTH:-true}"
+        echo "Kernel GNSS Override : ${COORDS:-<disabled - using real GPS or stealth mock app>}"
+        ;;
+esac

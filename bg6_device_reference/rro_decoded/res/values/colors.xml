@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="os_basic_brand_color">#ff2278ff</color>
+    <color name="os_platform_clickable_color">#332a73ff</color>
+    <color name="os_platform_disabled_color">#662a73ff</color>
+</resources>

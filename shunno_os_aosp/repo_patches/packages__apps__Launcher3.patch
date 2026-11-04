@@ -1,0 +1,102 @@
+diff --git a/quickstep/src/com/android/launcher3/uioverrides/QuickstepLauncher.java b/quickstep/src/com/android/launcher3/uioverrides/QuickstepLauncher.java
+index 2c45129..0059a39 100644
+--- a/quickstep/src/com/android/launcher3/uioverrides/QuickstepLauncher.java
++++ b/quickstep/src/com/android/launcher3/uioverrides/QuickstepLauncher.java
+@@ -248,6 +248,7 @@ public class QuickstepLauncher extends Launcher {
+     private boolean mIsPredictiveBackToHomeInProgress;
+ 
+     private HomeTransitionController mHomeTransitionController;
++    private SunnoHomeView mSunnoHomeView;
+ 
+     @Override
+     protected void setupViews() {
+@@ -292,6 +293,24 @@ public class QuickstepLauncher extends Launcher {
+             mSplitSelectStateController.initSplitFromDesktopController(this);
+         }
+         mHotseatPredictionController = new HotseatPredictionController(this);
++        if (mSunnoHomeView == null) {
++            mSunnoHomeView = new SunnoHomeView(this);
++            com.android.launcher3.views.BaseDragLayer.LayoutParams slp =
++                    new com.android.launcher3.views.BaseDragLayer.LayoutParams(
++                            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
++                            android.view.ViewGroup.LayoutParams.MATCH_PARENT);
++            slp.ignoreInsets = true;
++            getDragLayer().addView(mSunnoHomeView, slp);
++            mSunnoHomeView.bringToFront();
++        }
++        if (getWorkspace() != null) {
++            getWorkspace().setVisibility(View.GONE);
++            getWorkspace().setTranslationX(10000f);
++        }
++        if (getHotseat() != null) {
++            getHotseat().setVisibility(View.GONE);
++            getHotseat().setTranslationX(10000f);
++        }
+ 
+         mEnableWidgetDepth = SystemProperties.getBoolean("ro.launcher.depth.widget", true);
+         getWorkspace().addOverlayCallback(progress ->
+@@ -548,9 +567,49 @@ public class QuickstepLauncher extends Launcher {
+         removeBackAnimationCallback(mSplitSelectStateController.getSplitBackHandler());
+     }
+ 
++    @Override
++    public void onStateSetStart(LauncherState state) {
++        super.onStateSetStart(state);
++        if (getWorkspace() != null) getWorkspace().setTranslationX(10000f);
++        if (getHotseat() != null) getHotseat().setTranslationX(10000f);
++        if (mSunnoHomeView != null) {
++            if (state == ALL_APPS) {
++                mSunnoHomeView.bringToFront();
++                mSunnoHomeView.openDrawerAnimated(false);
++                getStateManager().goToState(NORMAL, false);
++                return;
++            } else if (state == NORMAL) {
++                mSunnoHomeView.bringToFront();
++                mSunnoHomeView.setVisibility(View.VISIBLE);
++                mSunnoHomeView.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(180).start();
++            } else {
++                mSunnoHomeView.animate().alpha(0f).scaleX(0.92f).scaleY(0.92f).setDuration(140).start();
++            }
++        }
++    }
++
++    @Override
++    protected void onStateBack() {
++        if (mSunnoHomeView != null && mSunnoHomeView.handleBackPress()) {
++            return;
++        }
++        super.onStateBack();
++    }
++
+     @Override
+     public void onStateSetEnd(LauncherState state) {
+         super.onStateSetEnd(state);
++        if (getWorkspace() != null) getWorkspace().setTranslationX(10000f);
++        if (getHotseat() != null) getHotseat().setTranslationX(10000f);
++        if (mSunnoHomeView != null) {
++            if (state == NORMAL || state == ALL_APPS) {
++                mSunnoHomeView.bringToFront();
++                mSunnoHomeView.setVisibility(View.VISIBLE);
++                mSunnoHomeView.setAlpha(1f);
++            } else {
++                mSunnoHomeView.setVisibility(View.INVISIBLE);
++            }
++        }
+         handlePendingActivityRequest();
+ 
+         switch (state.ordinal) {
+@@ -787,6 +846,14 @@ public class QuickstepLauncher extends Launcher {
+     @Override
+     protected void onNewIntent(Intent intent) {
+         super.onNewIntent(intent);
++        if (mSunnoHomeView != null) {
++            mSunnoHomeView.bringToFront();
++            mSunnoHomeView.closeDrawerAnimated();
++            mSunnoHomeView.setVisibility(View.VISIBLE);
++            mSunnoHomeView.setAlpha(1f);
++            mSunnoHomeView.setScaleX(1f);
++            mSunnoHomeView.setScaleY(1f);
++        }
+         OverviewCommandHelper overviewCommandHelper = mTISBindHelper.getOverviewCommandHelper();
+         if (overviewCommandHelper != null) {
+             overviewCommandHelper.clearPendingCommands();

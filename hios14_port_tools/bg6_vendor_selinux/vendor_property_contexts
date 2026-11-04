@@ -1,0 +1,364 @@
+#line 1 "out/soong/.intermediates/system/sepolicy/contexts/vendor_property_contexts/android_common/gen/namespace_checked/device/sprd/mpool/sepolicy/vendor/security/property_contexts"
+vendor.sprd.storageproxyd.                    u:object_r:vendor_storageproxyd_default_prop:s0
+#line 1 "out/soong/.intermediates/system/sepolicy/contexts/vendor_property_contexts/android_common/gen/namespace_checked/device/sprd/mpool/sepolicy/vendor/property_contexts"
+persist.vendor.avc.               u:object_r:vendor_avc_prop:s0
+
+##########################
+# property service keys
+#
+#persist.vendor.delta.time u:object_r:system_prop:s0
+persist.vendor.ylog_lite.   u:object_r:vendor_ylog_lite_pprop:s0
+vendor.ylog_lite.   u:object_r:vendor_ylog_lite_prop:s0
+persist.vendor.radio.    u:object_r:vendor_radio_prop:s0
+ro.vendor.modem.         u:object_r:vendor_radio_prop:s0
+ro.vendor.radio.         u:object_r:vendor_radio_prop:s0
+vendor.radio.            u:object_r:vendor_radio_prop:s0
+vendor.ril.              u:object_r:vendor_radio_prop:s0
+vendor.sim.              u:object_r:vendor_radio_prop:s0
+vendor.data.             u:object_r:vendor_radio_prop:s0
+vendor.net.              u:object_r:vendor_radio_prop:s0
+vendor.gsm.serial        u:object_r:vendor_radio_prop:s0
+vendor.bluetooth.        u:object_r:vendor_bt_prop:s0
+persist.vendor.sys.      u:object_r:vendor_sys_prop:s0
+vendor.sys.              u:object_r:vendor_sys_prop:s0
+ro.vendor.media          u:object_r:vendor_video_prop:s0
+vendor.h264dec           u:object_r:vendor_video_prop:s0
+vendor.h264enc           u:object_r:vendor_video_prop:s0
+vendor.m4vdec            u:object_r:vendor_video_prop:s0
+persist.vendor.sysdump   u:object_r:vendor_systemdebuggerd_prop:s0
+vendor.debug.sysdump.enabled   u:object_r:vendor_systemdebuggerd_prop:s0
+persist.vendor.modem.nr.enable u:object_r:vendor_media_prop:s0
+# For thermal
+
+# For Power
+persist.vendor.power.            u:object_r:vendor_power_prop:s0
+
+# For aprd
+persist.vendor.aprservice.enabled       u:object_r:vendor_aprd_prop:s0
+# For Camera
+vendor.cam.            u:object_r:vendor_camera_prop:s0
+ro.vendor.cam.         u:object_r:vendor_camera_prop:s0
+persist.vendor.cam.    u:object_r:vendor_camera_prop:s0
+# For FaceID
+persist.vendor.faceid.       u:object_r:vendor_faceid_prop:s0
+ro.vendor.faceid.            u:object_r:vendor_faceid_prop:s0
+#For Fingerprint
+ro.vendor.fps.      u:object_r:vendor_fps_prop:s0
+# For Hwui
+ro.vendor.hwui.    u:object_r:vendor_hwui_prop:s0
+# For Wcnd
+persist.vendor.wcnd.   u:object_r:vendor_wcnd_prop:s0
+# For slogmodem
+persist.vendor.modem.  u:object_r:vendor_modem_prop:s0
+vendor.modem.          u:object_r:vendor_modem_prop:s0
+ro.vendor.phy.log      u:object_r:vendor_modem_prop:s0
+ro.vendor.ag.          u:object_r:vendor_ag_prop:s0
+ro.vendor.sp.          u:object_r:vendor_sp_prop:s0
+ro.vendor.ch.          u:object_r:vendor_ch_prop:s0
+ro.vendor.product.partitionpath    u:object_r:vendor_product_prop:s0
+# For engineerMode
+persist.vendor.eng.   u:object_r:vendor_eng_prop:s0
+
+vendor.hwc.drm.device  u:object_r:vendor_hwc_prop:s0
+# For GPU
+ro.vendor.gpu.boost             u:object_r:vendor_gpu_prop:s0
+ro.vendor.gpu.boost.path        u:object_r:vendor_gpu_prop:s0
+ro.vendor.gpu.boost.sf          u:object_r:vendor_gpu_prop:s0
+ro.vendor.gpu.boost.sf.level    u:object_r:vendor_gpu_prop:s0
+ro.vendor.arm.                  u:object_r:vendor_arm_prop:s0
+vendor.mali.                    u:object_r:vendor_arm_prop:s0
+ro.vendor.hwui.platform     u:object_r:vendor_hwui_prop:s0
+# For powerhint
+# ro.vendor.powerhint.enable u:object_r:vendor_powerhint_prop:s0
+
+# For sf
+ro.vendor.sf.   u:object_r:vendor_sf_prop:s0
+ro.vendor.gpu.   u:object_r:vendor_gpu_prop:s0
+
+ro.vendor.sf.fbc  u:object_r:vendor_sf_fbc_prop:s0
+ro.vendor.gpu.fbc  u:object_r:vendor_gpu_fbc_prop:s0
+ro.vendor.vsp.fbc  u:object_r:vendor_vsp_fbc_prop:s0
+ro.vendor.whale2.afbc  u:object_r:vendor_whale2_afbc_prop:s0
+
+vendor.all.modules.ready                        u:object_r:vendor_device_prop:s0
+
+#For ro.vendor.soc.*
+vendor.soc.manufacturer    u:object_r:vendor_soc_prop:s0
+vendor.soc.model           u:object_r:vendor_soc_prop:s0
+
+#For wifionly
+ro.vendor.radio.noril    u:object_r:vendor_radio_noril_prop:s0
+ro.vendor.radio.hasmodem    u:object_r:vendor_radio_hasmodem_prop:s0
+
+#For dataonly
+ro.vendor.radio.dataonly    u:object_r:vendor_radio_dataonly_prop:s0
+
+#For audio
+ro.vendor.audio.whale_hal          u:object_r:vendor_audio_prop:s0
+persist.vendor.audio.hifi_enabled  u:object_r:vendor_audio_prop:s0
+ro.vendor.af.bt_fc_multiplier      u:object_r:vendor_audio_prop:s0
+ro.vendor.af.dup_multiplier        u:object_r:vendor_audio_prop:s0
+ro.vendor.af.raise_bt_thread_prio  u:object_r:vendor_audio_prop:s0
+
+#for wfd
+ro.vendor.media.wfd.resolution        u:object_r:vendor_wfd_prop:s0
+
+#for fingerprint dynamic log
+persist.vendor.debug.fp.support  u:object_r:vendor_fp_prop:s0
+
+#For logcat2kmsg
+persist.vendor.logcat2kmsg u:object_r:vendor_logcat_prop:s0
+
+#For DynamicLog
+persist.vendor.camera.bypass.pdaf  u:object_r:vendor_camera_prop:s0
+persist.vendor.fdtop.fdv3  u:object_r:vendor_fdtop_prop:s0
+
+#for display
+ro.vendor.display.multidisplay  u:object_r:vendor_display_prop:s0
+ro.vendor.displayenhance  u:object_r:vendor_display_prop:s0
+ro.vendor.nightdisplay.enhance  u:object_r:vendor_display_prop:s0
+persist.vendor.hwc.display.modeid u:object_r:vendor_hwc_prop:s0
+
+#for Power
+persist.vendor.bl.max  u:object_r:vendor_display_prop:s0
+
+#NFBD: add type C headset by S681LNGL-226 by feng.wang 20230614 start
+#for typec headset
+ro.vendor.tran.trans_typecheadset  u:object_r:vendor_typecheadset_prop:s0
+#NFBD: add type C headset by S681LNGL-226 by feng.wang 20230614 end
+#line 1 "out/soong/.intermediates/system/sepolicy/contexts/vendor_property_contexts/android_common/gen/namespace_checked/device/tran/system/module/tnev/msepolicy/vendor/property_contexts"
+#vendor.ril.recovery.sim0                u:object_r:vendor_mtk_telephony_sensitive_prop:s0
+#vendor.ril.recovery.sim1                u:object_r:vendor_mtk_telephony_sensitive_prop:s0
+#line 1 "out/soong/.intermediates/system/sepolicy/contexts/vendor_property_contexts/android_common/gen/namespace_checked/device/sprd/mpool/module/vendor/audio/msepolicy/vendor/property_contexts"
+#auido sub-system use
+persist.vendor.media.dump.path u:object_r:vendor_audio_prop:s0
+persist.vendor.media.dump.switch u:object_r:vendor_audio_prop:s0
+persist.vendor.media.audiofw.devices.dump u:object_r:vendor_audio_prop:s0
+persist.vendor.media.audiofw.dump u:object_r:vendor_audio_prop:s0
+persist.vendor.audioloop.test.result  u:object_r:vendor_audio_prop:s0
+persist.vendor.modem.t.enable  u:object_r:vendor_audio_prop:s0
+persist.vendor.modem.w.enable  u:object_r:vendor_audio_prop:s0
+persist.vendor.modem.tl.enable  u:object_r:vendor_audio_prop:s0
+persist.vendor.modem.lf.enable  u:object_r:vendor_audio_prop:s0
+persist.vendor.modem.l.enable  u:object_r:vendor_audio_prop:s0
+persist.vendor.audio.nv  u:object_r:vendor_audio_prop:s0
+ro.vendor.audio.fragment_size u:object_r:vendor_audio_prop:s0
+ro.vendor.audio.usb.period_us u:object_r:vendor_audio_prop:s0
+ro.vendor.audio_tunning.nr u:object_r:vendor_audio_prop:s0
+ro.vendor.audio_tunning.dual_spk u:object_r:vendor_audio_prop:s0
+ro.vendor.digital.fm.support  u:object_r:vendor_audio_prop:s0
+ro.vendor.audio.product.hardware  u:object_r:vendor_audio_prop:s0
+persist.vendor.media.audio.dump  u:object_r:vendor_audio_prop:s0
+persist.vendor.media.systemready.state u:object_r:vendor_audio_prop:s0
+persist.vendor.audio.boot_completed  u:object_r:vendor_audio_prop:s0
+#line 1 "out/soong/.intermediates/system/sepolicy/contexts/vendor_property_contexts/android_common/gen/namespace_checked/device/sprd/mpool/module/vendor/camera/msepolicy/vendor/property_contexts"
+persist.vendor.cam.ip                      u:object_r:vendor_camera_prop:s0
+ro.vendor.camera.req.fmq.size              u:object_r:vendor_camera_ro_prop:s0
+ro.vendor.camera.res.fmq.size              u:object_r:vendor_camera_ro_prop:s0
+#line 1 "out/soong/.intermediates/system/sepolicy/contexts/vendor_property_contexts/android_common/gen/namespace_checked/device/sprd/mpool/module/vendor/ota/mfeature/ota/v-ab/msepolicy/vendor/property_contexts"
+ro.vendor.secure.boot.kce_ota  u:object_r:vendor_kce_prop:s0
+#line 1 "out/soong/.intermediates/system/sepolicy/contexts/vendor_property_contexts/android_common/gen/namespace_checked/device/sprd/mpool/module/vendor/thermal/msepolicy/vendor/property_contexts"
+persist.vendor.thermal. u:object_r:vendor_thermald_prop:s0
+persist.vendor.bsservice. u:object_r:vendor_thermald_prop:s0
+vendor.thermal. u:object_r:vendor_thermald_prop:s0
+#line 1 "out/soong/.intermediates/system/sepolicy/contexts/vendor_property_contexts/android_common/gen/namespace_checked/device/sprd/mpool/module/vendor/gpu/msepolicy/vendor/property_contexts"
+# For hal_graphics_composer_default
+
+# For hal_graphics_allocator_default
+#line 1 "out/soong/.intermediates/system/sepolicy/contexts/vendor_property_contexts/android_common/gen/namespace_checked/device/sprd/mpool/module/vendor/memory/msepolicy/vendor/property_contexts"
+ro.vendor.lmk. u:object_r:vendor_lmk_prop:s0
+#For zramwb
+vendor.zram. u:object_r:vendor_zramwb_prop:s0
+#line 1 "out/soong/.intermediates/system/sepolicy/contexts/vendor_property_contexts/android_common/gen/namespace_checked/device/sprd/mpool/module/vendor/power/msepolicy/vendor/property_contexts"
+ro.vendor.minui.hwrotation  u:object_r:vendor_hwrotation_prop:s0
+#line 1 "out/soong/.intermediates/system/sepolicy/contexts/vendor_property_contexts/android_common/gen/namespace_checked/device/sprd/mpool/module/vendor/wcn/msepolicy/vendor/property_contexts"
+vendor.wlan.driver.version                      u:object_r:vendor_wifi_version:s0
+vendor.wlan.firmware.version                    u:object_r:vendor_wifi_version:s0
+#line 1 "out/soong/.intermediates/system/sepolicy/contexts/vendor_property_contexts/android_common/gen/namespace_checked/device/sprd/mpool/module/vendor/app/msepolicy/vendor/property_contexts"
+##########################
+# property service keys
+#
+#persist.vendor.delta.time u:object_r:system_prop:s0
+
+# For Video
+vendor.av1dec            u:object_r:vendor_video_prop:s0
+vendor.h265dec           u:object_r:vendor_video_prop:s0
+vendor.vp9dec            u:object_r:vendor_video_prop:s0
+vendor.vpxdec            u:object_r:vendor_video_prop:s0
+vendor.h265enc           u:object_r:vendor_video_prop:s0
+vendor.m4venc            u:object_r:vendor_video_prop:s0
+#line 1 "out/soong/.intermediates/system/sepolicy/contexts/vendor_property_contexts/android_common/gen/namespace_checked/device/sprd/mpool/module/vendor/engpc/msepolicy/vendor/property_contexts"
+# For engpc
+vendor.flag.engpc.onemodem.enable       u:object_r:vendor_engpc_prop:s0
+vendor.flag.sys.usb.config              u:object_r:vendor_engpc_prop:s0
+vendor.ro.bootmode                      u:object_r:vendor_engpc_prop:s0
+persist.vendor.modem.log_dest           u:object_r:vendor_engpc_prop:s0
+persist.vendor.wcn.log_dest             u:object_r:vendor_engpc_prop:s0
+ro.vendor.modem.support                 u:object_r:vendor_engpc_prop:s0
+vendor.flag.engpc.restart               u:object_r:vendor_engpc_prop:s0
+#BSP:for cali 30min shutdown by jianyun.yang 20230307
+vendor.transsion.cali.usb.state         u:object_r:vendor_engpc_prop:s0
+
+persist.vendor.gnss.tool.test           u:object_r:vendor_engpc_prop:s0
+
+#For 5G
+vendor.flag.sys.5gusb.config            u:object_r:vendor_engpc_prop:s0
+#line 1 "out/soong/.intermediates/system/sepolicy/contexts/vendor_property_contexts/android_common/gen/namespace_checked/vendor/transsion/partner/trancare/sepolicy/non_plat/property_contexts"
+init.svc.vendor.tranlogconfig        u:object_r:vendor_tranlog_default_prop:s0
+ro.vendor.trancare.support           u:object_r:vendor_tranlog_default_prop:s0
+ro.vendor.cloudengine.support        u:object_r:vendor_tranlog_default_prop:s0
+#line 1 "out/soong/.intermediates/system/sepolicy/contexts/vendor_property_contexts/android_common/gen/namespace_checked/vendor/transsion/libs/dts/sepolicy/property_contexts"
+vendor.dts.audio.   u:object_r:vendor_dts_audio_prop:s0
+ro.vendor.dts.      u:object_r:vendor_dts_audio_prop:s0
+#line 1 "out/soong/.intermediates/system/sepolicy/contexts/vendor_property_contexts/android_common/gen/namespace_checked/vendor/transsion/partner/scaler/sepolicy/non_plat/property_contexts"
+ro.vendor.app_resolution_tuner u:object_r:vendor_scaler_default_prop:s0
+ro.vendor.gamemode_platform u:object_r:vendor_scaler_default_prop:s0
+ro.vendor.scaler_version u:object_r:vendor_scaler_default_prop:s0
+ro.vendor.scaler_time u:object_r:vendor_scaler_default_prop:s0
+#SPD: add TGPA_RT 20220418
+ro.vendor.tgpa_resolution_tuner u:object_r:vendor_scaler_default_prop:s0
+ro.vendor.tgpa_scaler_version u:object_r:vendor_scaler_default_prop:s0
+ro.vendor.tgpa_scaler_time u:object_r:vendor_scaler_default_prop:s0
+#line 1 "out/soong/.intermediates/system/sepolicy/contexts/vendor_property_contexts/android_common/gen/namespace_checked/vendor/transsion/partner/uxdetector/sepolicy/non_plat/property_contexts"
+ro.vendor.trancare.uxdetector           u:object_r:vendor_uxdetector_prop:s0
+ro.vendor.trancare.uxdetectorrest       u:object_r:vendor_uxdetector_prop:s0
+#line 1 "out/soong/.intermediates/system/sepolicy/contexts/vendor_property_contexts/android_common/gen/namespace_checked/vendor/transsion/partner/fingerprint/goodix/sepolicy/property_contexts"
+#BSP: modify fix goodix sepolicy build error XLLLHLWS-309 by fan.peng 20200429
+persist.vendor.goodix.dump_data                u:object_r:vendor_fingerprint_prop:s0
+persist.vendor.sys.fp.fod.location.X_Y         u:object_r:vendor_fingerprint_prop:s0
+persist.vendor.sys.fp.fod.size.width_height    u:object_r:vendor_fingerprint_prop:s0
+persist.vendor.gf.debug.dump_talog_data        u:object_r:vendor_fingerprint_prop:s0
+persist.vendor.gf.debug.dump_data              u:object_r:vendor_fingerprint_prop:s0
+persist.vendor.fingerprint.probe_status        u:object_r:vendor_fingerprint_prop:s0
+#BSP: add for opt fingerprint XLLLHLWS-309 by zheyi.bai 20230503
+vendor.fp.goodix.Y.offset                      u:object_r:vendor_fingerprint_prop:s0
+vendor.fp.goodix.X.offset                      u:object_r:vendor_fingerprint_prop:s0
+vendor.fp.transsion.lcmname                    u:object_r:vendor_fingerprint_prop:s0
+vendor.fp.currentUid                           u:object_r:vendor_fingerprint_prop:s0
+persist.vendor.fp.sensorUid                    u:object_r:vendor_fingerprint_prop:s0
+persist.vendor.sys.fp.goodix.spmt.flag         u:object_r:vendor_fingerprint_prop:s0
+#line 1 "out/soong/.intermediates/system/sepolicy/contexts/vendor_property_contexts/android_common/gen/namespace_checked/vendor/transsion/sepolicy/common/non_plat/property_contexts"
+#ITEL: [SYS][SR][20] privacylock,IB-18640462
+#persist.vendor.privacy.permission u:object_r:vendor_persist_privacy_permission_prop:s0
+
+# add by xingui.yang for itel audio property
+ro.vendor.device.support.antenna           u:object_r:vendor_fm_prop:s0
+
+# IB-18640123-John, add for ADDITIONAL VENDOR BUILD PROPERTIES
+ro.vendor.itel.                    u:object_r:vendor_tran_prop:s0
+persist.vendor.sys.ohm.            u:object_r:vendor_tran_prop:s0
+ro.vendor.setupwizard.mode         u:object_r:vendor_tran_prop:s0
+ro.vendor.opa.eligible_device      u:object_r:vendor_tran_prop:s0
+ro.vendor.ui.version        u:object_r:vendor_tran_prop:s0
+ro.vendor.cobase.market            u:object_r:vendor_tran_prop:s0
+ro.vendor.boot.target_market       u:object_r:vendor_tran_prop:s0
+#IB-18640462-khx, add for cobase
+persist.vendor.sys.cobase.mcc      u:object_r:vendor_tran_prop:s0
+persist.vendor.cam.country         u:object_r:vendor_tran_prop:s0
+persist.vendor.country         u:object_r:vendor_camera_prop:s0
+persist.vendor.dualapp.support         u:object_r:vendor_tran_prop:s0
+#SCEQL5006S-22 add for itel midtest audio version test
+ro.vendor.audio.version            u:object_r:vendor_tran_prop:s0
+
+#add for sensor firmware
+ro.vendor.gsensor_vendor           u:object_r:vendor_tran_prop:s0
+ro.vendor.gsensor_ic               u:object_r:vendor_tran_prop:s0
+ro.vendor.gsensor_vendor2          u:object_r:vendor_tran_prop:s0
+ro.vendor.Light_sensor_vendor      u:object_r:vendor_tran_prop:s0
+ro.vendor.Light_sensor_ic          u:object_r:vendor_tran_prop:s0
+ro.vendor.Proximity_sensor_vendor  u:object_r:vendor_tran_prop:s0
+ro.vendor.Proximity_sensor_ic      u:object_r:vendor_tran_prop:s0
+ro.vendor.Magnetic_sensor_vendor   u:object_r:vendor_tran_prop:s0
+ro.vendor.Magnetic_sensor_ic       u:object_r:vendor_tran_prop:s0
+
+#add for sensor
+ro.vendor.ps_ground_noise_range_min       u:object_r:vendor_tran_prop:s0
+ro.vendor.ps_ground_noise_range_max       u:object_r:vendor_tran_prop:s0
+ro.vendor.ps_threshold_low_change_min     u:object_r:vendor_tran_prop:s0
+ro.vendor.ps_threshold_low_change_max     u:object_r:vendor_tran_prop:s0
+ro.vendor.ps_threshold_high_sub_low_min   u:object_r:vendor_tran_prop:s0
+ro.vendor.ps_threshold_high_change_max    u:object_r:vendor_tran_prop:s0
+ro.vendor.light_k_range_min     u:object_r:vendor_tran_prop:s0
+ro.vendor.light_k_range_max     u:object_r:vendor_tran_prop:s0
+ro.vendor.light_zero_lux_range_min      u:object_r:vendor_tran_prop:s0
+ro.vendor.light_zero_lux_range_max      u:object_r:vendor_tran_prop:s0
+ro.vendor.acc_x_abs_rang        u:object_r:vendor_tran_prop:s0
+ro.vendor.acc_y_abs_rang        u:object_r:vendor_tran_prop:s0
+ro.vendor.acc_z_abs_rang_min    u:object_r:vendor_tran_prop:s0
+ro.vendor.acc_z_abs_rang_max    u:object_r:vendor_tran_prop:s0
+ro.vendor.acc_xyz_offset        u:object_r:vendor_tran_prop:s0
+
+# IB-18602932, add for tran_commlog
+persist.vendor.tranlog.calibration                u:object_r:vendor_tran_prop:s0
+#ro.vendor.tranlog.calibration                u:object_r:vendor_tran_prop:s0
+
+# IB-02516, add for tranlog
+ro.vendor.tranlog.support                 u:object_r:vendor_tran_prop:s0 exact bool
+ro.vendor.tranlog.patition                u:object_r:vendor_tran_prop:s0
+
+ro.vendor.mtk_f2fs_enable u:object_r:vendor_tran_prop:s0 exact bool
+ro.vendor.proinfo.activationstatus u:object_r:vendor_tran_prop:s0 exact int
+ro.vendor.proinfo.activationtime u:object_r:vendor_tran_prop:s0 exact int
+ro.vendor.iris.enabled u:object_r:vendor_tran_prop:s0 exact int
+persist.vendor.itel.               u:object_r:vendor_tran_prop:s0
+
+persist.vendor.fallbackhome.sleep.time u:object_r:vendor_tran_prop:s0
+
+ro.vendor.midtest.chargecontrol_support u:object_r:vendor_tran_prop:s0
+ro.vendor.midtest.new_touch_test u:object_r:vendor_tran_prop:s0
+ro.vendor.supprot_data_role_device u:object_r:vendor_tran_prop:s0
+
+# ITEL_SYSTEM_IB_18644012 wenrong.liu, Add begin, for shutdown emergency. 3/26/2021
+ro.vendor.shutdown.emergency.support u:object_r:vendor_tran_prop:s0
+# ITEL_SYSTEM_IB_18644012 wenrong.liu Add end
+
+# sys yongjie.wu add for OOBE start
+persist.vendor.pms_removable    u:object_r:vendor_tran_prop:s0
+# sys yongjie.wu add for OOBE end
+
+# BSP: add for audio game mode by hailin.li 20211117 start
+ro.vendor.tran_audio_game_mode.support u:object_r:vendor_tran_prop:s0
+# BSP: add for audio game mode by hailin.li 20211117 end
+
+ro.vendor.tran.shutdown.emergency.support u:object_r:vendor_tran_prop:s0
+
+# sys zhihao.fan_18646807 add for xml start
+ro.vendor.tran.xml.support u:object_r:vendor_tran_prop:s0
+# sys zhihao.fan_18646807 add for xml end
+
+# xiaojie.pan add for midtest fast charger
+ro.vendor.midtest.rfc_charge_support u:object_r:vendor_tran_prop:s0
+ro.vendor.midtest.pe_charge_support u:object_r:vendor_tran_prop:s0
+
+# ying.liu add for ACS
+ro.vendor.tran_trusted_device_v2_support  u:object_r:vendor_tran_prop:s0
+
+#TDD: add feature battery charging  by chunyan.tang 20230920
+ro.vendor.kom_telephony_support  u:object_r:vendor_tran_prop:s0
+
+# Comm wangshan add for drop SAR
+ro.vendor.tran_dynamic_sar.support u:object_r:vendor_tran_prop:s0
+#line 1 "out/soong/.intermediates/system/sepolicy/contexts/vendor_property_contexts/android_common/gen/namespace_checked/vendor/transsion/partner/fpsmgr/sepolicy/non_plat/property_contexts"
+#=============allow vendor_init to set iomanager prop===========
+ro.vendor.darwin.support u:object_r:vendor_darwin_support_prop:s0
+
+#line 1 "out/soong/.intermediates/system/sepolicy/contexts/vendor_property_contexts/android_common/gen/namespace_checked/vendor/transsion/partner/turboCloudService/sepolicy/non_plat/property_contexts"
+#=============allow vendor_init to set x-turbo prop===========
+vendor.prop.turbo.cloud u:object_r:vendor_turbo_cloud_prop:s0
+persist.vendor.turbocloud.db_version u:object_r:vendor_turbo_cloud_prop:s0
+
+#line 1 "out/soong/.intermediates/system/sepolicy/contexts/vendor_property_contexts/android_common/gen/namespace_checked/vendor/transsion/partner/sparta/sepolicy/memfusion/non_plat/property_contexts"
+persist.vendor.swapfile_enable u:object_r:vendor_memfusion_state_prop:s0
+persist.vendor.swapfile_size_mb u:object_r:vendor_memfusion_size_prop:s0
+persist.vendor.uxcompaction_enable u:object_r:vendor_uxcompaction_enable_prop:s0
+ro.vendor.memfusion.support u:object_r:vendor_memfusion_support_prop:s0
+ro.vendor.memfusion2_1.support u:object_r:vendor_memfusion_support_prop:s0
+persist.vendor.memfusion_ui_enable u:object_r:vendor_memfusion_ui_enable_prop:s0
+persist.vendor.upload_tranlog u:object_r:vendor_memfusion_tranlog_prop:s0
+#SPD: add for MemoryFusion lite, by yuling.fu on 20210820 start
+ro.vendor.memfusion.lite.support u:object_r:vendor_memfusion_lite_support_prop:s0
+#SPD: add for MemoryFusion lite, by yuling.fu on 20210820 end
+#line 1 "out/soong/.intermediates/system/sepolicy/contexts/vendor_property_contexts/android_common/gen/namespace_checked/system/sepolicy/reqd_mask/property_contexts"
+# empty property_contexts file - this file is used to generate an empty
+# non-platform property context for devices without any property_contexts
+# customizations.

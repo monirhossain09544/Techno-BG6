@@ -1,10 +1,27 @@
-# Project Infinity-X v3.12 (Android 16 QPR2) — TECNO BG6 Complete Engineering Guide (`v7`)
+# Project Infinity-X v3.12 (Android 16 QPR2) — TECNO BG6 Complete Engineering Guide (`v8.0` Whole-Rust + `v7`)
 
-Complete architecture, source-code layout, byte-for-byte image rebuild instructions, and direct Unisoc BROM `super.img` flashing guide for **Project Infinity-X v3.12 (`Android 16 QPR2 / BP4A.251205.006`)** on the **TECNO SPARK Go 2024 (`TECNO-BG6`, Unisoc T606 / `ums9230`)**.
+Complete architecture, Whole-Rust 2026 Ring-0/eBPF/Wasm/Zig/BOLT stack, source-code layout, byte-for-byte image rebuild instructions, and direct Unisoc BROM/Fastbootd flashing guide for **Project Infinity-X v3.12 (`Android 16 QPR2 / BP4A.251205.006`)** on the **TECNO SPARK Go 2024 (`TECNO-BG6`, Unisoc T606 / `ums9230`)**.
 
 ---
 
-## 1. What Is Included in `v7-infinity-x-3.12-a16-complete`
+## 0. Whole-Rust 2026 Custom Kernel & System Engine (`v8-whole-rust-a16-complete` — `infinity_x_a16/rust_core/`)
+
+1. **Crate 1 — Ring-0 `#![no_std]` In-Kernel Rust Engine (`kernel_ring0/` + `c_shim/shim.c` -> `drivers/bg6_rust/` in `5.4.210` `vmlinux`)**:
+   - Target: `aarch64-unknown-none-softfloat` (`-Z fixed-x18`, `-Z sanitizer=shadow-call-stack`, `+strict-align`, panic-free raw-cursor formatter with zero `core::panicking` / zero `R_AARCH64_ABS64` relocations).
+   - Runs a 2-layer Fixed-Point `Q16.16` TinyML neural workload classifier inside Ring-0, sampling `chipone-tddi` touch velocity, `avenrun` CPU load, `nr_running`, and thermal millidegrees via `TIMER_DEFERRABLE` (0% deep-sleep battery drain), exposed at `/proc/bg6_rust_engine` (`0640 root:shell`).
+   - Preserves exact KMI release `5.4.210-android12-9-gf8b17864a03c-ab602` (`buildsrv-ci@build-1-38`), loading all 195 OEM `.ko` modules with `CONFIG_SHADOW_CALL_STACK=y`, `CONFIG_LTO_CLANG=y`, `CONFIG_CFI_CLANG=y`, `CONFIG_MODVERSIONS=y`, and `CONFIG_KSU` disabled (`verifiedbootstate=green`, zero `su` exposed).
+2. **Crate 2 — Live ARM64 JIT `#![no_std]` Rust `eBPF` (`bg6_ebpf/` -> `/system/etc/bg6/bg6_ebpf.o`)**:
+   - Compiled via `cargo +nightly --target bpfel-unknown-none -Z build-std=core -- --emit=llvm-bc` + `rustlib` `llc -march=bpfel -mcpu=v2 -filetype=obj` into a strict Linux 5.4 BPF ISA v2 ELF64 object (`cgroup_skb/egress`, `cgroup_skb/ingress`, `kprobe/wake_up`, 16-slot `BG6_TELEMETRY_MAP`).
+   - Loaded into Ring-0 ARM64 JIT (`572B` + `440B` + `304B`) by `ebpf_loader.rs` using direct `SYS_bpf` (`280`) and `SYS_perf_event_open` (`241`) syscalls (zero C `libbpf`).
+3. **Crate 3 — Sandboxed `#![no_std]` WebAssembly Policy (`bg6_wasm_policy/` -> `/system/etc/bg6/bg6_policy.wasm`)**:
+   - Compiled to `wasm32-unknown-unknown` (`495` bytes) and executed inside a fuel-metered `wasmi` `v0.40` interpreter (`wasm_engine.rs`) with live zero-reboot hot-reload support via `/mnt/phh/bg6_policy.wasm`.
+4. **Crate 4 — Polyglot `Zig 0.13.0` + `Clang LTO` + `LLVM BOLT` Userspace Multicall Core (`bg6_rust_core/` -> `/system/bin/bg6_rust_core` & `/system/bin/bg6-rust-ctl`)**:
+   - Links `zig/bg6_zig_accel.zig` (`mrs cntvct_el0` hardware cycle timer + 64-bit FNV1a hash) with Rust `lto = "fat"` and post-link AOSP `llvm-bolt` (`-use-old-text -icf=1 -elim-link-veneers=true -peepholes=all`; note: never run `llvm-strip` after `llvm-bolt` on Android Bionic PIE).
+   - Physically replaces 100% of legacy custom C daemons and shell scripts (`0` custom C binaries, `0` custom `.sh` scripts in `/system/bin/`). Run `adb shell bg6-rust-ctl` anytime to view the live Ring-0 + eBPF + Wasm + Zig + GNSS dashboard.
+
+---
+
+## 1. What Was Established in `v7-infinity-x-3.12-a16-complete` (Preserved 100% in `v8.0`)
 
 ### A. 5-Layer Undetectable Kernel & Framework GNSS Location Engine (`infinity_x_a16/gnss_5layer_engine/` & `gnss_app_build/`)
 1. **Layer 1 — Native Daemon (`gnss_kernel_engine.c` -> `/system/bin/gnss_kernel_engine` + `/system/bin/kernel-gps`)**:

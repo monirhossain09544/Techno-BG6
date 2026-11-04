@@ -1,0 +1,20 @@
+[package]
+name = "bg6_rust_core"
+version = "8.0.0"
+edition = "2021"
+description = "100% Pure-Rust Userspace System Suite for TECNO-BG6 (eBPF Loader + Wasm Sandbox + TinyML Scheduler + DT2W + 5-Layer GNSS)"
+
+[[bin]]
+name = "bg6_rust_core"
+path = "src/main.rs"
+
+[dependencies]
+libc = "0.2"
+wasmi = { version = "0.40", default-features = false, features = ["std"] }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = "none"

@@ -1,0 +1,16 @@
+[package]
+name = "bg6_ebpf"
+version = "8.0.0"
+edition = "2021"
+description = "TECNO-BG6 Live JIT #[no_std] Rust eBPF Programs (CGROUP_SKB + KPROBE)"
+
+[lib]
+name = "bg6_ebpf"
+crate-type = ["staticlib"]
+
+[profile.release]
+opt-level = 3
+panic = "abort"
+codegen-units = 1
+debug = false
+strip = "none"

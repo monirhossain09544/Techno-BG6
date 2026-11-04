@@ -1,0 +1,17 @@
+[package]
+name = "bg6_kernel_ring0"
+version = "8.0.0"
+edition = "2021"
+description = "TECNO-BG6 Ring-0 #[no_std] In-Kernel Rust Engine & Fixed-Point Q16.16 TinyML Workload Classifier"
+
+[lib]
+name = "bg6_kernel_ring0"
+crate-type = ["staticlib"]
+
+[profile.release]
+opt-level = 2
+lto = false
+panic = "abort"
+codegen-units = 1
+debug = false
+strip = "none"

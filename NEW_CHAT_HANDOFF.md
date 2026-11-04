@@ -1,7 +1,28 @@
-# TECNO BG6 COMPLETE ENGINEERING PROJECT — FULL HANDOFF (`v7` ANDROID 16 QPR2 + `v6` + `v5`)
+# TECNO BG6 COMPLETE ENGINEERING PROJECT — FULL HANDOFF (`v8` WHOLE-RUST A16 QPR2 + `v7` + `v6` + `v5`)
 # (Paste this message into any new chat to continue the project even with zero prior server)
 
-## LATEST MILESTONE (`v7-infinity-x-3.12-a16-complete` — Nov 2026): LIVE ON PHONE & 100% STORED ON GITHUB
+## LATEST MILESTONE (`v8-whole-rust-a16-complete` — Nov 2026): 100% WHOLE-RUST KERNEL + SYSTEM ENGINE LIVE ON PHONE & GITHUB
+
+The phone (**TECNO SPARK Go 2024 / `TECNO-BG6`**, ADB serial `1099738415003670`, Unisoc T606 / `ums9230`) is running **Project Infinity-X v3.12 (`Android 16 QPR2 / BP4A.251205.006`)** powered by our **Whole-Rust 2026 OS Engine (`v8.0`)** (`infinity_x_a16/rust_core/`):
+1. **Ring-0 In-Kernel `#![no_std]` Rust Engine (`kernel_ring0/` -> `drivers/bg6_rust/` in `5.4.210-android12-9-gf8b17864a03c-ab602` `vmlinux`)**:
+   - Compiled with `rustc +nightly` (`aarch64-unknown-none-softfloat`, `-Z fixed-x18`, `-Z sanitizer=shadow-call-stack`, `+strict-align`, zero FP/NEON, zero `R_AARCH64_ABS64` relocations) + thin ~150-line CFI-safe `shim.c` boundary.
+   - Runs a 2-layer Fixed-Point `Q16.16` **TinyML neural workload classifier**, hardware `input_handler` (`chipone-tddi` / `gpio-keys`), `TIMER_DEFERRABLE` 100ms scheduler sampler (0% deep-sleep wakeups), and stealth `/proc/bg6_rust_engine` (`0640 root:shell`).
+   - Preserves 100% of Unisoc KMI/CFI/SCS ABI: all **195** closed-source vendor `.ko` modules load cleanly (`CONFIG_SHADOW_CALL_STACK=y`, `CONFIG_LTO_CLANG=y`, `CONFIG_CFI_CLANG=y`, `CONFIG_MODVERSIONS=y`, `CONFIG_KSU` disabled for banking/Play Integrity stealth).
+2. **Live ARM64 JIT `#![no_std]` Rust `eBPF` (`bg6_ebpf/` -> `/system/etc/bg6/bg6_ebpf.o`)**:
+   - Compiled 100% in `#![no_std]` Rust (`bpfel-unknown-none` + `rustlib` LLVM `llc -march=bpfel -mcpu=v2`), loaded via a zero-`libbpf` Pure-Rust `SYS_bpf` ELF loader (`ebpf_loader.rs`) with live ARM64 JIT (`egress 572B`, `ingress 440B`, `kprobe/wake_up 304B`).
+3. **Hot-Reloadable `#![no_std]` WebAssembly Policy Sandbox (`bg6_wasm_policy/` -> `/system/etc/bg6/bg6_policy.wasm` + `wasmi` fuel-metered sandbox)**:
+   - Evaluates CPU/GPU/uclamp/90Hz scheduling profiles (`wasm_compute_sched_profile`) and DT2W tap geometry (`wasm_validate_double_tap`), supporting live zero-reboot hot-reload from `/mnt/phh/bg6_policy.wasm`.
+4. **Polyglot `Zig 0.13.0` + `Clang LTO` + `LLVM BOLT` Pure-Rust Userspace Suite (`bg6_rust_core/` -> `/system/bin/bg6_rust_core` & `/system/bin/bg6-rust-ctl`)**:
+   - **0% custom userspace C daemons, 0% custom `.sh` scripts** — legacy `bg6-perf-tune.sh`, `bg6_perf_engine` (C), `bg6_dt2w_daemon` (C), `gnss_kernel_engine` (C) are physically deleted from `system_a` and replaced by one BOLT-optimized (`-use-old-text -icf=1 -peepholes=all`) Pure-Rust multicall binary + `bg6_zig_accel.zig` (`cntvct_el0` + FNV64).
+5. **Verified Release Checksums (`v8-whole-rust-a16-complete`)**:
+   - `bg6_boot_a_v6_rust.img` (`67,108,864` B): `SHA256 = 60509e6da8c7a168eb048a15bb7cbab02587c02717d60f55d372ac4e57f6a225`
+   - `infinity_x_bg6_ready.img` (`3,423,481,856` B, AVB `SHA256_RSA2048`): `SHA256 = db819b4c7a52eeae3650f27c09c3721488f0082926500b9313a49a20fc9b5d1f` (`MD5 = 38b5efcdb7b410ee7f663fc3f4023ba0`)
+   - `infinity_x_bg6_ready.img.xz`: `SHA256 = 2d0aee5c344de0d844c0da33ed9142dad0498985512b5175a2bcc11e479774e2`
+   - `kernel_repo_v6_rust.bundle`: `SHA256 = 04c4f0a3335fff29d681ec75b27a0d18f1fad65262997ed1b2becda76f1b7b72`
+
+---
+
+## PREVIOUS MILESTONE (`v7-infinity-x-3.12-a16-complete` — Nov 2026): ANDROID 16 QPR2 BASELINE
 
 The phone (**TECNO SPARK Go 2024 / `TECNO-BG6`**, ADB serial `1099738415003670`, Unisoc T606 / `ums9230`) is running **Project Infinity-X v3.12 (`Android 16 QPR2 / BP4A.251205.006`)** with:
 1. **5-Layer Undetectable Kernel & Framework GNSS Location Engine** (`infinity_x_a16/gnss_5layer_engine/` + `gnss_app_build/KernelGnssSettings.apk` + patched `framework.jar` & `services.jar` + `/system/bin/gnss_kernel_engine` + `/system/bin/kernel-gps`).

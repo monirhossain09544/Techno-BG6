@@ -1,0 +1,15 @@
+[package]
+name = "bg6_wasm_policy"
+version = "8.0.0"
+edition = "2021"
+description = "Hot-reloadable #[no_std] WebAssembly Sandboxed Scheduler & Gesture Policy for TECNO-BG6"
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+opt-level = "z"
+lto = true
+panic = "abort"
+codegen-units = 1
+strip = "symbols"

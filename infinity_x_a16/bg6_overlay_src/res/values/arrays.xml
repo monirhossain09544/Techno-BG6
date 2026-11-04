@@ -1,44 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <integer-array name="config_availableColorModes">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+    </integer-array>
     <array name="config_autoBrightnessDisplayValuesNits">
-        <item>10.39</item>
-        <item>80.2</item>
-        <item>80.2</item>
-        <item>80.2</item>
-        <item>96.75</item>
-        <item>96.75</item>
-        <item>111.8</item>
-        <item>144.3</item>
-        <item>144.3</item>
-        <item>144.3</item>
-        <item>144.3</item>
-        <item>156.2</item>
-        <item>220.4</item>
-        <item>260.0</item>
-        <item>288.5</item>
-        <item>315.4</item>
-        <item>330.0</item>
+        <item>5.8</item>
+        <item>11.0</item>
+        <item>18.5</item>
+        <item>26.0</item>
+        <item>38.0</item>
+        <item>54.0</item>
+        <item>74.0</item>
+        <item>98.0</item>
+        <item>128.0</item>
+        <item>158.0</item>
+        <item>188.0</item>
+        <item>218.0</item>
+        <item>255.0</item>
+        <item>288.0</item>
+        <item>315.0</item>
+        <item>338.0</item>
+        <item>352.0</item>
+        <item>360.0</item>
         <item>363.6</item>
-        <item>366.6</item>
     </array>
     <integer-array name="config_autoBrightnessLevels">
-        <item>16</item>
-        <item>32</item>
-        <item>50</item>
-        <item>100</item>
-        <item>140</item>
-        <item>180</item>
-        <item>240</item>
+        <item>2</item>
+        <item>5</item>
+        <item>10</item>
+        <item>20</item>
+        <item>40</item>
+        <item>80</item>
+        <item>150</item>
         <item>300</item>
-        <item>600</item>
+        <item>500</item>
         <item>800</item>
-        <item>1000</item>
+        <item>1200</item>
         <item>2000</item>
         <item>3000</item>
         <item>4000</item>
-        <item>5000</item>
-        <item>6000</item>
-        <item>8000</item>
+        <item>5500</item>
+        <item>7000</item>
+        <item>8500</item>
         <item>10000</item>
     </integer-array>
     <string-array name="config_biometric_sensors">

@@ -409,4 +409,4 @@ ro.vendor.tran.shutdown.emergency.support=1
 ro.vendor.tran.xml.support=1
 # end of file
 persist.sys.phh.unisoc_color_transform_workaround=1
-persist.vendor.hwc.display.modeid=0
+persist.sys.sf.disable_blurs=0

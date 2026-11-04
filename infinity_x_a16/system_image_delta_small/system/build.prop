@@ -218,7 +218,6 @@ ro.build.backported_fixes.alias_bitset.long_list=18
 
 
 # TECNO-BG6 Hardware & Display Optimizations (Unisoc T606 / ums9230 / Mali-G57)
-persist.vendor.hwc.display.modeid=0
 persist.sys.fuse.bpf.override=false
 ro.surface_flinger.use_content_detection_for_refresh_rate=false
 ro.surface_flinger.max_frame_buffer_acquired_buffers=3
@@ -236,3 +235,4 @@ ro.com.google.acsa=true
 ro.opa.eligible_device=true
 persist.sys.phh.unisoc_color_transform_workaround=1
 persist.sys.override_mock_location=true
+persist.sys.sf.disable_blurs=0

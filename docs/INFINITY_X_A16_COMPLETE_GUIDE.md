@@ -41,7 +41,25 @@ Stock AOSP/Infinity-X `Dialer` (`com.android.dialer`) and `Contacts` (`com.andro
 - **`init_fixed` (`/system/bin/init`)**: Patched Android 16 `init` binary required for Unisoc BG6 dynamic partition mounting and boot.
 - **Full Android 16 (Non-Go) Conversion**: Injects `android.hardware.ram.normal.xml`, sets `ro.config.low_ram=false`, enables full recents/multi-window/split-screen, `trust_warnings=0`, `navigation_bar_hint=0`, and `navbar_ime_space=0`.
 - **`bg6_perf_engine` (`/system/bin/bg6_perf_engine` + `/system/bin/bg6-perf-tune.sh` + `/system/etc/init/init.bg6.rc`)**: Configures 4 GB Physical RAM + 4 GB LZ4 ZRAM, `schedutil` governor tuning, SurfaceFlinger frame pacing, and I/O queue optimizations.
-- **`treble-overlay-tecno-bg6.apk` (`bg6_overlay_src/`)**: Custom RRO hardware overlay matching TECNO BG6 display cutout, status bar height, brightness curves, and `power_profile.xml`.
+- **`treble-overlay-tecno-bg6.apk` (`bg6_overlay_src/`)**: Custom RRO hardware overlay matching TECNO BG6 display cutout, status bar height, calibrated 18-level brightness curves, 90Hz refresh rate, color modes, and `power_profile.xml`.
+
+---
+
+### D. Complete 6-Subsystem Display, Color Matrix, 90Hz, Blur & `ICNL9916` DT2W Engine (`infinity_x_a16/display_engine/`)
+1. **`SurfaceFlinger` ARM64 Binary Patch (`patch_surfaceflinger_bg6.py` -> `/system/bin/surfaceflinger`)**:
+   - **Root Cause Fixed**: On Unisoc T606 (`ums9230`), `persist.sys.phh.unisoc_color_transform_workaround=1` suppresses HWC2's broken `setColorTransform` ioctl (which otherwise causes a black screen), leaving `CompositionEngine` on hardware DPU composition with `SKIP_CLIENT_COLOR_TRANSFORM` active—causing **Night Light**, **Extra Dim**, **LiveDisplay**, **Colors**, **Color Correction**, and **Color Inversion** to have zero visual effect.
+   - **4-Site ELF RX Patch**:
+     - `Display::getSkipColorTransform()` (`0x51d350`): Patched to `mov w0, #0; ret` so Skia `RenderEngine` never skips `colorTransformMatrix`.
+     - `SurfaceFlinger::updateColorMatrixLocked()` (`0x35be70` -> cave `0x854400`): Dynamically inspects all 16 floats of `mCurrentState.colorMatrix`—automatically keeping `mDebugDisableHWC = 0` (**pure 90Hz hardware DPU composition**) when `colorMatrix == Identity`, and switching `mDebugDisableHWC = 1` (**90Hz Mali-G57 Skia GPU client composition**) whenever any non-identity color matrix is active.
+     - `SurfaceFlinger::updateColorMatrixLocked()` (`0x35bc10` -> cave `0x854380`) & `onTransact` `case 1023` (`0x35ae50` -> cave `0x8543c0`): Native `1.25x` (`Saturated`) and `1.125x` (`Adaptive`) color-mode saturation multipliers with immediate lock-safe matrix refresh.
+2. **90Hz Default Refresh Rate & GPU Frame Pacing**:
+   - Unlocked native `720x1612 @ 90.00 Hz` (`hwcId=1`) + `60.00 Hz` switching by removing `persist.vendor.hwc.display.modeid=0`, setting `config_defaultRefreshRate=90` / `config_defaultPeakRefreshRate=90` in `treble-overlay-tecno-bg6.apk`, and tuning Mali-G57 `polling_interval=10` in `bg6_perf_engine.c`.
+3. **Calibrated 18-Step Adaptive Brightness (`ls9801i` -> `sprd_backlight` `0..4095`)**:
+   - Replaced stock 5-point Go-edition table with a monotonically smooth 18-step ambient lux (`2..10000 lux`) / 19-value display nits (`5.8..363.6 nits`) curve with `2000ms` brightening / `4000ms` darkening debounce.
+4. **Kawase Dual-Filter V2 Window-Level Blurs**:
+   - Enabled `persist.sys.sf.disable_blurs=0` and `disable_window_blurs=0` across Quick Settings, Notification Shade, Lockscreen PIN Bouncer, and system dialogs with full `Blur intensity` (`0%..200%`) slider control.
+5. **Hardware-Safe `ICNL9916` (`01f1` Flashless SRAM-BOOT) Tap to Wake & Tap to Sleep (`bg6_dt2w_daemon.c`)**:
+   - Bind-mounts `/dev/dt2w_state` (`cc0`) over `/proc/gesture_function` to protect BOE `ICNL9916` volatile SRAM touch firmware from reset wipes, synchronizes `/sys/devices/virtual/sprd_sensorhub_tp/device/psensor_enable` with `Settings.Secure.DOUBLE_TAP_TO_WAKE`, provides <5ms Double-Tap to Wake, Lockscreen/Home Double-Tap to Sleep, Standby CPU Power-Save, and automatic screen wake on incoming SIM/VoIP calls (`MODE_RINGTONE`), alarms (`USAGE_ALARM`), and USB charger plug/unplug (`Wake on plug`).
 
 ---
 
@@ -63,7 +81,7 @@ sudo bash infinity_x_a16/rebuild_ready_img_from_vanilla.sh \
 
 # 3. Verify exact MD5 (3,423,481,856 bytes)
 md5sum infinity_x_bg6_ready.img
-# Expected: 425543fc7c09e9b8e311b25bc367c2cf
+# Expected: 9e92b1a23f74602c8b3ccf8defa23e37
 ```
 
 ---

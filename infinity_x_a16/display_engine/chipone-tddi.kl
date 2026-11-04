@@ -1,0 +1,8 @@
+# TECNO BG6 Chipone ICNL9916 TDDi Keylayout
+key 183   WAKEUP
+key 143   WAKEUP
+key 190   WAKEUP
+key 158   BACK              VIRTUAL
+key 139   MENU              VIRTUAL
+key 172   HOME              VIRTUAL
+key 127   MENU              VIRTUAL

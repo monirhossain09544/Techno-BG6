@@ -143,6 +143,6 @@ ro.com.android.mobiledata=false
 ro.config.low_ram=false
 ro.com.google.acsa=true
 persist.sys.phh.unisoc_color_transform_workaround=1
-persist.vendor.hwc.display.modeid=0
 ro.adb.secure=0
 persist.sys.usb.config=mtp,adb
+persist.sys.sf.disable_blurs=0

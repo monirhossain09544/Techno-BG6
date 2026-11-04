@@ -1,19 +1,19 @@
 # TECNO SPARK Go 2024 (TECNO-BG6 / Unisoc T606 ums9230)
-# Project Infinity X v3.12 (Android 16 QPR2) Non-Go & 4GB ZRAM RC
+# Project Infinity X v3.12 (Android 16 QPR2) Non-Go, 90Hz, Display & DT2W RC
 
 on early-init
     mount none /system/etc/vendor_build_bg6.prop /vendor/build.prop bind
     mount none /system/etc/permissions/android.hardware.ram.normal.xml /vendor/etc/permissions/handheld_core_hardware.xml bind
-    setprop persist.vendor.hwc.display.modeid 0
     setprop persist.sys.phh.unisoc_color_transform_workaround 1
+    setprop persist.sys.sf.disable_blurs 0
     setprop keystore.module_hash.sent true
 
 on init
     mount none /system/etc/vendor_build_bg6.prop /vendor/build.prop bind
     mount none /system/etc/permissions/android.hardware.ram.normal.xml /vendor/etc/permissions/handheld_core_hardware.xml bind
     exec u:r:phhsu_daemon:s0 root -- /system/bin/resetprop_phh ro.config.low_ram false
-    setprop persist.vendor.hwc.display.modeid 0
     setprop persist.sys.phh.unisoc_color_transform_workaround 1
+    setprop persist.sys.sf.disable_blurs 0
     setprop keystore.module_hash.sent true
 
 on post-fs
@@ -23,27 +23,38 @@ on post-fs
 
 on post-fs-data
     exec u:r:phhsu_daemon:s0 root -- /system/bin/resetprop_phh ro.config.low_ram false
-    setprop persist.vendor.hwc.display.modeid 0
     setprop persist.sys.phh.unisoc_color_transform_workaround 1
+    setprop persist.sys.sf.disable_blurs 0
     setprop keystore.module_hash.sent true
     exec - root root -- /system/bin/bg6_perf_engine --boot
+    setprop sys.usb.config adb
+    start adbd
 
 on boot
     exec u:r:phhsu_daemon:s0 root -- /system/bin/resetprop_phh ro.config.low_ram false
-    setprop persist.vendor.hwc.display.modeid 0
     setprop persist.sys.phh.unisoc_color_transform_workaround 1
+    setprop persist.sys.sf.disable_blurs 0
     exec - root root -- /system/bin/bg6_perf_engine --boot
 
 on property:sys.boot_completed=1
-    setprop persist.vendor.hwc.display.modeid 0
     setprop persist.sys.phh.unisoc_color_transform_workaround 1
+    setprop persist.sys.sf.disable_blurs 0
+    setprop persist.sys.override_mock_location true
     start bg6_perf_engine
     start bg6_tune_boot
+    start bg6_dt2w_daemon
+    start gnss_kernel_engine
 
 service bg6_perf_engine /system/bin/bg6_perf_engine --daemon
     class late_start
     user root
     group root system
+    seclabel u:r:phhsu_daemon:s0
+
+service bg6_dt2w_daemon /system/bin/bg6_dt2w_daemon
+    class late_start
+    user root
+    group root system input
     seclabel u:r:phhsu_daemon:s0
 
 service bg6_tune_boot /system/bin/sh /system/bin/bg6-perf-tune.sh
@@ -59,11 +70,3 @@ service gnss_kernel_engine /system/bin/gnss_kernel_engine
     user root
     group root system shell
     seclabel u:r:phhsu_daemon:s0
-
-on property:sys.boot_completed=1
-    setprop persist.sys.override_mock_location true
-    start gnss_kernel_engine
-
-on post-fs-data
-    setprop sys.usb.config adb
-    start adbd

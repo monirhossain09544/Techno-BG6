@@ -4,7 +4,7 @@ resetprop_phh ro.config.low_ram false
 resetprop_phh ro.com.google.acsa true
 resetprop_phh ro.opa.eligible_device true
 resetprop_phh persist.sys.phh.unisoc_color_transform_workaround 1
-resetprop_phh persist.vendor.hwc.display.modeid 0
+resetprop_phh persist.sys.sf.disable_blurs 0
 resetprop_phh ro.vendor.build.display.id BG6-F069-OP-V2387-250722
 if [ -f /system/etc/vendor_build_bg6.prop ]; then
     mount -o bind /system/etc/vendor_build_bg6.prop /vendor/build.prop 2>/dev/null || true

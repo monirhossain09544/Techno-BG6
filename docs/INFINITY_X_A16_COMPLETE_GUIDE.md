@@ -63,7 +63,7 @@ sudo bash infinity_x_a16/rebuild_ready_img_from_vanilla.sh \
 
 # 3. Verify exact MD5 (3,423,481,856 bytes)
 md5sum infinity_x_bg6_ready.img
-# Expected: 8446097a33b12884a5b42ca5056751a6
+# Expected: 425543fc7c09e9b8e311b25bc367c2cf
 ```
 
 ---

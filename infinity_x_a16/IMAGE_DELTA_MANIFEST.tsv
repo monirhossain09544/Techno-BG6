@@ -17,7 +17,7 @@ DELETED	system/system_ext/apex/com.android.vndk.v31.apex
 DELETED	system/system_ext/apex/com.android.vndk.v32.apex
 DELETED	system/system_ext/apex/com.android.vndk.v34.apex
 ADDED_DIR	system/app/KernelGnssSettings	0o755	u:object_r:system_file:s0
-ADDED_FILE	system/app/KernelGnssSettings/KernelGnssSettings.apk	29232	0o644	u:object_r:system_file:s0	bb9b2593f19a3875cfb7170cab36425fa0848eb2ddc17f8d15ad60d393e258c0
+ADDED_FILE	system/app/KernelGnssSettings/KernelGnssSettings.apk	29232	0o644	u:object_r:system_file:s0	10450383f30461180ead58ef620a2e50d78e5e373befd17bccd6a66a0ff24835
 ADDED_FILE	system/bin/bg6-perf-tune.sh	2091	0o755	u:object_r:phhsu_exec:s0	750cbde3bbf966fcaf933253da4f62bc2137fac53b223de9e4fb702b0a59f582
 ADDED_FILE	system/bin/bg6_perf_engine	13160	0o755	u:object_r:system_file:s0	5e6f72fa7dd7b4936a978891516c4383b4c760795ed31de113623dad1d410d50
 ADDED_FILE	system/bin/gnss_kernel_engine	13096	0o755	u:object_r:phhsu_exec:s0	3f5a9822750b09c08919c0807d132124b1ed2283da240feb93a7be4f1bc0e0f2

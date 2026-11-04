@@ -95,7 +95,7 @@ DT2W/DT2S : Working (BOE ICNL9916 In-Cell TDDi + Patched dtbo_a + dt2w_daemon)
 1. Download `infinity_x_bg6_ready.img.xz` from [Releases](../../releases/tag/v7-infinity-x-3.12-a16-complete) and decompress:
    ```bash
    xz -dk infinity_x_bg6_ready.img.xz
-   # Verify MD5: 8446097a33b12884a5b42ca5056751a6 (3,423,481,856 bytes)
+   # Verify MD5: 425543fc7c09e9b8e311b25bc367c2cf (3,423,481,856 bytes)
    ```
 2. Flash via `fastbootd` (or inject into `super.img` using `brom_super_flasher/`):
    ```bash

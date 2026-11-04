@@ -8,10 +8,10 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -22,6 +22,7 @@ public class KernelGnssService extends Service {
     public static final String ACTION_START = "com.android.settings.gnss.START";
     public static final String ACTION_STOP = "com.android.settings.gnss.STOP";
     private static final String CHANNEL_ID = "kernel_gnss_channel";
+    private static final int FGS_TYPE_SPECIAL_USE = 0x40000000;
 
     public static volatile boolean sIsRunning = false;
     public static volatile double sLat = 23.792500;
@@ -74,13 +75,27 @@ public class KernelGnssService extends Service {
                 .putBoolean("active", true)
                 .apply();
         } else {
-            sLat = Double.parseDouble(prefs.getString("lat", "23.792500"));
-            sLon = Double.parseDouble(prefs.getString("lon", "90.407800"));
+            try {
+                sLat = Double.parseDouble(prefs.getString("lat", "23.792500"));
+                sLon = Double.parseDouble(prefs.getString("lon", "90.407800"));
+            } catch (Exception ignored) {}
             sAcc = prefs.getFloat("acc", 2.6f);
             prefs.edit().putBoolean("active", true).apply();
         }
 
-        startForeground(1001, buildNotification());
+        try {
+            Notification notif = buildNotification();
+            if (Build.VERSION.SDK_INT >= 34) {
+                startForeground(1001, notif, FGS_TYPE_SPECIAL_USE);
+            } else {
+                startForeground(1001, notif);
+            }
+        } catch (Throwable t) {
+            try {
+                startForeground(1001, buildNotification());
+            } catch (Throwable ignored) {}
+        }
+
         ensureProviders();
         sIsRunning = true;
         mHandler.removeCallbacks(mPulseTask);
@@ -92,18 +107,7 @@ public class KernelGnssService extends Service {
         String[] providers = new String[]{LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER, "fused"};
         for (String p : providers) {
             try {
-                mLm.addTestProvider(
-                    p,
-                    false,
-                    "gps".equals(p),
-                    "network".equals(p),
-                    false,
-                    true,
-                    true,
-                    true,
-                    1,
-                    1
-                );
+                mLm.addTestProvider(p, false, "gps".equals(p), "network".equals(p), false, true, true, true, 1, 1);
             } catch (Exception ignored) {
                 try {
                     mLm.setTestProviderEnabled(p, true);
@@ -224,7 +228,9 @@ public class KernelGnssService extends Service {
     private void stopEngine() {
         mHandler.removeCallbacks(mPulseTask);
         restoreRealGpsNow(this);
-        stopForeground(true);
+        try {
+            stopForeground(true);
+        } catch (Throwable ignored) {}
     }
 
     private void createChannel() {

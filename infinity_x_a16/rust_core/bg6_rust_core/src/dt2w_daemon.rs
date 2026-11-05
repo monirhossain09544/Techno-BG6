@@ -754,20 +754,16 @@ pub fn run_dt2w_daemon() -> i32 {
         let t = now_ms();
         let bl = get_real_backlight();
         let mut force_setting_check = false;
-        let mut netlink_power_event = false;
 
         if nfds > 0 {
             for e in &ep_events[..nfds as usize] {
                 if e.u64 == 4 && uevent_fd >= 0 {
+                    // Drain netlink uevents purely as a zero-polling wakeup hint to re-check usb/online;
+                    // NEVER wake on generic battery fuel-gauge power_supply ticks!
                     while unsafe {
                         libc::recv(uevent_fd, scratch_buf.as_mut_ptr() as *mut _, scratch_buf.len(), 0)
                     } > 0
-                    {
-                        let msg = String::from_utf8_lossy(&scratch_buf);
-                        if msg.contains("power_supply") || msg.contains("POWER_SUPPLY") {
-                            netlink_power_event = true;
-                        }
-                    }
+                    {}
                 } else if e.u64 == 5 && inotify_fd >= 0 {
                     while unsafe {
                         libc::read(inotify_fd, scratch_buf.as_mut_ptr() as *mut _, scratch_buf.len())
@@ -826,10 +822,8 @@ pub fn run_dt2w_daemon() -> i32 {
                 continue;
             }
             let cur_usb = get_usb_online();
-            if netlink_power_event || (cur_usb >= 0 && last_usb_online >= 0 && cur_usb != last_usb_online) {
-                if cur_usb >= 0 {
-                    last_usb_online = cur_usb;
-                }
+            if cur_usb >= 0 && last_usb_online >= 0 && cur_usb != last_usb_online {
+                last_usb_online = cur_usb;
                 last_wake_ms = t;
                 ctx.exit(&mut slot_active, 0, "USB_PLUG_WAKE");
                 continue;

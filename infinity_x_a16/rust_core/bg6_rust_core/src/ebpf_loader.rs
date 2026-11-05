@@ -426,9 +426,9 @@ impl LiveEbpfRuntime {
         let (ingress_prog_id, ingress_jited_bytes) = get_prog_info(ingress_fd);
         let (kprobe_prog_id, kprobe_jited_bytes) = get_prog_info(kprobe_fd);
 
-        // 1. Attach CGROUP_SKB egress & ingress to /dev/cg2_bpf
+        // 1. Attach CGROUP_SKB egress & ingress (prefer /sys/fs/cgroup/apps so we never collide with netbpfload on root)
         let mut cgroup_attached = false;
-        for cg_path in ["/dev/cg2_bpf", "/sys/fs/cgroup"] {
+        for cg_path in ["/sys/fs/cgroup/apps", "/dev/cg2_bpf", "/sys/fs/cgroup"] {
             if let Ok(cg_file) = OpenOptions::new().read(true).open(cg_path) {
                 let cg_fd = cg_file.into_raw_fd();
                 let mut a_eg = BpfAttachAttr {

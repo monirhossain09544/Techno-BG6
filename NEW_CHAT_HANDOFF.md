@@ -16,8 +16,8 @@ The phone (**TECNO SPARK Go 2024 / `TECNO-BG6`**, ADB serial `1099738415003670`,
    - **0% custom userspace C daemons, 0% custom `.sh` scripts** — legacy `bg6-perf-tune.sh`, `bg6_perf_engine` (C), `bg6_dt2w_daemon` (C), `gnss_kernel_engine` (C) are physically deleted from `system_a` and replaced by one BOLT-optimized (`-use-old-text -icf=1 -peepholes=all`) Pure-Rust multicall binary + `bg6_zig_accel.zig` (`cntvct_el0` + FNV64).
 5. **Verified Release Checksums (`v8-whole-rust-a16-complete`)**:
    - `bg6_boot_a_v6_rust.img` (`67,108,864` B): `SHA256 = 60509e6da8c7a168eb048a15bb7cbab02587c02717d60f55d372ac4e57f6a225`
-   - `infinity_x_bg6_ready.img` (`3,423,481,856` B, AVB `SHA256_RSA2048`): `SHA256 = be4e666a65d4293b4c7f6671f81fa0211122171ee6116da02da02c6f9c167a96` (`MD5 = 7a69fcab8ccdedeb913f9e50c58abf3e`)
-   - `infinity_x_bg6_ready.img.xz`: `SHA256 = 800554dbd29d1d521999b4463cf7071a9f5a4e32de746da7388b5aa7de0a3d3d`
+   - `infinity_x_bg6_ready.img` (`3,423,481,856` B, AVB `SHA256_RSA2048`): `SHA256 = 2c12cfac16d5b439018148a3afe2b65c7b2b3e6e77dc754c4cb6567b7a0d0f77` (`MD5 = 71565d27580f075f67bd1b5d4a3e5f32`)
+   - `infinity_x_bg6_ready.img.xz`: `SHA256 = f85c522cfe9e009d7faca93112a35227cf75edb53230894a0a2a71969effa7dc`
    - `kernel_repo_v6_rust.bundle`: `SHA256 = 04c4f0a3335fff29d681ec75b27a0d18f1fad65262997ed1b2becda76f1b7b72`
 
 ---

@@ -22,7 +22,7 @@ fn panic(_info: &PanicInfo) -> ! {
 
 #[no_mangle]
 pub extern "C" fn wasm_policy_version() -> u32 {
-    8001
+    8002
 }
 
 /// Computes unified CPU/GPU/WALT scheduling parameters inside the Wasm sandbox.
@@ -97,6 +97,9 @@ pub extern "C" fn wasm_compute_sched_profile(
 }
 
 /// Sandboxed Double-Tap Gesture Validator (1 = valid double-tap, 0 = reject)
+/// Screen-on DT2S is delegated 100% to Android 16's native SystemUI / Launcher3
+/// to prevent double-power-toggle blink; Wasm validates Black-Standby DT2W with
+/// hardware IRQ timestamps (`dur_ms` >= 0 for crisp sub-5ms taps, `gap_ms` = down2 - up1).
 #[no_mangle]
 pub extern "C" fn wasm_validate_double_tap(
     is_standby: i32,
@@ -107,27 +110,21 @@ pub extern "C" fn wasm_validate_double_tap(
     tap_y: i32,
 ) -> i32 {
     if is_standby != 0 {
-        if dur_ms >= 5
-            && dur_ms <= 350
-            && gap_ms >= 20
-            && gap_ms <= 750
-            && max_move_px <= 70
-            && tap_dist_px <= 200
+        if dur_ms >= 0
+            && dur_ms <= 380
+            && gap_ms >= 15
+            && gap_ms <= 550
+            && max_move_px >= 0
+            && max_move_px <= 60
+            && tap_dist_px >= 0
+            && tap_dist_px <= 145
+            && tap_y >= 60
+            && tap_y <= 1552
         {
             1
         } else {
             0
         }
-    } else if dur_ms >= 5
-        && dur_ms <= 320
-        && gap_ms >= 20
-        && gap_ms <= 600
-        && max_move_px <= 55
-        && tap_dist_px <= 140
-        && tap_y >= 10
-        && tap_y <= 1480
-    {
-        1
     } else {
         0
     }

@@ -61,6 +61,22 @@ const fn eviocgname(len: usize) -> libc::c_ulong {
     ((2u32 << 30) | ((len as u32) << 16) | (0x45u32 << 8) | 0x06u32) as libc::c_ulong
 }
 
+const fn eviocgabs(abs: usize) -> libc::c_ulong {
+    ((2u32 << 30) | (24u32 << 16) | (0x45u32 << 8) | ((0x40 + abs) as u32)) as libc::c_ulong
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+struct InputAbsInfo {
+    value: i32,
+    minimum: i32,
+    maximum: i32,
+    fuzz: i32,
+    flat: i32,
+    resolution: i32,
+}
+const _: () = assert!(core::mem::size_of::<InputAbsInfo>() == 24);
+
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
 struct InputEvent {
@@ -71,6 +87,16 @@ struct InputEvent {
     value: i32,
 }
 const _: () = assert!(core::mem::size_of::<InputEvent>() == 24);
+
+#[inline]
+fn ev_irq_ms(ev: &InputEvent) -> i64 {
+    let ms = ev.tv_sec.saturating_mul(1000) + (ev.tv_usec / 1000);
+    if ms > 0 {
+        ms
+    } else {
+        now_ms()
+    }
+}
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -166,67 +192,50 @@ fn set_dummy_backlight(val: i32) {
     let _ = write_atomic_file(DUMMY_BL_PATH, &format!("{}\n", val), 0o666);
 }
 
-fn is_screen_ready_for_dt2s(tap_y: i32) -> i32 {
-    let sysui = run_stdout(
-        "/system/bin/dumpsys",
-        &[
-            "activity",
-            "service",
-            "com.android.systemui/.SystemUIService",
-            "SysUiState",
-            "PulseExpansionHandler",
-            "KeyguardViewMediator",
-        ],
-    );
-    let mut keyguard_showing = false;
-    let mut occluded = false;
-    let mut bouncer_showing = false;
-    let mut qs_expanded = false;
-
-    for line in sysui.lines() {
-        if line.contains("keygrd_visible") || line.contains("mShowing: true") {
-            keyguard_showing = true;
-        }
-        if line.contains("mOccluded: true") {
-            occluded = true;
-        }
-        if line.contains("bouncer_visible") || line.contains("bouncerShowing: true") {
-            bouncer_showing = true;
-        }
-        if line.contains("qsExpanded: true") {
-            qs_expanded = true;
-        }
+fn read_abs_val(fd: i32, axis: usize) -> Option<i32> {
+    if fd < 0 {
+        return None;
     }
-
-    if bouncer_showing || qs_expanded {
-        return 0;
-    }
-    if keyguard_showing && !occluded {
-        return 1;
-    }
-    if tap_y < 90 {
-        return 2;
-    }
-
-    thread::sleep(Duration::from_millis(70));
-    let win = run_stdout("/system/bin/dumpsys", &["window", "displays"]);
-    let mut on_home_launcher = false;
-    let mut ime_showing = false;
-    for line in win.lines() {
-        if line.contains("mCurrentFocus=")
-            && (line.contains("QuickstepLauncher") || line.contains("NexusLauncherActivity"))
-        {
-            on_home_launcher = true;
-        }
-        if line.contains("mIsImeShowing=true") || line.contains("mImeShowing=true") {
-            ime_showing = true;
-        }
-    }
-    if on_home_launcher && !ime_showing {
-        2
+    let mut info = InputAbsInfo::default();
+    let rc = unsafe { libc::ioctl(fd, eviocgabs(axis) as _, &mut info as *mut InputAbsInfo) };
+    if rc >= 0 {
+        Some(info.value)
     } else {
-        0
+        None
     }
+}
+
+fn sync_touch_abs_state(touch_fd: i32, cur_slot: &mut usize, cur_x: &mut i32, cur_y: &mut i32) {
+    if let Some(s) = read_abs_val(touch_fd, ABS_MT_SLOT) {
+        if (0..10).contains(&s) {
+            *cur_slot = s as usize;
+        } else {
+            *cur_slot = 0;
+        }
+    } else {
+        *cur_slot = 0;
+    }
+    if let Some(x) = read_abs_val(touch_fd, ABS_MT_POSITION_X) {
+        *cur_x = x;
+    }
+    if let Some(y) = read_abs_val(touch_fd, ABS_MT_POSITION_Y) {
+        *cur_y = y;
+    }
+}
+
+fn drain_input_fd(fd: i32) {
+    if fd < 0 {
+        return;
+    }
+    let mut ev = InputEvent::default();
+    while unsafe {
+        libc::read(
+            fd,
+            &mut ev as *mut InputEvent as *mut _,
+            core::mem::size_of::<InputEvent>(),
+        )
+    } == core::mem::size_of::<InputEvent>() as isize
+    {}
 }
 
 fn setup_uinput_keys() -> i32 {
@@ -548,7 +557,14 @@ struct StandbyCtx {
 }
 
 impl StandbyCtx {
-    fn enter(&mut self, slot_active: &mut [bool; 10], reason: &str) {
+    fn enter(
+        &mut self,
+        slot_active: &mut [bool; 10],
+        cur_slot: &mut usize,
+        cur_x: &mut i32,
+        cur_y: &mut i32,
+        reason: &str,
+    ) {
         umount_all_detach(BL_PATH);
         set_dummy_backlight(if self.saved_bl >= 40 { self.saved_bl } else { 220 });
         set_real_backlight(self.bl_real_fd, 0);
@@ -566,33 +582,40 @@ impl StandbyCtx {
 
         if is_dpms_off() {
             emit_wakeup(self.ufd);
-            thread::sleep(Duration::from_millis(120));
+            // Clamp hardware backlight at 0 every 5ms across the entire DPMS Off->On transition
+            // so sprd_drm / lights HAL can never produce even a 1-frame visible blink.
+            for _ in 0..24 {
+                set_real_backlight(self.bl_real_fd, 0);
+                thread::sleep(Duration::from_millis(5));
+            }
             set_real_backlight(self.bl_real_fd, 0);
         }
 
         ensure_dpu_ddr_bandwidth();
         refresh_user_activity_via_uinput(self.utouch_fd, &mut self.keepalive_alt);
+        drain_input_fd(self.touch_fd);
+        drain_input_fd(self.pwr_fd);
+        *slot_active = [false; 10];
+        sync_touch_abs_state(self.touch_fd, cur_slot, cur_x, cur_y);
         set_standby_cpu_power_save(true);
 
         let t = now_ms();
         self.is_black_standby = true;
         self.standby_enter_ms = t;
         self.last_keepalive_ms = t;
-        log_msg(&format!("ENTER_BLACK_STANDBY reason={} (Rust v8.0)", reason));
+        log_msg(&format!("ENTER_BLACK_STANDBY reason={} (Rust v8.2)", reason));
     }
 
-    fn exit(&mut self, slot_active: &mut [bool; 10], mode: i32, reason: &str) {
+    fn exit(
+        &mut self,
+        slot_active: &mut [bool; 10],
+        cur_slot: &mut usize,
+        cur_x: &mut i32,
+        cur_y: &mut i32,
+        mode: i32,
+        reason: &str,
+    ) {
         set_standby_cpu_power_save(false);
-
-        release_active_mt_slots(self.touch_fd, slot_active, false);
-        unsafe {
-            if self.touch_fd >= 0 {
-                libc::ioctl(self.touch_fd, EVIOCGRAB as _, 0 as libc::c_int);
-            }
-            if self.pwr_fd >= 0 {
-                libc::ioctl(self.pwr_fd, EVIOCGRAB as _, 0 as libc::c_int);
-            }
-        }
         self.is_black_standby = false;
 
         let dummy_bl = get_dummy_backlight();
@@ -607,8 +630,21 @@ impl StandbyCtx {
             } else {
                 220
             };
+            // Restore backlight FIRST for <2ms instant factory wake feel
             set_real_backlight(self.bl_real_fd, restore);
             ensure_dpu_ddr_bandwidth();
+            release_active_mt_slots(self.touch_fd, slot_active, false);
+            unsafe {
+                if self.touch_fd >= 0 {
+                    libc::ioctl(self.touch_fd, EVIOCGRAB as _, 0 as libc::c_int);
+                }
+                if self.pwr_fd >= 0 {
+                    libc::ioctl(self.pwr_fd, EVIOCGRAB as _, 0 as libc::c_int);
+                }
+            }
+            drain_input_fd(self.touch_fd);
+            drain_input_fd(self.pwr_fd);
+            sync_touch_abs_state(self.touch_fd, cur_slot, cur_x, cur_y);
             emit_wakeup(self.ufd);
             refresh_user_activity_via_uinput(self.utouch_fd, &mut self.keepalive_alt);
             ensure_dpu_ddr_bandwidth();
@@ -617,6 +653,16 @@ impl StandbyCtx {
                 reason, restore
             ));
         } else {
+            release_active_mt_slots(self.touch_fd, slot_active, false);
+            unsafe {
+                if self.touch_fd >= 0 {
+                    libc::ioctl(self.touch_fd, EVIOCGRAB as _, 0 as libc::c_int);
+                }
+                if self.pwr_fd >= 0 {
+                    libc::ioctl(self.pwr_fd, EVIOCGRAB as _, 0 as libc::c_int);
+                }
+            }
+            sync_touch_abs_state(self.touch_fd, cur_slot, cur_x, cur_y);
             set_real_backlight(self.bl_real_fd, 0);
             log_msg(&format!("EXIT_BLACK_STANDBY reason={} bl=0", reason));
         }
@@ -625,7 +671,7 @@ impl StandbyCtx {
 
 pub fn run_dt2w_daemon() -> i32 {
     let _ = fs::remove_file(LOG_PATH);
-    log_msg("bg6_dt2w_daemon v8.0 Pure-Rust starting (epoll + Netlink UEvent + inotify + Wasm Sandbox)");
+    log_msg("bg6_dt2w_daemon v8.2 Pure-Rust Factory DT2W Engine starting");
 
     umount_all_detach(BL_PATH);
     chmod_path(BL_PATH, 0o664);
@@ -675,8 +721,11 @@ pub fn run_dt2w_daemon() -> i32 {
     let mut setting_cache = Dt2wSettingCache::new();
     let mut slot_active = [false; 10];
     let mut cur_slot: usize = 0;
+    let mut cur_x = 360i32;
+    let mut cur_y = 800i32;
 
     release_active_mt_slots(touch_fd, &mut slot_active, true);
+    sync_touch_abs_state(touch_fd, &mut cur_slot, &mut cur_x, &mut cur_y);
 
     let mut init_bl = get_real_backlight();
     if init_bl < 40 {
@@ -701,22 +750,23 @@ pub fn run_dt2w_daemon() -> i32 {
     let mut candidate_bl = init_bl;
     let mut candidate_bl_since_ms = now_ms();
     let mut bl_zero_since_ms = 0i64;
+    let mut dpms_off_since_ms = 0i64;
     let mut last_wake_ms = 0i64;
     let mut last_bw_check_ms = 0i64;
     let mut last_ring_check_ms = 0i64;
     let mut last_usb_online = get_usb_online();
 
-    let mut cur_x = 0i32;
-    let mut cur_y = 0i32;
     let mut start_x = 0i32;
     let mut start_y = 0i32;
     let mut touch_active = false;
     let mut was_touch_active = false;
     let mut start_recorded = false;
+    let mut multi_touch_tainted = false;
     let mut max_move_x = 0i32;
     let mut max_move_y = 0i32;
     let mut down_ms = 0i64;
-    let mut prev_tap_ms = 0i64;
+    let mut prev_tap_down_ms = 0i64;
+    let mut prev_tap_up_ms = 0i64;
     let mut prev_tap_x = 0i32;
     let mut prev_tap_y = 0i32;
 
@@ -744,10 +794,22 @@ pub fn run_dt2w_daemon() -> i32 {
     let mut scratch_buf = [0u8; 1024];
 
     loop {
-        let nfds = if epfd >= 0 {
-            unsafe { libc::epoll_wait(epfd, ep_events.as_mut_ptr(), ep_events.len() as i32, 120) }
+        let ep_timeout_ms = if !ctx.is_black_standby && bl_zero_since_ms > 0 {
+            35
         } else {
-            thread::sleep(Duration::from_millis(120));
+            150
+        };
+        let nfds = if epfd >= 0 {
+            unsafe {
+                libc::epoll_wait(
+                    epfd,
+                    ep_events.as_mut_ptr(),
+                    ep_events.len() as i32,
+                    ep_timeout_ms,
+                )
+            }
+        } else {
+            thread::sleep(Duration::from_millis(ep_timeout_ms as u64));
             0
         };
 
@@ -761,12 +823,21 @@ pub fn run_dt2w_daemon() -> i32 {
                     // Drain netlink uevents purely as a zero-polling wakeup hint to re-check usb/online;
                     // NEVER wake on generic battery fuel-gauge power_supply ticks!
                     while unsafe {
-                        libc::recv(uevent_fd, scratch_buf.as_mut_ptr() as *mut _, scratch_buf.len(), 0)
+                        libc::recv(
+                            uevent_fd,
+                            scratch_buf.as_mut_ptr() as *mut _,
+                            scratch_buf.len(),
+                            0,
+                        )
                     } > 0
                     {}
                 } else if e.u64 == 5 && inotify_fd >= 0 {
                     while unsafe {
-                        libc::read(inotify_fd, scratch_buf.as_mut_ptr() as *mut _, scratch_buf.len())
+                        libc::read(
+                            inotify_fd,
+                            scratch_buf.as_mut_ptr() as *mut _,
+                            scratch_buf.len(),
+                        )
                     } > 0
                     {
                         force_setting_check = true;
@@ -804,28 +875,65 @@ pub fn run_dt2w_daemon() -> i32 {
                     }
                 }
                 bl_zero_since_ms = 0;
+                dpms_off_since_ms = 0;
             } else if bl == 0 && dt2w_enabled {
                 if bl_zero_since_ms == 0 {
                     bl_zero_since_ms = t;
-                } else if t - bl_zero_since_ms >= 350 && t - last_wake_ms >= 1000 {
-                    ctx.enter(&mut slot_active, "SYSTEM_SLEEP");
+                }
+                if is_dpms_off() {
+                    if dpms_off_since_ms == 0 {
+                        dpms_off_since_ms = t;
+                    }
+                } else {
+                    dpms_off_since_ms = 0;
+                }
+
+                let sleep_settled = (dpms_off_since_ms > 0 && t - dpms_off_since_ms >= 220)
+                    || (t - bl_zero_since_ms >= 420);
+
+                if sleep_settled && (t - last_wake_ms >= 650) {
+                    ctx.enter(
+                        &mut slot_active,
+                        &mut cur_slot,
+                        &mut cur_x,
+                        &mut cur_y,
+                        "SYSTEM_SLEEP",
+                    );
                     bl_zero_since_ms = 0;
+                    dpms_off_since_ms = 0;
                     touch_active = false;
                     was_touch_active = false;
-                    prev_tap_ms = 0;
+                    multi_touch_tainted = false;
+                    prev_tap_down_ms = 0;
+                    prev_tap_up_ms = 0;
+                    continue;
                 }
             }
         } else {
             if !dt2w_enabled {
                 last_wake_ms = t;
-                ctx.exit(&mut slot_active, 0, "SETTING_DISABLED");
+                ctx.exit(
+                    &mut slot_active,
+                    &mut cur_slot,
+                    &mut cur_x,
+                    &mut cur_y,
+                    0,
+                    "SETTING_DISABLED",
+                );
                 continue;
             }
             let cur_usb = get_usb_online();
             if cur_usb >= 0 && last_usb_online >= 0 && cur_usb != last_usb_online {
                 last_usb_online = cur_usb;
                 last_wake_ms = t;
-                ctx.exit(&mut slot_active, 0, "USB_PLUG_WAKE");
+                ctx.exit(
+                    &mut slot_active,
+                    &mut cur_slot,
+                    &mut cur_x,
+                    &mut cur_y,
+                    0,
+                    "USB_PLUG_WAKE",
+                );
                 continue;
             }
             if cur_usb >= 0 {
@@ -835,7 +943,14 @@ pub fn run_dt2w_daemon() -> i32 {
                 last_ring_check_ms = t;
                 if is_ringing_or_alarm_active() {
                     last_wake_ms = now_ms();
-                    ctx.exit(&mut slot_active, 0, "INCOMING_CALL_OR_ALARM");
+                    ctx.exit(
+                        &mut slot_active,
+                        &mut cur_slot,
+                        &mut cur_x,
+                        &mut cur_y,
+                        0,
+                        "INCOMING_CALL_OR_ALARM",
+                    );
                     continue;
                 }
             }
@@ -845,7 +960,10 @@ pub fn run_dt2w_daemon() -> i32 {
             if !touch_active {
                 if is_dpms_off() {
                     emit_wakeup(ctx.ufd);
-                    thread::sleep(Duration::from_millis(120));
+                    for _ in 0..24 {
+                        set_real_backlight(ctx.bl_real_fd, 0);
+                        thread::sleep(Duration::from_millis(5));
+                    }
                     set_real_backlight(ctx.bl_real_fd, 0);
                     ensure_dpu_ddr_bandwidth();
                     refresh_user_activity_via_uinput(ctx.utouch_fd, &mut ctx.keepalive_alt);
@@ -874,7 +992,8 @@ pub fn run_dt2w_daemon() -> i32 {
             }
         }
 
-        // 1. Touchscreen Events
+        // 1. Touchscreen Events (Screen-ON DT2S is delegated 100% to Android 16 SystemUI/Launcher3
+        //    for zero-blink factory accuracy; here we track MT state and handle Black-Standby DT2W)
         if touch_ready {
             while unsafe {
                 libc::read(
@@ -884,8 +1003,6 @@ pub fn run_dt2w_daemon() -> i32 {
                 )
             } == core::mem::size_of::<InputEvent>() as isize
             {
-                let ev_t = now_ms();
-
                 if ev.type_ == EV_ABS && ev.code as usize == ABS_MT_SLOT {
                     if ev.value >= 0 && ev.value < 10 {
                         cur_slot = ev.value as usize;
@@ -895,21 +1012,49 @@ pub fn run_dt2w_daemon() -> i32 {
                 if ev.type_ == EV_ABS && ev.code as usize == ABS_MT_TRACKING_ID {
                     if cur_slot < 10 {
                         slot_active[cur_slot] = ev.value >= 0;
+                        if cur_slot > 0 && ev.value >= 0 {
+                            multi_touch_tainted = true;
+                        }
                     }
                 }
 
-                if !dt2w_enabled && !ctx.is_black_standby {
+                // While screen is ON, only maintain cur_slot/cur_x/cur_y/slot_active — never
+                // interfere with Android's native Java GestureDetector / SystemUI DT2S!
+                if !ctx.is_black_standby {
+                    if ev.type_ == EV_ABS && cur_slot == 0 {
+                        match ev.code as usize {
+                            ABS_MT_POSITION_X => cur_x = ev.value,
+                            ABS_MT_POSITION_Y => cur_y = ev.value,
+                            _ => {}
+                        }
+                    }
                     touch_active = false;
                     was_touch_active = false;
-                    prev_tap_ms = 0;
+                    multi_touch_tainted = false;
+                    prev_tap_down_ms = 0;
+                    prev_tap_up_ms = 0;
                     continue;
                 }
-                if ctx.is_black_standby && (ev_t - ctx.standby_enter_ms < 450) {
+
+                // Short 150ms post-standby SPI settle guard (pre-sleep queue already drained)
+                let wall_now = now_ms();
+                if wall_now - ctx.standby_enter_ms < 150 {
+                    if ev.type_ == EV_ABS && cur_slot == 0 {
+                        match ev.code as usize {
+                            ABS_MT_POSITION_X => cur_x = ev.value,
+                            ABS_MT_POSITION_Y => cur_y = ev.value,
+                            _ => {}
+                        }
+                    }
                     touch_active = false;
                     was_touch_active = false;
-                    prev_tap_ms = 0;
+                    multi_touch_tainted = false;
+                    prev_tap_down_ms = 0;
+                    prev_tap_up_ms = 0;
                     continue;
                 }
+
+                let ev_t = ev_irq_ms(&ev);
 
                 if ev.type_ == EV_ABS && cur_slot == 0 {
                     match ev.code as usize {
@@ -919,6 +1064,7 @@ pub fn run_dt2w_daemon() -> i32 {
                             if ev.value >= 0 && !touch_active {
                                 touch_active = true;
                                 start_recorded = false;
+                                multi_touch_tainted = slot_active[1..].iter().any(|&a| a);
                                 max_move_x = 0;
                                 max_move_y = 0;
                                 down_ms = ev_t;
@@ -932,6 +1078,7 @@ pub fn run_dt2w_daemon() -> i32 {
                     if ev.value == 1 && !touch_active {
                         touch_active = true;
                         start_recorded = false;
+                        multi_touch_tainted = slot_active[1..].iter().any(|&a| a);
                         max_move_x = 0;
                         max_move_y = 0;
                         down_ms = ev_t;
@@ -957,89 +1104,72 @@ pub fn run_dt2w_daemon() -> i32 {
                     }
 
                     if was_touch_active && !touch_active {
-                        let dur = (ev_t - down_ms) as i32;
-                        let tap_x = start_x;
-                        let tap_y = start_y;
+                        let raw_dur = (ev_t - down_ms) as i32;
+                        let dur = raw_dur.max(0);
+                        let tap_x = if start_recorded { start_x } else { cur_x };
+                        let tap_y = if start_recorded { start_y } else { cur_y };
                         let max_move = max_move_x.max(max_move_y);
+                        let in_safe_zone =
+                            (24..=696).contains(&tap_x) && (60..=1552).contains(&tap_y);
 
-                        if ctx.is_black_standby {
-                            if dur >= 5 && dur <= 350 && max_move <= 70 {
-                                let gap = (down_ms - prev_tap_ms) as i32;
-                                let dist = (tap_x - prev_tap_x).abs().max((tap_y - prev_tap_y).abs());
-                                log_msg(&format!(
-                                    "STANDBY_TAP x={} y={} dur={} gap={} dist={}",
-                                    tap_x, tap_y, dur, gap, dist
-                                ));
-
-                                let valid_dt = if prev_tap_ms > 0 {
-                                    wasm_sb
-                                        .validate_double_tap(true, dur, gap, max_move, dist, tap_y)
-                                        .unwrap_or(gap >= 20 && gap <= 750 && dist <= 200)
-                                } else {
-                                    false
-                                };
-
-                                if valid_dt {
-                                    prev_tap_ms = 0;
-                                    last_wake_ms = now_ms();
-                                    ctx.exit(&mut slot_active, 0, "DOUBLE_TAP");
-                                    was_touch_active = false;
-                                    break;
-                                } else {
-                                    prev_tap_ms = down_ms;
-                                    prev_tap_x = tap_x;
-                                    prev_tap_y = tap_y;
-                                }
+                        if !multi_touch_tainted
+                            && in_safe_zone
+                            && dur <= 380
+                            && max_move <= 60
+                        {
+                            let gap = if prev_tap_up_ms > 0 {
+                                (down_ms - prev_tap_up_ms) as i32
                             } else {
-                                prev_tap_ms = 0;
-                            }
-                        } else if dt2w_enabled {
-                            if dur >= 5
-                                && dur <= 320
-                                && max_move <= 55
-                                && (10..=1480).contains(&tap_y)
-                                && (ev_t - last_wake_ms > 450)
-                            {
-                                let gap = (down_ms - prev_tap_ms) as i32;
-                                let dist = (tap_x - prev_tap_x).abs().max((tap_y - prev_tap_y).abs());
-
-                                let valid_dt = if prev_tap_ms > 0 {
-                                    wasm_sb
-                                        .validate_double_tap(false, dur, gap, max_move, dist, tap_y)
-                                        .unwrap_or(gap >= 20 && gap <= 600 && dist <= 140)
-                                } else {
-                                    false
-                                };
-
-                                if valid_dt {
-                                    prev_tap_ms = 0;
-                                    let dt2s_mode = is_screen_ready_for_dt2s(tap_y);
-                                    if dt2s_mode == 1 {
-                                        log_msg(&format!("LOCKSCREEN_DT2S x={} y={}", tap_x, tap_y));
-                                        ctx.enter(&mut slot_active, "LOCKSCREEN_DOUBLE_TAP");
-                                        was_touch_active = false;
-                                        break;
-                                    } else if dt2s_mode == 2 {
-                                        log_msg(&format!("HOMESCREEN_DT2S x={} y={}", tap_x, tap_y));
-                                        emit_key(ctx.ufd, KEY_POWER, 1);
-                                        thread::sleep(Duration::from_millis(15));
-                                        emit_key(ctx.ufd, KEY_POWER, 0);
-                                        thread::sleep(Duration::from_millis(80));
-                                        ctx.enter(&mut slot_active, "HOMESCREEN_DOUBLE_TAP");
-                                        was_touch_active = false;
-                                        break;
-                                    }
-                                } else {
-                                    prev_tap_ms = down_ms;
-                                    prev_tap_x = tap_x;
-                                    prev_tap_y = tap_y;
-                                }
+                                0
+                            };
+                            let span = if prev_tap_down_ms > 0 {
+                                (down_ms - prev_tap_down_ms) as i32
                             } else {
-                                prev_tap_ms = 0;
+                                0
+                            };
+                            let dx = tap_x - prev_tap_x;
+                            let dy = tap_y - prev_tap_y;
+                            let dist = (((dx * dx + dy * dy) as f64).sqrt()) as i32;
+
+                            log_msg(&format!(
+                                "STANDBY_TAP x={} y={} dur={} gap={} span={} dist={}",
+                                tap_x, tap_y, dur, gap, span, dist
+                            ));
+
+                            let valid_dt = if prev_tap_up_ms > 0 && span <= 850 {
+                                wasm_sb
+                                    .validate_double_tap(true, dur, gap, max_move, dist, tap_y)
+                                    .unwrap_or((15..=550).contains(&gap) && dist <= 145)
+                            } else {
+                                false
+                            };
+
+                            if valid_dt {
+                                prev_tap_down_ms = 0;
+                                prev_tap_up_ms = 0;
+                                last_wake_ms = now_ms();
+                                ctx.exit(
+                                    &mut slot_active,
+                                    &mut cur_slot,
+                                    &mut cur_x,
+                                    &mut cur_y,
+                                    0,
+                                    "DOUBLE_TAP",
+                                );
+                                was_touch_active = false;
+                                multi_touch_tainted = false;
+                                break;
+                            } else {
+                                prev_tap_down_ms = down_ms;
+                                prev_tap_up_ms = ev_t;
+                                prev_tap_x = tap_x;
+                                prev_tap_y = tap_y;
                             }
                         } else {
-                            prev_tap_ms = 0;
+                            prev_tap_down_ms = 0;
+                            prev_tap_up_ms = 0;
                         }
+                        multi_touch_tainted = false;
                     }
 
                     was_touch_active = touch_active;
@@ -1063,7 +1193,14 @@ pub fn run_dt2w_daemon() -> i32 {
                 if ev.type_ == EV_KEY {
                     if ev.code == KEY_POWER && ev.value == 1 {
                         last_wake_ms = now_ms();
-                        ctx.exit(&mut slot_active, 2, "POWER_KEY");
+                        ctx.exit(
+                            &mut slot_active,
+                            &mut cur_slot,
+                            &mut cur_x,
+                            &mut cur_y,
+                            2,
+                            "POWER_KEY",
+                        );
                         break;
                     } else if ev.code == KEY_VOLUMEUP || ev.code == KEY_VOLUMEDOWN {
                         emit_key(ctx.ufd, ev.code, ev.value);
@@ -1087,7 +1224,14 @@ pub fn run_dt2w_daemon() -> i32 {
                 }
                 if ev.type_ == EV_KEY && ev.value == 1 {
                     last_wake_ms = now_ms();
-                    ctx.exit(&mut slot_active, 0, "FINGERPRINT");
+                    ctx.exit(
+                        &mut slot_active,
+                        &mut cur_slot,
+                        &mut cur_x,
+                        &mut cur_y,
+                        0,
+                        "FINGERPRINT",
+                    );
                     break;
                 }
             }

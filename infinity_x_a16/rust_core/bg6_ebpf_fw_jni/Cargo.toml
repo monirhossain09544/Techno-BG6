@@ -1,0 +1,19 @@
+[package]
+name = "bg6_ebpf_fw"
+version = "9.0.0"
+edition = "2021"
+description = "100% Pure-Rust Kernel eBPF Firewall & Telemetry JNI Engine (SYS_bpf + cgroup_skb + TC ingress_discard + Socket Filter JIT)"
+
+[lib]
+name = "bg6_ebpf_fw"
+crate-type = ["cdylib"]
+
+[dependencies]
+libc = "0.2"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"

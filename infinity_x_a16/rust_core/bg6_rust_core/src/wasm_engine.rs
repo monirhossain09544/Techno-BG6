@@ -35,6 +35,28 @@ impl WasmSchedDecision {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct WasmJetsamDecision {
+    pub mode: u32,
+    pub min_oom_adj: i32,
+    pub min_anon_kb: u64,
+    pub max_pids_per_pass: usize,
+    pub target_swappiness: u32,
+}
+
+impl WasmJetsamDecision {
+    pub fn mode_name(&self) -> &'static str {
+        match self.mode {
+            0 => "SCROLL_SHIELD",
+            1 => "HEALTHY_HOLD",
+            2 => "GENTLE_IDLE",
+            3 => "PRESSURE_COMPACT",
+            4 => "DEEP_STANDBY",
+            _ => "DEFAULT",
+        }
+    }
+}
+
 pub struct WasmSandbox {
     engine: Engine,
     store: Store<()>,
@@ -186,6 +208,57 @@ impl WasmSandbox {
             gpu_min_hz: gpu_mhz.clamp(153, 512) * 1_000_000,
             profile_id: prof,
             policy_version: self.policy_version,
+        }
+    }
+
+    pub fn eval_jetsam_action(
+        &mut self,
+        mem_avail_mb: i32,
+        swap_free_mb: i32,
+        psi_some_x100: i32,
+        ring0_score: i32,
+        touch_vel: i32,
+        is_standby: bool,
+    ) -> WasmJetsamDecision {
+        let fallback = WasmJetsamDecision {
+            mode: if is_standby { 4 } else if touch_vel > 60 { 0 } else { 2 },
+            min_oom_adj: if is_standby { 650 } else { 700 },
+            min_anon_kb: 14_336,
+            max_pids_per_pass: if touch_vel > 60 { 0 } else { 2 },
+            target_swappiness: 135,
+        };
+
+        let Some(inst) = self.instance else {
+            return fallback;
+        };
+        let Ok(func): Result<TypedFunc<(i32, i32, i32, i32, i32, i32), i64>, _> =
+            inst.get_typed_func(&self.store, "wasm_compute_jetsam_action")
+        else {
+            return fallback;
+        };
+
+        let _ = self.store.set_fuel(FUEL_BUDGET);
+        let Ok(packed_i64) = func.call(
+            &mut self.store,
+            (
+                mem_avail_mb,
+                swap_free_mb,
+                psi_some_x100,
+                ring0_score,
+                touch_vel,
+                if is_standby { 1 } else { 0 },
+            ),
+        ) else {
+            return fallback;
+        };
+
+        let packed = packed_i64 as u64;
+        WasmJetsamDecision {
+            mode: (packed & 0xff) as u32,
+            min_oom_adj: ((packed >> 8) & 0xffff) as i32,
+            min_anon_kb: ((packed >> 24) & 0xffff),
+            max_pids_per_pass: (((packed >> 40) & 0xff) as usize).min(8),
+            target_swappiness: (((packed >> 48) & 0xff) as u32).clamp(60, 180),
         }
     }
 

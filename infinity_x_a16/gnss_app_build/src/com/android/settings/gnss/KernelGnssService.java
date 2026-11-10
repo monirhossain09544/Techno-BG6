@@ -33,15 +33,23 @@ public class KernelGnssService extends Service {
     public static volatile float sAcc = 2.6f;
     public static volatile boolean sJitter = true;
 
+    public static volatile boolean sCruiseActive = false;
+    public static volatile float sSpeedKmh = 42.0f;
+    public static volatile float sBearingDeg = 65.0f;
+    public static volatile long sFixesPushed = 0L;
+    public static volatile int sSvCount = 15;
+    public static volatile float sMeanCn0 = 41.8f;
+
     private Handler mHandler;
     private LocationManager mLm;
+    private long mLastTickMs = 0L;
 
     private final Runnable mPulseTask = new Runnable() {
         @Override
         public void run() {
             if (!sIsRunning) return;
             pushHardwareFix();
-            mHandler.postDelayed(this, 800);
+            mHandler.postDelayed(this, 500);
         }
     };
 
@@ -71,6 +79,7 @@ public class KernelGnssService extends Service {
             prefs.edit()
                 .putString("lat", String.valueOf(sLat))
                 .putString("lon", String.valueOf(sLon))
+                .putFloat("alt", (float) sAlt)
                 .putFloat("acc", sAcc)
                 .putBoolean("active", true)
                 .apply();
@@ -79,6 +88,7 @@ public class KernelGnssService extends Service {
                 sLat = Double.parseDouble(prefs.getString("lat", "23.792500"));
                 sLon = Double.parseDouble(prefs.getString("lon", "90.407800"));
             } catch (Exception ignored) {}
+            sAlt = prefs.getFloat("alt", 15.2f);
             sAcc = prefs.getFloat("acc", 2.6f);
             prefs.edit().putBoolean("active", true).apply();
         }
@@ -98,6 +108,7 @@ public class KernelGnssService extends Service {
 
         ensureProviders();
         sIsRunning = true;
+        mLastTickMs = SystemClock.elapsedRealtime();
         mHandler.removeCallbacks(mPulseTask);
         mHandler.post(mPulseTask);
         return START_STICKY;
@@ -121,7 +132,26 @@ public class KernelGnssService extends Service {
 
     private void pushHardwareFix() {
         long nowMs = System.currentTimeMillis();
+        long elapsedMs = SystemClock.elapsedRealtime();
         long elapsedNanos = SystemClock.elapsedRealtimeNanos();
+
+        float dtSec = (mLastTickMs > 0 && elapsedMs > mLastTickMs)
+                ? Math.min(2.0f, (elapsedMs - mLastTickMs) / 1000.0f)
+                : 0.5f;
+        mLastTickMs = elapsedMs;
+
+        float speedMps = 0.0f;
+        if (sCruiseActive && sSpeedKmh > 0.2f) {
+            speedMps = sSpeedKmh / 3.6f;
+            double distMeters = speedMps * dtSec;
+            double rad = Math.toRadians(sBearingDeg);
+            double dLat = (distMeters * Math.cos(rad)) / 111320.0;
+            double cosLat = Math.max(0.15, Math.cos(Math.toRadians(sLat)));
+            double dLon = (distMeters * Math.sin(rad)) / (111320.0 * cosLat);
+            sLat = Math.max(-85.0, Math.min(85.0, sLat + dLat));
+            sLon = ((sLon + dLon + 540.0) % 360.0) - 180.0;
+        }
+
         double jLat = 0.0;
         double jLon = 0.0;
         if (sJitter) {
@@ -131,6 +161,11 @@ public class KernelGnssService extends Service {
         double finalLat = sLat + jLat;
         double finalLon = sLon + jLon;
 
+        int sv = 14 + (int) ((nowMs / 4000L) % 4L);
+        sSvCount = sv;
+        sMeanCn0 = 39.4f + ((nowMs / 1300L) % 5L) * 0.7f;
+        sFixesPushed++;
+
         String[] providers = new String[]{LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER, "fused"};
         for (String p : providers) {
             try {
@@ -139,21 +174,20 @@ public class KernelGnssService extends Service {
                 loc.setLongitude(finalLon);
                 loc.setAltitude(sAlt);
                 loc.setAccuracy(sAcc);
-                loc.setVerticalAccuracyMeters(2.5f);
-                loc.setSpeed(0.0f);
-                loc.setSpeedAccuracyMetersPerSecond(0.5f);
-                loc.setBearing(0.0f);
-                loc.setBearingAccuracyDegrees(5.0f);
+                loc.setVerticalAccuracyMeters(2.2f);
+                loc.setSpeed(speedMps);
+                loc.setSpeedAccuracyMetersPerSecond(0.4f);
+                loc.setBearing(sBearingDeg);
+                loc.setBearingAccuracyDegrees(3.5f);
                 loc.setTime(nowMs);
                 loc.setElapsedRealtimeNanos(elapsedNanos);
-                loc.setElapsedRealtimeUncertaintyNanos(45000.0);
+                loc.setElapsedRealtimeUncertaintyNanos(35000.0);
 
                 if ("gps".equals(p)) {
                     Bundle extras = new Bundle();
-                    int sv = 12 + (int)((nowMs / 5000L) % 4L);
                     extras.putInt("satellites", sv);
-                    extras.putInt("meanCn0", 35);
-                    extras.putInt("maxCn0", 43);
+                    extras.putInt("meanCn0", Math.round(sMeanCn0));
+                    extras.putInt("maxCn0", 46);
                     loc.setExtras(extras);
                 }
                 mLm.setTestProviderLocation(p, loc);
@@ -165,6 +199,7 @@ public class KernelGnssService extends Service {
 
     public static void restoreRealGpsNow(Context ctx) {
         sIsRunning = false;
+        sCruiseActive = false;
         LocationManager lm = (LocationManager) ctx.getSystemService(Context.LOCATION_SERVICE);
         final SharedPreferences prefs = ctx.getSharedPreferences("kernel_gnss", MODE_PRIVATE);
 
@@ -249,8 +284,8 @@ public class KernelGnssService extends Service {
 
         return new Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
-            .setContentTitle("Kernel GNSS Active (Stealth Mode)")
-            .setContentText(String.format("Locked: %.5f, %.5f | isMock=false", sLat, sLon))
+            .setContentTitle("Kernel GNSS Studio (Stealth Locked)")
+            .setContentText(String.format("%.5f, %.5f | %d SV | isMock=false", sLat, sLon, sSvCount))
             .setContentIntent(piOpen)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Restore Real GPS", piStop)
             .setOngoing(true)

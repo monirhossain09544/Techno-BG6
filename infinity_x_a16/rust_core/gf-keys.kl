@@ -1,0 +1,7 @@
+# TECNO-BG6 (Unisoc T606) Side Capacitive Fingerprint Sensor Key Layout
+# Silences raw capacitive touch-navigation scancodes emitted by vendor fpsmgr
+# (87, 103, 105, 106, 108, 116, 139, 172, 212) so Generic.kl can never wake
+# the display or inject stray DPAD/HOME/POWER keys on unauthenticated touches.
+# Real biometric unlock runs over HIDL FingerprintProvider + BiometricAuthGate.
+
+key 999   UNKNOWN

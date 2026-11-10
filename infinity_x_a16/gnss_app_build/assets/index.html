@@ -1,343 +1,2734 @@
 <!DOCTYPE html>
-<html>
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>Kernel GNSS Studio</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=Hind+Siliguri:wght@500;600;700&family=JetBrains+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+<link rel="stylesheet" href="mapbox-gl.css" />
+<script src="mapbox-gl.js"></script>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
-  body { background: #0d1117; color: #e6edf3; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-  
-  /* Header */
-  .top-bar { background: #161b22; padding: 10px 14px; border-bottom: 1px solid #30363d; z-index: 1000; }
-  .title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-  .app-title { font-size: 15px; font-weight: 700; color: #58a6ff; display: flex; align-items: center; gap: 6px; }
-  .badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.4px; }
-  .badge.active { background: rgba(0, 230, 118, 0.18); color: #00e676; border: 1px solid #00e676; }
-  .badge.idle { background: rgba(139, 148, 158, 0.18); color: #8b949e; border: 1px solid #30363d; }
+:root,
+[data-theme="dark"] {
+  --bg-chassis: #06080E;
+  --bg-deck: #0A0F1A;
+  --bg-card: #0F1626;
+  --bg-recess: #070B13;
+  --bg-key: #151F33;
+  --bg-key-hi: #1C2942;
 
-  /* Search box */
-  .search-row { display: flex; gap: 6px; position: relative; }
-  .search-input { flex: 1; background: #0d1117; border: 1px solid #30363d; color: #fff; padding: 8px 12px; border-radius: 8px; font-size: 13px; outline: none; }
-  .search-input:focus { border-color: #58a6ff; }
-  .btn-search { background: #21262d; color: #e6edf3; border: 1px solid #30363d; padding: 0 12px; border-radius: 8px; font-size: 12px; font-weight: 600; }
-  .btn-layer { background: #21262d; color: #58a6ff; border: 1px solid #30363d; padding: 0 10px; border-radius: 8px; font-size: 12px; font-weight: 600; }
-  #search-results { position: absolute; top: 38px; left: 0; right: 0; background: #161b22; border: 1px solid #30363d; border-radius: 8px; max-height: 190px; overflow-y: auto; display: none; z-index: 2000; box-shadow: 0 8px 24px rgba(0,0,0,0.6); }
-  .search-item { padding: 9px 12px; font-size: 12px; border-bottom: 1px solid #21262d; color: #c9d1d9; }
-  .search-item:active { background: #1f6feb; color: #fff; }
+  --border-hair: #1E2B45;
+  --border-strong: #2D3F63;
+  --bevel-top: rgba(255, 255, 255, 0.08);
 
-  /* Preset chips */
-  .chips-bar { display: flex; gap: 6px; overflow-x: auto; padding: 7px 12px; background: #12161c; border-bottom: 1px solid #21262d; scrollbar-width: none; }
-  .chips-bar::-webkit-scrollbar { display: none; }
-  .chip { flex-shrink: 0; background: #21262d; color: #c9d1d9; border: 1px solid #30363d; padding: 5px 10px; border-radius: 14px; font-size: 11px; font-weight: 600; }
-  .chip:active { background: #58a6ff; color: #0d1117; }
-  .chip.save-btn { background: rgba(88, 166, 255, 0.15); color: #58a6ff; border-color: #58a6ff; }
+  --txt-hi: #F8FAFC;
+  --txt-mid: #94A3B8;
+  --txt-lo: #64748B;
 
-  /* Map container */
-  #map-wrap { flex: 1; position: relative; }
-  #map { width: 100%; height: 100%; background: #161b22; }
+  --emerald: #10B981;
+  --emerald-soft: rgba(16, 185, 129, 0.16);
+  --emerald-rim: rgba(16, 185, 129, 0.48);
 
-  /* Floating D-Pad Joystick on Map */
-  .dpad { position: absolute; right: 12px; bottom: 14px; z-index: 900; display: grid; grid-template-columns: repeat(3, 34px); grid-template-rows: repeat(3, 34px); gap: 3px; background: rgba(22,27,34,0.88); padding: 5px; border-radius: 12px; border: 1px solid #30363d; backdrop-filter: blur(6px); }
-  .dpad button { background: #21262d; color: #e6edf3; border: 1px solid #30363d; border-radius: 7px; font-size: 13px; font-weight: bold; }
-  .dpad button:active { background: #00e676; color: #000; }
+  --cyan: #38BDF8;
+  --cyan-soft: rgba(56, 189, 248, 0.16);
+  --cyan-rim: rgba(56, 189, 248, 0.48);
 
-  /* Bottom Control Panel */
-  .bottom-panel { background: #161b22; border-top: 1px solid #30363d; padding: 10px 14px 14px; z-index: 1000; }
-  .telemetry { display: flex; justify-content: space-between; background: #0d1117; padding: 7px 10px; border-radius: 8px; border: 1px solid #21262d; margin-bottom: 8px; font-size: 11px; color: #8b949e; }
-  .telemetry span b { color: #00e676; font-family: monospace; }
-  .coords-row { display: flex; gap: 6px; margin-bottom: 8px; }
-  .coord-box { flex: 1; background: #0d1117; border: 1px solid #30363d; border-radius: 7px; padding: 5px 8px; }
-  .coord-box label { display: block; font-size: 9px; color: #8b949e; text-transform: uppercase; }
-  .coord-box input { width: 100%; background: transparent; border: none; color: #fff; font-size: 12px; font-family: monospace; outline: none; margin-top: 1px; }
-  .action-row { display: flex; gap: 8px; }
-  .btn-main { flex: 2; padding: 12px; border: none; border-radius: 10px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
-  .btn-lock { background: #00e676; color: #051b0e; }
-  .btn-lock:active { background: #00c853; }
-  .btn-stop { flex: 1; padding: 12px; border: 1px solid #58a6ff; background: rgba(88,166,255,0.18); color: #58a6ff; border-radius: 10px; font-size: 13px; font-weight: 700; }
-  .btn-stop:active { background: #58a6ff; color: #0d1117; }
-  #toast { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(13,17,23,0.92); color: #fff; border: 1px solid #58a6ff; padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; z-index: 2500; display: none; white-space: nowrap; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
+  --amber: #F59E0B;
+  --amber-soft: rgba(245, 158, 11, 0.16);
+  --amber-rim: rgba(245, 158, 11, 0.50);
+
+  --coral: #F43F5E;
+  --coral-soft: rgba(244, 63, 94, 0.16);
+  --coral-rim: rgba(244, 63, 94, 0.48);
+
+  --violet: #A78BFA;
+  --shadow-crisp: 0 8px 22px rgba(2, 5, 12, 0.62);
+  --backdrop-dim: rgba(3, 6, 12, 0.78);
+  --slider-track: #1B2740;
+}
+
+[data-theme="light"] {
+  --bg-chassis: #ECEAE4;
+  --bg-deck: #E4E1D8;
+  --bg-card: #F8F7F3;
+  --bg-recess: #D8D4C9;
+  --bg-key: #EAE7DF;
+  --bg-key-hi: #DDD9CE;
+
+  --border-hair: #C9C4B8;
+  --border-strong: #AEAA9D;
+  --bevel-top: rgba(255, 255, 255, 0.88);
+
+  --txt-hi: #0F172A;
+  --txt-mid: #334155;
+  --txt-lo: #64748B;
+
+  --emerald: #047857;
+  --emerald-soft: rgba(4, 120, 87, 0.13);
+  --emerald-rim: rgba(4, 120, 87, 0.44);
+
+  --cyan: #0369A1;
+  --cyan-soft: rgba(3, 105, 161, 0.13);
+  --cyan-rim: rgba(3, 105, 161, 0.42);
+
+  --amber: #B45309;
+  --amber-soft: rgba(180, 83, 9, 0.14);
+  --amber-rim: rgba(180, 83, 9, 0.46);
+
+  --coral: #BE123C;
+  --coral-soft: rgba(190, 18, 60, 0.13);
+  --coral-rim: rgba(190, 18, 60, 0.45);
+
+  --violet: #6D28D9;
+  --shadow-crisp: 0 6px 18px rgba(15, 23, 42, 0.18);
+  --backdrop-dim: rgba(15, 23, 42, 0.54);
+  --slider-track: #CCC7BA;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-chassis);
+  color: var(--txt-hi);
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+  overscroll-behavior: none;
+}
+
+button, input {
+  font-family: inherit;
+  color: inherit;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* Full-Bleed 60fps Mapbox WebGL Radar Stage */
+#map-stage {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-chassis);
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.mapboxgl-ctrl-attrib,
+.mapboxgl-ctrl-logo,
+.mapboxgl-ctrl {
+  display: none !important;
+}
+
+/* 1. Compact Top Tactical HUD (< 11% viewport height per content-first-noise-reduction) */
+.top-hud {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  right: 10px;
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.hud-bar {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 7px 0 9px;
+  border-radius: 11px;
+  background: var(--bg-deck);
+  border: 1px solid var(--border-strong);
+  box-shadow: inset 0 1px 0 var(--bevel-top), 0 6px 18px rgba(0, 0, 0, 0.42);
+}
+
+.gnss-emblem {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--cyan-soft);
+  border: 1px solid var(--cyan-rim);
+  color: var(--cyan);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.gnss-emblem.locked {
+  background: var(--emerald-soft);
+  border-color: var(--emerald-rim);
+  color: var(--emerald);
+}
+
+.gnss-emblem svg {
+  width: 15px;
+  height: 15px;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  background: transparent;
+  border: 0;
+  outline: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--txt-hi);
+  user-select: text;
+}
+
+.search-input::placeholder {
+  color: var(--txt-lo);
+  font-weight: 500;
+}
+
+.clear-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--bg-key);
+  border: 1px solid var(--border-hair);
+  color: var(--txt-mid);
+  font-size: 12px;
+  font-weight: 700;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.demo-btn {
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 7px;
+  background: var(--amber-soft);
+  border: 1px solid var(--amber-rim);
+  color: var(--amber);
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.lock-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 7px;
+  background: var(--bg-key);
+  border: 1px solid var(--border-hair);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--txt-mid);
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.lock-pill.active {
+  background: var(--emerald-soft);
+  border-color: var(--emerald-rim);
+  color: var(--emerald);
+}
+
+.lock-led {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Autocomplete Dropdown (Crisp Solid Anodized Card — Zero Blur) */
+#search-results {
+  pointer-events: auto;
+  background: var(--bg-deck);
+  border: 1px solid var(--border-strong);
+  border-radius: 11px;
+  max-height: 230px;
+  overflow-y: auto;
+  display: none;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.55);
+}
+
+.search-item {
+  padding: 9px 12px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border-bottom: 1px solid var(--border-hair);
+  cursor: pointer;
+}
+
+.search-item:last-child {
+  border-bottom: 0;
+}
+
+.search-item:active {
+  background: var(--bg-key);
+}
+
+.s-pin {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--cyan-soft);
+  border: 1px solid var(--cyan-rim);
+  color: var(--cyan);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.s-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.s-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--txt-hi);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.s-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--txt-mid);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Quick Waypoint Strip */
+.waypoint-strip {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+
+.waypoint-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.wp-chip {
+  flex-shrink: 0;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 7px;
+  background: var(--bg-deck);
+  border: 1px solid var(--border-strong);
+  box-shadow: inset 0 1px 0 var(--bevel-top);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--txt-hi);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.wp-chip:active {
+  transform: translateY(1px);
+}
+
+.wp-chip.save-btn {
+  background: var(--bg-key-hi);
+  border-color: var(--cyan-rim);
+  color: var(--cyan);
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.wp-chip.custom {
+  border-color: var(--emerald-rim);
+}
+
+.wp-del {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--coral);
+  padding-left: 2px;
+}
+
+/* 2. Precision Tactical GNSS Target Reticle Marker */
+.gnss-reticle {
+  width: 54px;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: grab;
+}
+
+.reticle-halo {
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  background: rgba(56, 189, 248, 0.16);
+  border: 1.5px dashed rgba(56, 189, 248, 0.72);
+  transition: transform 0.18s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.gnss-reticle.locked .reticle-halo {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.85);
+}
+
+.gnss-reticle.lifting .reticle-halo {
+  transform: scale(1.22);
+}
+
+.reticle-core {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #0284C7;
+  border: 2.5px solid #FFFFFF;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.gnss-reticle.locked .reticle-core {
+  background: #059669;
+}
+
+.reticle-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #FFFFFF;
+}
+
+.reticle-heading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.reticle-heading svg {
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  color: #38BDF8;
+}
+
+.gnss-reticle.locked .reticle-heading svg {
+  color: #10B981;
+}
+
+/* 3. Plane Finder Right-Edge Tactical Map Controls */
+.right-fabs {
+  position: absolute;
+  right: 10px;
+  bottom: 204px;
+  z-index: 880;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.tac-fab {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--bg-deck);
+  border: 1px solid var(--border-strong);
+  box-shadow: inset 0 1px 0 var(--bevel-top), 0 5px 14px rgba(0, 0, 0, 0.45);
+  color: var(--txt-hi);
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.tac-fab:active {
+  transform: translateY(1px);
+}
+
+.tac-fab.active {
+  background: var(--bg-key-hi);
+  border-color: var(--cyan-rim);
+  color: var(--cyan);
+}
+
+.tac-fab svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Map Style HUD Pill */
+.style-pill {
+  position: absolute;
+  left: 10px;
+  bottom: 204px;
+  z-index: 880;
+  height: 28px;
+  padding: 0 9px;
+  border-radius: 7px;
+  background: var(--bg-deck);
+  border: 1px solid var(--border-strong);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--txt-mid);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* 4. Plane Finder Anchored Bottom Telemetry & Command Deck */
+.bottom-deck {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 8px;
+  z-index: 900;
+  padding: 9px 11px 10px;
+  border-radius: 14px;
+  background: var(--bg-deck);
+  border: 1px solid var(--border-strong);
+  box-shadow: inset 0 1px 0 var(--bevel-top), 0 10px 28px rgba(0, 0, 0, 0.58);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+body.searching-open .bottom-deck,
+body.searching-open .right-fabs,
+body.searching-open .style-pill {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.deck-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.coord-block {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.area-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.area-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--txt-hi);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stealth-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.8px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--bg-key);
+  border: 1px solid var(--border-hair);
+  color: var(--txt-mid);
+  flex-shrink: 0;
+}
+
+.stealth-tag.on {
+  background: var(--emerald-soft);
+  border-color: var(--emerald-rim);
+  color: var(--emerald);
+}
+
+.coord-mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--cyan);
+  margin-top: 1px;
+}
+
+.deck-tools {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.tool-key {
+  height: 32px;
+  min-width: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
+  background: var(--bg-key);
+  border: 1px solid var(--border-strong);
+  box-shadow: inset 0 1px 0 var(--bevel-top);
+  color: var(--txt-hi);
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.tool-key.sat-accent {
+  background: var(--cyan-soft);
+  border-color: var(--cyan-rim);
+  color: var(--cyan);
+}
+
+.tool-key svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Plane Finder 3-Column Telemetry Strip */
+.tele-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.t-cell {
+  padding: 5px 7px;
+  border-radius: 8px;
+  background: var(--bg-recess);
+  border: 1px solid var(--border-hair);
+  min-width: 0;
+}
+
+.t-lbl {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5px;
+  font-weight: 700;
+  color: var(--txt-lo);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.t-val {
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 14.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--txt-hi);
+  line-height: 1.15;
+  margin-top: 1px;
+}
+
+.t-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.8px;
+  color: var(--txt-mid);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Primary Tactical Command Row */
+.cmd-row {
+  display: grid;
+  grid-template-columns: 1.45fr 0.95fr auto;
+  gap: 6px;
+}
+
+.cmd-btn {
+  height: 40px;
+  padding: 0 11px;
+  border-radius: 9px;
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-key);
+  color: var(--txt-hi);
+  box-shadow: inset 0 1px 0 var(--bevel-top);
+}
+
+.cmd-btn:active {
+  transform: translateY(1px);
+}
+
+.cmd-btn.engage {
+  background: #0284C7;
+  border-color: #38BDF8;
+  color: #FFFFFF;
+}
+
+.cmd-btn.engage.locked {
+  background: #059669;
+  border-color: #34D399;
+  color: #FFFFFF;
+}
+
+.cmd-btn.cruise.on {
+  background: var(--amber-soft);
+  border-color: var(--amber-rim);
+  color: var(--amber);
+}
+
+.cmd-btn.reset {
+  padding: 0 11px;
+  color: var(--txt-mid);
+}
+
+/* Crisp Toast */
+#toast {
+  position: fixed;
+  top: 94px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9500;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--emerald-rim);
+  color: var(--txt-hi);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  display: none;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* =========================================================================
+   Dialogs & 3-Tab Pro GNSS Constellation / Kinematics / NMEA Bottom Sheet
+   ========================================================================= */
+dialog.pro-dlg {
+  margin: auto;
+  width: min(92vw, 350px);
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--bg-deck);
+  border: 1px solid var(--border-strong);
+  color: var(--txt-hi);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.65);
+}
+
+dialog.pro-dlg::backdrop,
+dialog.sat-sheet::backdrop {
+  background: var(--backdrop-dim);
+}
+
+dialog.sat-sheet {
+  position: fixed;
+  inset: auto 0 0 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: 85dvh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-top: 1px solid var(--border-strong);
+  border-radius: 18px 18px 0 0;
+  background: var(--bg-deck);
+  color: var(--txt-hi);
+  overflow: hidden;
+}
+
+.sat-inner {
+  padding: 10px 13px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  max-height: 85dvh;
+  overflow-y: auto;
+}
+
+.sheet-grab {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-strong);
+  margin: 0 auto;
+}
+
+.sat-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sat-title {
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.05em;
+}
+
+.sat-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--bg-recess);
+  border: 1px solid var(--border-hair);
+}
+
+.sat-tab {
+  height: 30px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--txt-mid);
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.sat-tab.active {
+  background: var(--bg-key);
+  border-color: var(--border-strong);
+  color: var(--cyan);
+}
+
+.sat-panel {
+  display: none;
+  min-height: 255px;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.sat-panel.active {
+  display: flex;
+}
+
+.skyplot-grid {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.sky-box {
+  padding: 6px;
+  border-radius: 10px;
+  background: var(--bg-recess);
+  border: 1px solid var(--border-hair);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+#skyplot-canvas {
+  width: 136px;
+  height: 136px;
+  display: block;
+}
+
+.cn0-box {
+  padding: 8px;
+  border-radius: 10px;
+  background: var(--bg-recess);
+  border: 1px solid var(--border-hair);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+#cn0-canvas {
+  width: 100%;
+  height: 92px;
+  display: block;
+}
+
+.const-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--txt-mid);
+}
+
+.lg-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 3px;
+}
+
+/* Brand-Consistent Native Range Slider (modern-web-guidance `slider`) */
+.slider-row {
+  padding: 7px 9px;
+  border-radius: 9px;
+  background: var(--bg-recess);
+  border: 1px solid var(--border-hair);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sl-hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+}
+
+.sl-lbl {
+  color: var(--txt-mid);
+  font-weight: 600;
+}
+
+.sl-val {
+  color: var(--cyan);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+input[type="range"].gnss-slider {
+  --slider-track-size: 6px;
+  --slider-thumb-size: 18px;
+  --slider-track-radius: 999px;
+  --slider-thumb-radius: 50%;
+  --slider-track-color: var(--slider-track);
+  --slider-fill-color: var(--cyan);
+  --slider-thumb-color: var(--cyan);
+  --slider-direction: to right;
+  --attr-min: attr(min type(<number>), 0);
+  --attr-max: attr(max type(<number>), 100);
+  --control-value: attr(value type(<number>), 50);
+  --slider-progress: calc(
+    progress(var(--control-value), var(--attr-min), var(--attr-max)) * 100%
+  );
+
+  appearance: none;
+  inline-size: 100%;
+  block-size: 26px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+@supports not (opacity: progress(1, 0, 100)) {
+  input[type="range"].gnss-slider {
+    --slider-progress: calc(
+      (var(--control-value) - var(--attr-min)) /
+      (var(--attr-max) - var(--attr-min)) * 100%
+    );
+  }
+}
+
+input[type="range"].gnss-slider::-webkit-slider-runnable-track {
+  block-size: var(--slider-track-size);
+  border: 0;
+  border-radius: var(--slider-track-radius);
+  background: linear-gradient(
+    var(--slider-direction),
+    var(--slider-fill-color) var(--slider-progress),
+    var(--slider-track-color) var(--slider-progress)
+  );
+}
+
+input[type="range"].gnss-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  inline-size: var(--slider-thumb-size);
+  block-size: var(--slider-thumb-size);
+  margin-block-start: calc((var(--slider-track-size) - var(--slider-thumb-size)) / 2);
+  border: 2px solid #FFFFFF;
+  border-radius: var(--slider-thumb-radius);
+  background: var(--slider-thumb-color);
+}
+
+input[type="range"].gnss-slider::-moz-range-track {
+  block-size: var(--slider-track-size);
+  border: 0;
+  border-radius: var(--slider-track-radius);
+  background: var(--slider-track-color);
+}
+
+input[type="range"].gnss-slider::-moz-range-progress {
+  block-size: var(--slider-track-size);
+  border-radius: var(--slider-track-radius);
+  background: var(--slider-fill-color);
+}
+
+input[type="range"].gnss-slider::-moz-range-thumb {
+  inline-size: var(--slider-thumb-size);
+  block-size: var(--slider-thumb-size);
+  border: 2px solid #FFFFFF;
+  border-radius: var(--slider-thumb-radius);
+  background: var(--slider-thumb-color);
+}
+
+input[type="range"].gnss-slider:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+.preset-mini-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.mini-chip {
+  height: 25px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: var(--bg-key);
+  border: 1px solid var(--border-hair);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--txt-hi);
+  cursor: pointer;
+}
+
+.nmea-console {
+  padding: 9px;
+  border-radius: 9px;
+  background: var(--bg-recess);
+  border: 1px solid var(--border-strong);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  line-height: 1.52;
+  color: var(--emerald);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.dlg-title {
+  font-family: 'Chakra Petch', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.dlg-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: var(--txt-mid);
+  margin: 3px 0 10px;
+}
+
+.dlg-field {
+  margin-bottom: 8px;
+}
+
+.dlg-field label {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  color: var(--txt-mid);
+  margin-bottom: 3px;
+}
+
+.dlg-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: var(--bg-recess);
+  border: 1px solid var(--border-strong);
+  color: var(--txt-hi);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12.5px;
+  outline: none;
+  user-select: text;
+}
+
+.dlg-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+/* =========================================================================
+   Persistent App Tour Layer (`popover="manual"` per modern-web-guidance)
+   ========================================================================= */
+.tour-layer {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: none;
+  overflow: visible;
+  display: none;
+}
+
+[popover].tour-layer:is(:popover-open, .\:popover-open) {
+  display: block;
+}
+
+.tour-spotlight {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  border-radius: 10px;
+  box-shadow: 0 0 0 4000px rgba(3, 6, 12, 0.76);
+  border: 2px solid #FFB800;
+  pointer-events: none;
+  transition: left 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+              top 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+              width 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+              height 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tour-spotlight::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 13px;
+  border: 2px solid rgba(255, 184, 0, 0.52);
+  pointer-events: none;
+}
+
+.tour-cue {
+  position: fixed;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: #FFB800;
+  color: #06080E;
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  animation: cuePulse 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes cuePulse {
+  from { margin-top: -4px; }
+  to   { margin-top: -11px; }
+}
+
+.tour-card {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  top: 118px;
+  padding: 12px 13px;
+  border-radius: 13px;
+  background: #0D1320;
+  border: 1.5px solid #FFB800;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.74);
+  color: #F8FAFC;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@supports not (anchor-name: --foo) {
+  .tour-card {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+  }
+}
+
+.tour-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.tour-step-pill {
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: rgba(255, 184, 0, 0.16);
+  border: 1px solid rgba(255, 184, 0, 0.55);
+  color: #FFB800;
+}
+
+.tour-ctrls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.t-btn {
+  height: 25px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: #172238;
+  border: 1px solid #2C3E63;
+  color: #E2E8F0;
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.t-btn.auto-on {
+  background: rgba(16, 185, 129, 0.22);
+  border-color: #10B981;
+  color: #34D399;
+}
+
+.tour-h2 {
+  font-family: 'Chakra Petch', 'Hind Siliguri', sans-serif;
+  font-weight: 700;
+  font-size: 14.5px;
+  color: #FFFFFF;
+}
+
+.tour-desc {
+  font-family: 'Hind Siliguri', 'Plus Jakarta Sans', sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #CBD5E1;
+}
+
+.tour-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px solid #1E2C47;
+  font-family: 'JetBrains Mono', 'Hind Siliguri', monospace;
+  font-size: 10.5px;
+  color: #FFB800;
+}
+
+.tour-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.t-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #283856;
+}
+
+.t-dot.on {
+  width: 16px;
+  border-radius: 4px;
+  background: #FFB800;
+}
 </style>
 </head>
 <body>
+<h1 class="visually-hidden">Kernel GNSS Satellite &amp; Radar Studio</h1>
 
-<div class="top-bar">
-  <div class="title-row">
-    <div class="app-title">&#x1F6F0;&#xFE0F; Kernel GNSS Location Studio</div>
-    <div id="status-badge" class="badge idle">REAL GPS</div>
-  </div>
-  <div class="search-row">
-    <input id="q" class="search-input" type="text" placeholder="Search place on OpenStreetMap (e.g. Gulshan 2, Banani)..." onkeydown="if(event.key==='Enter')doSearch()" />
-    <button class="btn-search" onclick="doSearch()">Search</button>
-    <button class="btn-layer" onclick="toggleLayer()">Map</button>
+<main id="map-stage">
+  <div id="map" tabindex="0" role="region" aria-label="Interactive GNSS Radar Map"></div>
+
+  <!-- 1. Compact Top Tactical HUD -->
+  <header class="top-hud">
+    <form id="search-form" class="hud-bar" onsubmit="event.preventDefault(); doSearch();">
+      <div id="gnss-emblem" class="gnss-emblem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/>
+        </svg>
+      </div>
+      <label for="q" class="visually-hidden">Search place or coordinates</label>
+      <input id="q" class="search-input" type="text" autocomplete="off" placeholder="Search place or lat,lon..." onfocus="onSearchFocus()" onblur="onSearchBlur()" oninput="onSearchInput()" />
+      <button id="clear-q" class="clear-btn" type="button" onclick="clearSearchBox()" aria-label="Clear search">✕</button>
+      <button id="btn-demo" class="demo-btn" type="button" onclick="startInteractiveDemo(false)">▶ DEMO</button>
+      <div id="status-badge" class="lock-pill">
+        <span class="lock-led"></span>
+        <span id="status-text">REAL GPS</span>
+      </div>
+    </form>
+
     <div id="search-results"></div>
-  </div>
-</div>
 
-<div class="chips-bar" id="chips-bar">
-  <button class="chip save-btn" onclick="saveCustomPreset()">+ Save Pin</button>
-  <button class="chip" onclick="jumpTo(23.7925, 90.4078, 'Gulshan 2')">Gulshan 2</button>
-  <button class="chip" onclick="jumpTo(23.7937, 90.4043, 'Banani 11')">Banani 11</button>
-  <button class="chip" onclick="jumpTo(23.7465, 90.3760, 'Dhanmondi')">Dhanmondi</button>
-  <button class="chip" onclick="jumpTo(23.8728, 90.3984, 'Uttara Sec 7')">Uttara 7</button>
-  <button class="chip" onclick="jumpTo(23.8069, 90.3687, 'Mirpur 10')">Mirpur 10</button>
-  <button class="chip" onclick="jumpTo(23.8162, 90.4265, 'Bashundhara')">Bashundhara</button>
-  <button class="chip" onclick="jumpTo(23.7806, 90.4259, 'Badda')">Badda</button>
-  <button class="chip" onclick="jumpTo(23.7330, 90.4172, 'Motijheel')">Motijheel</button>
-</div>
+    <div id="chips-bar" class="waypoint-strip">
+      <button class="wp-chip save-btn" type="button" onclick="openSaveModal()">+ SAVE PIN</button>
+      <button class="wp-chip" type="button" onclick="jumpTo(23.7925, 90.4078, 'Gulshan 2, Dhaka')">Gulshan 2</button>
+      <button id="chip-banani" class="wp-chip" type="button" onclick="jumpTo(23.7937, 90.4043, 'Banani 11, Dhaka', true)">Banani 11</button>
+      <button class="wp-chip" type="button" onclick="jumpTo(23.7465, 90.3760, 'Dhanmondi, Dhaka')">Dhanmondi</button>
+      <button class="wp-chip" type="button" onclick="jumpTo(23.8728, 90.3984, 'Uttara 7, Dhaka')">Uttara 7</button>
+      <button class="wp-chip" type="button" onclick="jumpTo(1.2834, 103.8607, 'Marina Bay, Singapore')">Singapore</button>
+      <button class="wp-chip" type="button" onclick="jumpTo(35.6595, 139.7004, 'Shibuya, Tokyo')">Tokyo</button>
+      <button class="wp-chip" type="button" onclick="jumpTo(37.3861, -122.0839, 'Mountain View, US')">Silicon Valley</button>
+    </div>
+  </header>
 
-<div id="map-wrap">
-  <div id="toast"></div>
-  <div id="map"></div>
-  <div class="dpad" title="Move pin by ~15 meters">
-    <button onclick="nudge(0.00012, -0.00012)">&#x2196;</button>
-    <button onclick="nudge(0.00015, 0)">&#x2191;</button>
-    <button onclick="nudge(0.00012, 0.00012)">&#x2197;</button>
-    <button onclick="nudge(0, -0.00015)">&#x2190;</button>
-    <button onclick="recenterMap()">&#x25CE;</button>
-    <button onclick="nudge(0, 0.00015)">&#x2192;</button>
-    <button onclick="nudge(-0.00012, -0.00012)">&#x2199;</button>
-    <button onclick="nudge(-0.00015, 0)">&#x2193;</button>
-    <button onclick="nudge(-0.00012, 0.00012)">&#x2198;</button>
+  <!-- 2. Precision Tactical GNSS Target Reticle -->
+  <div id="center-pin" class="gnss-reticle" aria-hidden="true">
+    <div class="reticle-halo"></div>
+    <div id="pin-heading" class="reticle-heading">
+      <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 1 19 15 12 11 5 15 12 1"/></svg>
+    </div>
+    <div class="reticle-core"><div class="reticle-dot"></div></div>
   </div>
-</div>
 
-<div class="bottom-panel">
-  <div class="telemetry">
-    <span>SV: <b id="sv-val">13</b></span>
-    <span>Cn0: <b id="cn0-val">42 dB</b></span>
-    <span>isMock: <b>false</b></span>
-    <span>Sync: <b>GPS+Fused+Net</b></span>
+  <!-- Left Map Layer Indicator Pill -->
+  <button id="style-pill" class="style-pill" type="button" onclick="cycleLayer()">
+    <span>MAP:</span>
+    <span id="style-name-lbl" style="color:var(--cyan)">NIGHT RADAR</span>
+  </button>
+
+  <!-- 3. Plane Finder Right-Edge Tactical Controls -->
+  <div class="right-fabs">
+    <button id="compass-fab" class="tac-fab" type="button" onclick="resetNorth()" aria-label="Reset North">
+      <svg id="compass-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="12 2 16 12 12 10 8 12 12 2" fill="#F43F5E" stroke="#F43F5E"/>
+        <polygon points="12 22 16 12 12 14 8 12 12 22" stroke="currentColor" fill="none"/>
+      </svg>
+    </button>
+    <button id="fab-3d" class="tac-fab" type="button" onclick="toggle3DPitch()">3D</button>
+    <button id="fab-layer" class="tac-fab" type="button" onclick="cycleLayer()" aria-label="Switch Map Layer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
+      </svg>
+    </button>
+    <button id="fab-recenter" class="tac-fab" type="button" onclick="recenterMap()" aria-label="Recenter Pin">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/>
+      </svg>
+    </button>
   </div>
-  <div class="coords-row">
-    <div class="coord-box">
-      <label>Latitude</label>
-      <input id="in-lat" type="number" step="0.000001" value="23.792500" onchange="onManualCoord()" />
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <!-- 4. Plane Finder Anchored Bottom Telemetry & Command Deck -->
+  <section class="bottom-deck" aria-label="GNSS Telemetry and Controls">
+    <div class="deck-top">
+      <div class="coord-block" onclick="openEditCoordModal()">
+        <div class="area-row">
+          <span id="area-display" class="area-name">Gulshan 2, Dhaka</span>
+          <span id="stealth-tag" class="stealth-tag">STANDBY</span>
+        </div>
+        <div id="coord-display" class="coord-mono">23.792500° N, 90.407800° E</div>
+      </div>
+
+      <div class="deck-tools">
+        <button id="btn-sat-open" class="tool-key sat-accent" type="button" onclick="openSatSheet()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13 7 9 3 5 7l4 4"/><path d="m17 11 4 4-4 4-4-4"/><path d="m8 12 4 4 6-6-4-4Z"/><path d="m16 8 3-3"/><path d="M9 21a6 6 0 0 0-6-6"/>
+          </svg>
+          <span>SAT</span>
+        </button>
+        <button class="tool-key" type="button" onclick="openEditCoordModal()" aria-label="Edit Coordinates">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+          </svg>
+        </button>
+        <button class="tool-key" type="button" onclick="copyCoords()" aria-label="Copy Coordinates">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+        </button>
+      </div>
     </div>
-    <div class="coord-box">
-      <label>Longitude</label>
-      <input id="in-lon" type="number" step="0.000001" value="90.407800" onchange="onManualCoord()" />
+
+    <div class="tele-strip">
+      <div class="t-cell">
+        <div class="t-lbl">ALT / CEP</div>
+        <div id="val-alt" class="t-val">15.2 m</div>
+        <div id="sub-acc" class="t-sub">±2.6m · HDOP 0.7</div>
+      </div>
+      <div class="t-cell">
+        <div class="t-lbl">CONSTELLATION</div>
+        <div id="val-sv" class="t-val" style="color:var(--emerald)">15 SV</div>
+        <div id="sub-cn0" class="t-sub">41.8 dB-Hz · L1+L5</div>
+      </div>
+      <div class="t-cell">
+        <div class="t-lbl">KINEMATICS</div>
+        <div id="val-spd" class="t-val" style="color:var(--cyan)">0.0 km/h</div>
+        <div id="sub-hdg" class="t-sub">065° NE · STATIC</div>
+      </div>
     </div>
-    <div class="coord-box" style="max-width:72px">
-      <label>Acc (m)</label>
-      <input id="in-acc" type="number" step="0.1" value="2.6" />
+
+    <div class="cmd-row">
+      <button id="btn-lock" class="cmd-btn engage" type="button" onclick="lockHere()">
+        <span id="btn-lock-text">ENGAGE LOCK</span>
+      </button>
+      <button id="btn-cruise" class="cmd-btn cruise" type="button" onclick="toggleCruise()">
+        <span id="btn-cruise-text">▶ CRUISE</span>
+      </button>
+      <button id="btn-reset" class="cmd-btn reset" type="button" onclick="stopLock()">REAL GPS</button>
+    </div>
+  </section>
+</main>
+
+<!-- 3-Tab Pro GNSS Constellation, Kinematics & Live NMEA Bottom Sheet -->
+<dialog id="dlg-sat" class="sat-sheet" closedby="any" aria-labelledby="sat-dlg-title">
+  <div class="sat-inner">
+    <div class="sheet-grab"></div>
+    <div class="sat-hdr">
+      <div>
+        <div id="sat-dlg-title" class="sat-title">5-LAYER KERNEL GNSS INSPECTOR</div>
+        <div id="sat-dlg-sub" class="t-sub">isMock=false · L1/L5 Multi-GNSS Synthesizer</div>
+      </div>
+      <button class="tool-key" type="button" onclick="closeSatSheet()">✕</button>
+    </div>
+
+    <div class="sat-tabs">
+      <button id="stab-sky" class="sat-tab active" type="button" onclick="switchSatTab('sky')">SKYPLOT &amp; SVs</button>
+      <button id="stab-kin" class="sat-tab" type="button" onclick="switchSatTab('kin')">KINEMATICS</button>
+      <button id="stab-nmea" class="sat-tab" type="button" onclick="switchSatTab('nmea')">LIVE NMEA</button>
+    </div>
+
+    <!-- Tab 1: Polar Skyplot + C/N0 Bars -->
+    <div id="spanel-sky" class="sat-panel active">
+      <div class="skyplot-grid">
+        <div class="sky-box">
+          <canvas id="skyplot-canvas"></canvas>
+        </div>
+        <div class="cn0-box">
+          <div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:9.5px;">
+            <span style="color:var(--txt-mid);font-weight:700;">C/N0 CARRIER (dB-Hz)</span>
+            <span id="sky-fix-pill" style="color:var(--emerald);font-weight:700;">3D FIX · 15 SV</span>
+          </div>
+          <canvas id="cn0-canvas"></canvas>
+          <div class="const-legend">
+            <span><i class="lg-dot" style="background:#10B981"></i>GPS</span>
+            <span><i class="lg-dot" style="background:#38BDF8"></i>GAL</span>
+            <span><i class="lg-dot" style="background:#F59E0B"></i>GLO</span>
+            <span><i class="lg-dot" style="background:#A78BFA"></i>BDS</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="tele-strip">
+        <div class="t-cell">
+          <div class="t-lbl">MOCK FLAG</div>
+          <div class="t-val" style="color:var(--emerald)">FALSE</div>
+          <div class="t-sub">5-Layer Hook</div>
+        </div>
+        <div class="t-cell">
+          <div class="t-lbl">FIX PULSES</div>
+          <div id="sat-pulses" class="t-val">0</div>
+          <div class="t-sub">500ms Cadence</div>
+        </div>
+        <div class="t-cell">
+          <div class="t-lbl">PROVIDERS</div>
+          <div class="t-val" style="color:var(--cyan)">3 / 3</div>
+          <div class="t-sub">GPS·NET·FUSED</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Brand-Consistent Kinematics & Precision Sliders -->
+    <div id="spanel-kin" class="sat-panel">
+      <div class="preset-mini-row">
+        <button class="mini-chip" type="button" onclick="applySpeedPreset(5.5)">Walk 5.5</button>
+        <button class="mini-chip" type="button" onclick="applySpeedPreset(20)">Bike 20</button>
+        <button class="mini-chip" type="button" onclick="applySpeedPreset(45)">City 45</button>
+        <button class="mini-chip" type="button" onclick="applySpeedPreset(95)">Highway 95</button>
+        <button class="mini-chip" type="button" onclick="toggleJitterState()" id="chip-jitter">Jitter: ON</button>
+      </div>
+
+      <div class="slider-row">
+        <div class="sl-hdr">
+          <label for="sl-speed" class="sl-lbl">CRUISE VELOCITY</label>
+          <span id="lbl-speed" class="sl-val">42.0 km/h</span>
+        </div>
+        <input id="sl-speed" class="gnss-slider" type="range" min="0" max="140" step="1" value="42" oninput="onKinSliderChange()" />
+      </div>
+
+      <div class="slider-row">
+        <div class="sl-hdr">
+          <label for="sl-bearing" class="sl-lbl">HEADING AZIMUTH</label>
+          <span id="lbl-bearing" class="sl-val">065° NE</span>
+        </div>
+        <input id="sl-bearing" class="gnss-slider" type="range" min="0" max="359" step="1" value="65" oninput="onKinSliderChange()" />
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+        <div class="slider-row">
+          <div class="sl-hdr">
+            <label for="sl-alt" class="sl-lbl">ALTITUDE</label>
+            <span id="lbl-alt" class="sl-val">15.2 m</span>
+          </div>
+          <input id="sl-alt" class="gnss-slider" type="range" min="0" max="300" step="1" value="15" oninput="onKinSliderChange()" />
+        </div>
+        <div class="slider-row">
+          <div class="sl-hdr">
+            <label for="sl-acc" class="sl-lbl">CEP ACCURACY</label>
+            <span id="lbl-acc" class="sl-val">±2.6 m</span>
+          </div>
+          <input id="sl-acc" class="gnss-slider" type="range" min="1" max="20" step="0.2" value="2.6" oninput="onKinSliderChange()" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Live Checksummed NMEA-0183 Sentences -->
+    <div id="spanel-nmea" class="sat-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span class="t-lbl">LIVE NMEA-0183 HARDWARE STREAM (1Hz)</span>
+        <button class="mini-chip" style="color:var(--emerald);border-color:var(--emerald-rim);" type="button" onclick="copyNmeaStream()">COPY NMEA</button>
+      </div>
+      <div id="nmea-box" class="nmea-console"></div>
     </div>
   </div>
-  <div class="action-row">
-    <button id="btn-lock" class="btn-main btn-lock" onclick="lockHere()">Lock Hardware GNSS Here</button>
-    <button class="btn-stop" onclick="stopLock()">Real GPS</button>
+</dialog>
+
+<!-- Save Waypoint Dialog -->
+<dialog id="preset-dialog" class="pro-dlg" closedby="any" aria-labelledby="dlg-save-title">
+  <form method="dialog" onsubmit="confirmSavePreset(event)">
+    <h2 id="dlg-save-title" class="dlg-title">SAVE WAYPOINT PIN</h2>
+    <p id="dlg-save-coords" class="dlg-sub">23.792500, 90.407800</p>
+    <div class="dlg-field">
+      <label for="preset-name-input">WAYPOINT LABEL</label>
+      <input id="preset-name-input" class="dlg-input" type="text" placeholder="e.g. Office HQ, Test Hub" maxlength="24" required />
+    </div>
+    <div class="dlg-actions">
+      <button type="button" class="tool-key" onclick="document.getElementById('preset-dialog').close()">CANCEL</button>
+      <button type="submit" class="tool-key sat-accent">SAVE</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Manual Coordinates Dialog -->
+<dialog id="coord-dialog" class="pro-dlg" closedby="any" aria-labelledby="dlg-coord-title">
+  <form method="dialog" onsubmit="applyManualCoords(event)">
+    <h2 id="dlg-coord-title" class="dlg-title">DIRECT WGS-84 COORDINATES</h2>
+    <p class="dlg-sub">Precision 6-decimal latitude, longitude &amp; CEP</p>
+    <div class="dlg-field">
+      <label for="in-lat">LATITUDE (°N/S)</label>
+      <input id="in-lat" class="dlg-input" type="number" step="0.000001" required />
+    </div>
+    <div class="dlg-field">
+      <label for="in-lon">LONGITUDE (°E/W)</label>
+      <input id="in-lon" class="dlg-input" type="number" step="0.000001" required />
+    </div>
+    <div class="dlg-field">
+      <label for="in-acc">HORIZONTAL ACCURACY (m)</label>
+      <input id="in-acc" class="dlg-input" type="number" step="0.1" value="2.6" required />
+    </div>
+    <div class="dlg-actions">
+      <button type="button" class="tool-key" onclick="document.getElementById('coord-dialog').close()">CANCEL</button>
+      <button type="submit" class="tool-key sat-accent">JUMP TO FIX</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Persistent Game-Style Interactive Spotlight Live Demo (modern-web-guidance `persistent-app-tours`) -->
+<div id="tourLayer" class="tour-layer" popover="manual" role="dialog" aria-labelledby="tourTitle">
+  <div id="tourSpotlight" class="tour-spotlight"></div>
+  <div id="tourCue" class="tour-cue">TAP</div>
+  <div id="tourCard" class="tour-card">
+    <div class="tour-top">
+      <span id="tourStepPill" class="tour-step-pill">MISSION 01 / 05</span>
+      <div class="tour-ctrls">
+        <button id="tourAutoBtn" class="t-btn" type="button" onclick="toggleTourAuto()">▶ AUTO</button>
+        <button id="tourLangBtn" class="t-btn" type="button" onclick="toggleTourLang()">EN</button>
+        <button id="tourSkipBtn" class="t-btn" type="button" popovertarget="tourLayer" popovertargetaction="hide" onclick="stopInteractiveDemo(true)">SKIP ✕</button>
+      </div>
+    </div>
+    <h2 id="tourTitle" class="tour-h2">১/৫ · ওয়েপয়েন্টে তাৎক্ষণিক জাম্প</h2>
+    <p id="tourDesc" class="tour-desc">উপরের Banani 11 চিপে ট্যাপ করে ম্যাপ রেডারটি সাথে সাথে নতুন টার্গেট লোকেশনে নিয়ে যান।</p>
+    <div class="tour-foot">
+      <span id="tourHint">⚡ Banani 11 বাটনে ট্যাপ করুন</span>
+      <div id="tourDots" class="tour-dots"></div>
+    </div>
   </div>
 </div>
 
 <script>
+const MAPBOX_PK = 'YOUR_MAPBOX_PUBLIC_TOKEN_HERE';
+mapboxgl.accessToken = MAPBOX_PK;
+
 let curLat = 23.792500;
 let curLon = 90.407800;
+let curAlt = 15.2;
+let curAcc = 2.6;
+let curJitter = true;
 let isLocked = false;
-let isDarkLayer = false;
+let isCruising = false;
+let curSpeedKmh = 42.0;
+let curBearing = 65.0;
+let is3DPitch = false;
+let fixesPushed = 0;
+let svCount = 15;
+let meanCn0 = 41.8;
+let satTab = 'sky';
+let currentAreaLabel = 'Gulshan 2, Dhaka';
+let trailCoords = [[curLon, curLat]];
 
-const osmStreet = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19,
-  attribution: '&copy; OpenStreetMap'
+const mapStyles = [
+  { short: 'NIGHT RADAR', name: 'Mapbox Night Radar', url: 'mapbox://styles/mapbox/navigation-night-v1', light: false },
+  { short: 'SATELLITE HD', name: 'Mapbox Satellite Hybrid', url: 'mapbox://styles/mapbox/satellite-streets-v12', light: false },
+  { short: 'STREETS HD', name: 'Titanium Streets HD', url: 'mapbox://styles/mapbox/streets-v12', light: true },
+  { short: 'TERRAIN TOPO', name: 'Outdoors Elevation', url: 'mapbox://styles/mapbox/outdoors-v12', light: true }
+];
+let layerIdx = 0;
+
+const SATS = [
+  { prn: 'G03', sys: 'GPS', az: 42, el: 68, cn0: 45, col: '#10B981' },
+  { prn: 'G14', sys: 'GPS', az: 128, el: 52, cn0: 42, col: '#10B981' },
+  { prn: 'G22', sys: 'GPS', az: 235, el: 74, cn0: 46, col: '#10B981' },
+  { prn: 'G31', sys: 'GPS', az: 310, el: 34, cn0: 38, col: '#10B981' },
+  { prn: 'E07', sys: 'GAL', az: 84, el: 61, cn0: 43, col: '#38BDF8' },
+  { prn: 'E19', sys: 'GAL', az: 196, el: 44, cn0: 40, col: '#38BDF8' },
+  { prn: 'R09', sys: 'GLO', az: 15, el: 39, cn0: 37, col: '#F59E0B' },
+  { prn: 'R18', sys: 'GLO', az: 278, el: 57, cn0: 41, col: '#F59E0B' },
+  { prn: 'C11', sys: 'BDS', az: 156, el: 66, cn0: 44, col: '#A78BFA' },
+  { prn: 'C27', sys: 'BDS', az: 336, el: 49, cn0: 39, col: '#A78BFA' }
+];
+
+const map = new mapboxgl.Map({
+  container: 'map',
+  style: mapStyles[0].url,
+  center: [curLon, curLat],
+  zoom: 15.6,
+  minZoom: 2,
+  maxZoom: 21,
+  pitch: 0,
+  bearing: 0,
+  attributionControl: false,
+  dragRotate: true,
+  touchZoomRotate: true,
+  touchPitch: true,
+  maxTileCacheSize: 400
 });
-const cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-  maxZoom: 19,
-  attribution: '&copy; OSM &amp; Carto'
+
+const centerPin = document.getElementById('center-pin');
+const pinMarker = new mapboxgl.Marker({
+  element: centerPin,
+  anchor: 'center',
+  draggable: true
+}).setLngLat([curLon, curLat]).addTo(map);
+
+function ensureTrailLayer() {
+  try {
+    if (!map.getSource('gnss-trail')) {
+      map.addSource('gnss-trail', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: trailCoords }
+        }
+      });
+    }
+    if (!map.getLayer('gnss-trail-line')) {
+      map.addLayer({
+        id: 'gnss-trail-line',
+        type: 'line',
+        source: 'gnss-trail',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: {
+          'line-color': '#10B981',
+          'line-width': 3.5,
+          'line-opacity': 0.88
+        }
+      });
+    }
+  } catch (e) {}
+}
+
+map.on('style.load', ensureTrailLayer);
+
+function pushTrailPoint(lon, lat) {
+  const last = trailCoords[trailCoords.length - 1];
+  if (!last || Math.hypot(last[0] - lon, last[1] - lat) > 0.00003) {
+    trailCoords.push([lon, lat]);
+    if (trailCoords.length > 160) trailCoords.shift();
+    try {
+      const src = map.getSource('gnss-trail');
+      if (src) {
+        src.setData({
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: trailCoords }
+        });
+      }
+    } catch (e) {}
+  }
+}
+
+pinMarker.on('dragstart', () => centerPin.classList.add('lifting'));
+pinMarker.on('drag', () => {
+  const ll = pinMarker.getLngLat();
+  curLat = ll.lat;
+  curLon = ll.lng;
+  renderHudMetrics();
+});
+pinMarker.on('dragend', () => {
+  centerPin.classList.remove('lifting');
+  const ll = pinMarker.getLngLat();
+  setPinLocation(ll.lat, ll.lng, true, true);
 });
 
-const map = L.map('map', { zoomControl: true, layers: [osmStreet] }).setView([curLat, curLon], 16);
-
-const pinIcon = L.divIcon({
-  className: 'custom-pin',
-  html: '<div id="pin-dot" style="width:22px;height:22px;background:#00e676;border:3px solid #fff;border-radius:50%;box-shadow:0 0 12px #00e676;"></div>',
-  iconSize: [22, 22],
-  iconAnchor: [11, 11]
+map.on('rotate', () => {
+  const b = map.getBearing();
+  document.getElementById('compass-svg').style.transform = `rotate(${-b}deg)`;
+  updatePinHeadingTransform();
 });
 
-const marker = L.marker([curLat, curLon], { draggable: true, icon: pinIcon }).addTo(map);
-let toastTimer = null;
-function showToast(msg, color) {
+map.on('click', (e) => {
+  if (tourActive) return;
+  closeSearchResults();
+  document.getElementById('q').blur();
+  centerPin.classList.add('lifting');
+  setPinLocation(e.lngLat.lat, e.lngLat.lng, true, true);
+  setTimeout(() => centerPin.classList.remove('lifting'), 160);
+});
+
+function updatePinHeadingTransform() {
+  const mapB = map.getBearing() || 0;
+  const rel = curBearing - mapB;
+  document.getElementById('pin-heading').style.transform = `rotate(${rel}deg)`;
+}
+
+function compassDir(deg) {
+  const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  const idx = Math.round((((deg % 360) + 360) % 360) / 45) % 8;
+  return String(Math.round(deg)).padStart(3, '0') + '° ' + dirs[idx];
+}
+
+let toastTm = null;
+function showToast(msg) {
   const t = document.getElementById('toast');
-  t.style.borderColor = color || '#58a6ff';
-  t.style.color = color || '#58a6ff';
-  t.innerText = msg;
+  t.textContent = msg;
   t.style.display = 'block';
-  if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.style.display = 'none'; }, 3000);
+  clearTimeout(toastTm);
+  toastTm = setTimeout(() => { t.style.display = 'none'; }, 1950);
 }
 
-function setCoordsUI(lat, lon, pushIfActive) {
-  curLat = parseFloat(lat.toFixed(6));
-  curLon = parseFloat(lon.toFixed(6));
-  document.getElementById('in-lat').value = curLat.toFixed(6);
-  document.getElementById('in-lon').value = curLon.toFixed(6);
-  marker.setLatLng([curLat, curLon]);
-  if (pushIfActive && isLocked && window.AndroidBridge) {
-    const acc = parseFloat(document.getElementById('in-acc').value) || 2.6;
-    window.AndroidBridge.updateGnssCoords(curLat, curLon, 15.2, acc, true);
+function setPinLocation(lat, lon, syncLock, resetTrail) {
+  curLat = parseFloat(Number(lat).toFixed(6));
+  curLon = parseFloat(Number(lon).toFixed(6));
+  pinMarker.setLngLat([curLon, curLat]);
+  if (resetTrail) {
+    trailCoords = [[curLon, curLat]];
+    pushTrailPoint(curLon, curLat);
+  }
+  renderHudMetrics();
+  updateReverseGeocode(curLat, curLon);
+  if (syncLock && isLocked && window.AndroidBridge) {
+    window.AndroidBridge.updateGnssCoords(curLat, curLon, curAlt, curAcc, curJitter);
   }
 }
 
-map.on('click', function(e) {
-  setCoordsUI(e.latlng.lat, e.latlng.lng, true);
-});
-
-marker.on('dragend', function(e) {
-  const pos = marker.getLatLng();
-  setCoordsUI(pos.lat, pos.lng, true);
-});
-
-function toggleLayer() {
-  if (isDarkLayer) {
-    map.removeLayer(cartoDark);
-    map.addLayer(osmStreet);
-  } else {
-    map.removeLayer(osmStreet);
-    map.addLayer(cartoDark);
-  }
-  isDarkLayer = !isDarkLayer;
+let revGeoTimer = null;
+function updateReverseGeocode(lat, lon) {
+  clearTimeout(revGeoTimer);
+  revGeoTimer = setTimeout(() => {
+    const url = `https://api.mapbox.com/search/geocode/v6/reverse?longitude=${lon.toFixed(5)}&latitude=${lat.toFixed(5)}&limit=1&access_token=${MAPBOX_PK}`;
+    fetch(url)
+      .then(r => r.json())
+      .then(d => {
+        const f = d && d.features && d.features[0];
+        if (f && f.properties) {
+          const p = f.properties;
+          const ctx = p.context || {};
+          const hood = (ctx.neighborhood && ctx.neighborhood.name) || (ctx.locality && ctx.locality.name) || p.name;
+          const place = (ctx.place && ctx.place.name) || (ctx.country && ctx.country.name) || '';
+          if (hood) {
+            currentAreaLabel = hood + (place && hood !== place ? ', ' + place : '');
+            renderHudMetrics();
+          }
+        }
+      })
+      .catch(() => {});
+  }, 260);
 }
 
-function jumpTo(lat, lon) {
-  setCoordsUI(lat, lon, true);
-  map.flyTo([lat, lon], 16, { duration: 0.6 });
+function renderHudMetrics() {
+  const ns = curLat >= 0 ? 'N' : 'S';
+  const ew = curLon >= 0 ? 'E' : 'W';
+  document.getElementById('area-display').textContent = currentAreaLabel;
+  document.getElementById('coord-display').textContent = `${Math.abs(curLat).toFixed(6)}° ${ns}, ${Math.abs(curLon).toFixed(6)}° ${ew}`;
+
+  const badge = document.getElementById('status-badge');
+  const stTxt = document.getElementById('status-text');
+  const emb = document.getElementById('gnss-emblem');
+  const stTag = document.getElementById('stealth-tag');
+  const btnLock = document.getElementById('btn-lock');
+  const btnLockTxt = document.getElementById('btn-lock-text');
+  const btnCruise = document.getElementById('btn-cruise');
+  const btnCruiseTxt = document.getElementById('btn-cruise-text');
+
+  badge.classList.toggle('active', isLocked);
+  emb.classList.toggle('locked', isLocked);
+  centerPin.classList.toggle('locked', isLocked);
+  stTag.classList.toggle('on', isLocked);
+  btnLock.classList.toggle('locked', isLocked);
+
+  stTxt.textContent = isLocked ? (isCruising ? 'CRUISING' : 'LOCKED') : 'REAL GPS';
+  stTag.textContent = isLocked ? 'isMock=false' : 'HARDWARE';
+  btnLockTxt.textContent = isLocked ? '✓ LOCKED · SYNC' : 'ENGAGE LOCK';
+
+  btnCruise.classList.toggle('on', isCruising);
+  btnCruiseTxt.textContent = isCruising ? '⏸ CRUISING' : '▶ CRUISE';
+
+  document.getElementById('val-alt').textContent = `${curAlt.toFixed(1)} m`;
+  document.getElementById('sub-acc').textContent = `±${curAcc.toFixed(1)}m · HDOP 0.7`;
+  document.getElementById('val-sv').textContent = `${svCount} SV`;
+  document.getElementById('sub-cn0').textContent = `${meanCn0.toFixed(1)} dB-Hz · L1+L5`;
+  document.getElementById('val-spd').textContent = isCruising ? `${curSpeedKmh.toFixed(1)} km/h` : '0.0 km/h';
+  document.getElementById('sub-hdg').textContent = `${compassDir(curBearing)} · ${isCruising ? 'MOVING' : 'STATIC'}`;
+  document.getElementById('sat-pulses').textContent = String(fixesPushed);
+  document.getElementById('sky-fix-pill').textContent = `3D FIX · ${svCount} SV`;
+
+  updatePinHeadingTransform();
+}
+
+function jumpTo(lat, lon, label, fromTourChip) {
+  if (label) currentAreaLabel = label;
+  trailCoords = [[lon, lat]];
+  setPinLocation(lat, lon, true, true);
+  map.flyTo({ center: [lon, lat], zoom: 16.0, pitch: is3DPitch ? 52 : 0, duration: 520, essential: true });
+  if (tourActive && tourStep === 0 && fromTourChip) {
+    advanceTour();
+  }
+}
+
+function resetNorth() {
+  map.easeTo({ bearing: 0, pitch: is3DPitch ? 52 : 0, duration: 300 });
+}
+
+function toggle3DPitch() {
+  is3DPitch = !is3DPitch;
+  document.getElementById('fab-3d').classList.toggle('active', is3DPitch);
+  map.easeTo({
+    pitch: is3DPitch ? 52 : 0,
+    bearing: is3DPitch ? 28 : 0,
+    zoom: is3DPitch ? Math.max(16.2, map.getZoom()) : map.getZoom(),
+    duration: 450
+  });
+  showToast(is3DPitch ? '3D Radar Perspective (52°)' : '2D Top-Down Ortho (0°)');
+  if (tourActive && tourStep === 2) {
+    advanceTour();
+  }
+}
+
+function applyThemeForStyle(st) {
+  document.documentElement.setAttribute('data-theme', st.light ? 'light' : 'dark');
+  document.getElementById('style-name-lbl').textContent = st.short;
+  if (window.AndroidBridge && window.AndroidBridge.syncSystemBars) {
+    window.AndroidBridge.syncSystemBars(st.light);
+  }
+}
+
+function cycleLayer() {
+  layerIdx = (layerIdx + 1) % mapStyles.length;
+  const next = mapStyles[layerIdx];
+  applyThemeForStyle(next);
+  map.setStyle(next.url);
+  showToast(next.name);
 }
 
 function recenterMap() {
-  map.flyTo([curLat, curLon], 17, { duration: 0.4 });
+  map.flyTo({ center: [curLon, curLat], zoom: Math.max(16.0, map.getZoom()), pitch: is3DPitch ? 52 : 0, duration: 380, essential: true });
 }
 
-function nudge(dLat, dLon) {
-  setCoordsUI(curLat + dLat, curLon + dLon, true);
-  map.panTo([curLat, curLon]);
-}
-
-function onManualCoord() {
-  const la = parseFloat(document.getElementById('in-lat').value);
-  const lo = parseFloat(document.getElementById('in-lon').value);
-  if (!isNaN(la) && !isNaN(lo)) {
-    jumpTo(la, lo);
+function copyCoords() {
+  const str = `${curLat.toFixed(6)}, ${curLon.toFixed(6)}`;
+  let ok = false;
+  if (window.AndroidBridge && window.AndroidBridge.copyToClipboard) {
+    ok = window.AndroidBridge.copyToClipboard('GNSS Coordinates', str);
   }
-}
-
-function updateBadge(active) {
-  isLocked = active;
-  const b = document.getElementById('status-badge');
-  const btn = document.getElementById('btn-lock');
-  const dot = document.getElementById('pin-dot');
-  if (active) {
-    b.className = 'badge active';
-    b.innerText = 'GNSS LOCKED';
-    btn.innerText = 'Update Locked GNSS Pin';
-    if (dot) { dot.style.background = '#00e676'; dot.style.boxShadow = '0 0 12px #00e676'; }
-  } else {
-    b.className = 'badge idle';
-    b.innerText = 'REAL GPS';
-    btn.innerText = 'Lock Hardware GNSS Here';
-    if (dot) { dot.style.background = '#2f81f7'; dot.style.boxShadow = '0 0 12px #2f81f7'; }
+  if (!ok && navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(str).catch(() => {});
   }
+  showToast('Copied ' + str);
 }
 
 function lockHere() {
-  const acc = parseFloat(document.getElementById('in-acc').value) || 2.6;
+  isLocked = true;
+  fixesPushed++;
   if (window.AndroidBridge) {
-    window.AndroidBridge.startGnssLock(curLat, curLon, 15.2, acc, true);
+    window.AndroidBridge.startGnssLock(curLat, curLon, curAlt, curAcc, curJitter);
+    if (window.AndroidBridge.setKinematics) {
+      window.AndroidBridge.setKinematics(isCruising, curSpeedKmh, curBearing, curAlt, curAcc, curJitter);
+    }
   }
-  updateBadge(true);
-  showToast('Hardware GNSS Locked: ' + curLat.toFixed(4) + ', ' + curLon.toFixed(4), '#00e676');
+  renderHudMetrics();
+  showToast(`Stealth GNSS Locked · ${curLat.toFixed(4)}, ${curLon.toFixed(4)}`);
+  if (tourActive && tourStep === 1) {
+    advanceTour();
+  }
+}
+
+function toggleCruise() {
+  isCruising = !isCruising;
+  if (isCruising && !isLocked) {
+    isLocked = true;
+  }
+  if (window.AndroidBridge) {
+    if (isLocked) {
+      window.AndroidBridge.startGnssLock(curLat, curLon, curAlt, curAcc, curJitter);
+    }
+    if (window.AndroidBridge.setKinematics) {
+      window.AndroidBridge.setKinematics(isCruising, curSpeedKmh, curBearing, curAlt, curAcc, curJitter);
+    }
+  }
+  renderHudMetrics();
+  showToast(isCruising ? `Cruise Engaged · ${curSpeedKmh.toFixed(0)} km/h` : 'Cruise Paused');
+  if (tourActive && tourStep === 3 && isCruising) {
+    advanceTour();
+  }
 }
 
 function stopLock() {
-  updateBadge(false);
+  isLocked = false;
+  isCruising = false;
   if (window.AndroidBridge) {
     try {
       const res = JSON.parse(window.AndroidBridge.stopGnssLock());
       if (res && res.lat && res.lon) {
-        setCoordsUI(res.lat, res.lon, false);
-        map.flyTo([res.lat, res.lon], 16, { duration: 0.7 });
+        setPinLocation(res.lat, res.lon, false, true);
+        map.flyTo({ center: [res.lon, res.lat], zoom: 15.6, duration: 480, essential: true });
       }
     } catch (e) {}
   }
-  showToast('Real GPS Restored (Moved to your real location)', '#58a6ff');
+  renderHudMetrics();
+  showToast('Restored Hardware Real GPS');
+}
+
+/* Live Kinematic Sync Loop (syncs with KernelGnssService or simulates in browser preview) */
+setInterval(() => {
+  if (window.AndroidBridge && window.AndroidBridge.getStateJson) {
+    try {
+      const st = JSON.parse(window.AndroidBridge.getStateJson());
+      isLocked = !!st.active;
+      isCruising = !!st.cruise;
+      fixesPushed = st.fixes_pushed || fixesPushed;
+      svCount = st.sv_count || svCount;
+      meanCn0 = st.mean_cn0 || meanCn0;
+      if (isLocked && isCruising && st.lat && st.lon) {
+        curLat = st.lat;
+        curLon = st.lon;
+        pinMarker.setLngLat([curLon, curLat]);
+        pushTrailPoint(curLon, curLat);
+        map.easeTo({ center: [curLon, curLat], duration: 480 });
+      }
+      renderHudMetrics();
+    } catch (e) {}
+  } else if (isCruising) {
+    const mps = curSpeedKmh / 3.6;
+    const dist = mps * 0.5;
+    const rad = curBearing * Math.PI / 180;
+    curLat += (dist * Math.cos(rad)) / 111320.0;
+    curLon += (dist * Math.sin(rad)) / (111320.0 * Math.max(0.2, Math.cos(curLat * Math.PI / 180)));
+    fixesPushed++;
+    pinMarker.setLngLat([curLon, curLat]);
+    pushTrailPoint(curLon, curLat);
+    map.easeTo({ center: [curLon, curLat], duration: 480 });
+    renderHudMetrics();
+  }
+  const satDlg = document.getElementById('dlg-sat');
+  if (satDlg && satDlg.open) {
+    if (satTab === 'sky') drawSkyplotAndCn0();
+    else if (satTab === 'nmea') renderNmeaStream();
+  }
+}, 520);
+
+/* =========================================================================
+   3-Tab Pro GNSS Constellation, Kinematics & Live NMEA Inspector
+   ========================================================================= */
+function syncRangeSliderProps(sl) {
+  if (!sl) return;
+  sl.style.setProperty('--attr-min', sl.min || 0);
+  sl.style.setProperty('--attr-max', sl.max || 100);
+  sl.style.setProperty('--control-value', sl.value);
+}
+
+function syncAllSliders() {
+  const sp = document.getElementById('sl-speed');
+  const br = document.getElementById('sl-bearing');
+  const al = document.getElementById('sl-alt');
+  const ac = document.getElementById('sl-acc');
+  sp.value = curSpeedKmh;
+  br.value = curBearing;
+  al.value = curAlt;
+  ac.value = curAcc;
+  [sp, br, al, ac].forEach(syncRangeSliderProps);
+  updateKinLabels();
+}
+
+function updateKinLabels() {
+  document.getElementById('lbl-speed').textContent = `${curSpeedKmh.toFixed(1)} km/h`;
+  document.getElementById('lbl-bearing').textContent = compassDir(curBearing);
+  document.getElementById('lbl-alt').textContent = `${curAlt.toFixed(1)} m`;
+  document.getElementById('lbl-acc').textContent = `±${curAcc.toFixed(1)} m`;
+  document.getElementById('chip-jitter').textContent = `Jitter: ${curJitter ? 'ON' : 'OFF'}`;
+
+  document.getElementById('sl-speed').setAttribute('aria-valuetext', `${curSpeedKmh.toFixed(1)} kilometers per hour`);
+  document.getElementById('sl-bearing').setAttribute('aria-valuetext', compassDir(curBearing));
+  document.getElementById('sl-alt').setAttribute('aria-valuetext', `${curAlt.toFixed(1)} meters`);
+  document.getElementById('sl-acc').setAttribute('aria-valuetext', `plus or minus ${curAcc.toFixed(1)} meters`);
+}
+
+function onKinSliderChange() {
+  const sp = document.getElementById('sl-speed');
+  const br = document.getElementById('sl-bearing');
+  const al = document.getElementById('sl-alt');
+  const ac = document.getElementById('sl-acc');
+  [sp, br, al, ac].forEach(syncRangeSliderProps);
+
+  curSpeedKmh = parseFloat(sp.value) || 0;
+  curBearing = parseFloat(br.value) || 0;
+  curAlt = parseFloat(al.value) || 15;
+  curAcc = parseFloat(ac.value) || 2.6;
+  updateKinLabels();
+  renderHudMetrics();
+
+  if (window.AndroidBridge && window.AndroidBridge.setKinematics) {
+    window.AndroidBridge.setKinematics(isCruising, curSpeedKmh, curBearing, curAlt, curAcc, curJitter);
+  }
+}
+
+function applySpeedPreset(kmh) {
+  curSpeedKmh = kmh;
+  syncAllSliders();
+  renderHudMetrics();
+  if (window.AndroidBridge && window.AndroidBridge.setKinematics) {
+    window.AndroidBridge.setKinematics(isCruising, curSpeedKmh, curBearing, curAlt, curAcc, curJitter);
+  }
+  showToast(`Cruise Velocity → ${kmh} km/h`);
+}
+
+function toggleJitterState() {
+  curJitter = !curJitter;
+  updateKinLabels();
+  if (window.AndroidBridge && window.AndroidBridge.setKinematics) {
+    window.AndroidBridge.setKinematics(isCruising, curSpeedKmh, curBearing, curAlt, curAcc, curJitter);
+  }
+}
+
+function openSatSheet() {
+  const dlg = document.getElementById('dlg-sat');
+  syncAllSliders();
+  if (!dlg.open) dlg.showModal();
+  requestAnimationFrame(() => {
+    drawSkyplotAndCn0();
+    renderNmeaStream();
+  });
+  if (tourActive && tourStep === 4) {
+    completeTour();
+  }
+}
+
+function closeSatSheet() {
+  const dlg = document.getElementById('dlg-sat');
+  if (dlg && dlg.open) dlg.close();
+}
+
+function switchSatTab(t) {
+  satTab = t;
+  ['sky', 'kin', 'nmea'].forEach(k => {
+    document.getElementById('stab-' + k).classList.toggle('active', k === t);
+    document.getElementById('spanel-' + k).classList.toggle('active', k === t);
+  });
+  if (t === 'sky') requestAnimationFrame(drawSkyplotAndCn0);
+  if (t === 'nmea') renderNmeaStream();
+}
+
+/* 2.5x+ Retina Skyplot Polar Radar & Multi-GNSS C/N0 Signal Bars (Zero Blur) */
+function drawSkyplotAndCn0() {
+  const sc = document.getElementById('skyplot-canvas');
+  const bc = document.getElementById('cn0-canvas');
+  if (!sc || !bc) return;
+
+  const dpr = Math.max(window.devicePixelRatio || 1, 2.5);
+  const sw = sc.clientWidth || 136;
+  const sh = sc.clientHeight || 136;
+  sc.width = Math.round(sw * dpr);
+  sc.height = Math.round(sh * dpr);
+
+  const sctx = sc.getContext('2d');
+  sctx.save();
+  sctx.scale(dpr, dpr);
+  sctx.clearRect(0, 0, sw, sh);
+
+  const isLt = document.documentElement.getAttribute('data-theme') === 'light';
+  const ringCol = isLt ? 'rgba(15,23,42,0.18)' : 'rgba(148,163,184,0.22)';
+  const lblCol = isLt ? '#334155' : '#94A3B8';
+
+  const cx = sw * 0.5;
+  const cy = sh * 0.5;
+  const R = Math.min(cx, cy) - 12;
+
+  sctx.strokeStyle = ringCol;
+  sctx.lineWidth = 1;
+  [1.0, 0.66, 0.33].forEach(f => {
+    sctx.beginPath();
+    sctx.arc(cx, cy, R * f, 0, Math.PI * 2);
+    sctx.stroke();
+  });
+
+  sctx.beginPath();
+  sctx.moveTo(cx - R, Math.floor(cy) + 0.5);
+  sctx.lineTo(cx + R, Math.floor(cy) + 0.5);
+  sctx.moveTo(Math.floor(cx) + 0.5, cy - R);
+  sctx.lineTo(Math.floor(cx) + 0.5, cy + R);
+  sctx.stroke();
+
+  sctx.fillStyle = lblCol;
+  sctx.font = '700 8.5px "JetBrains Mono", monospace';
+  sctx.textAlign = 'center';
+  sctx.textBaseline = 'middle';
+  sctx.fillText('N', cx, 6);
+  sctx.fillText('S', cx, sh - 6);
+  sctx.fillText('E', sw - 6, cy);
+  sctx.fillText('W', 6, cy);
+
+  const phase = performance.now() * 0.0004;
+  SATS.forEach((s, idx) => {
+    const azRad = ((s.az + Math.sin(phase + idx) * 3) - 90) * Math.PI / 180;
+    const rr = ((90 - s.el) / 90) * R;
+    const px = cx + Math.cos(azRad) * rr;
+    const py = cy + Math.sin(azRad) * rr;
+
+    sctx.beginPath();
+    sctx.arc(px, py, 4.2, 0, Math.PI * 2);
+    sctx.fillStyle = s.col;
+    sctx.fill();
+    sctx.strokeStyle = '#FFFFFF';
+    sctx.lineWidth = 1;
+    sctx.stroke();
+  });
+  sctx.restore();
+
+  // C/N0 Bars
+  const bw = bc.clientWidth || 180;
+  const bh = bc.clientHeight || 92;
+  bc.width = Math.round(bw * dpr);
+  bc.height = Math.round(bh * dpr);
+
+  const bctx = bc.getContext('2d');
+  bctx.save();
+  bctx.scale(dpr, dpr);
+  bctx.clearRect(0, 0, bw, bh);
+
+  const n = SATS.length;
+  const slot = bw / n;
+  const barW = Math.max(8, slot - 6);
+
+  SATS.forEach((s, i) => {
+    const jitterCn0 = Math.min(50, Math.max(25, s.cn0 + Math.sin(performance.now() * 0.002 + i) * 1.4));
+    const hVal = ((jitterCn0 - 15) / 36) * (bh - 18);
+    const x = Math.round(i * slot + (slot - barW) * 0.5);
+    const y = Math.round(bh - 14 - hVal);
+
+    bctx.fillStyle = isLt ? 'rgba(15,23,42,0.08)' : 'rgba(148,163,184,0.10)';
+    bctx.fillRect(x, 2, barW, bh - 16);
+
+    bctx.fillStyle = s.col;
+    bctx.fillRect(x, y, barW, Math.round(hVal));
+
+    bctx.fillStyle = lblCol;
+    bctx.font = '600 7.5px "JetBrains Mono", monospace';
+    bctx.textAlign = 'center';
+    bctx.fillText(s.prn, x + barW * 0.5, bh - 4);
+  });
+  bctx.restore();
+}
+
+function nmeaChecksum(body) {
+  let c = 0;
+  for (let i = 0; i < body.length; i++) c ^= body.charCodeAt(i);
+  return c.toString(16).toUpperCase().padStart(2, '0');
+}
+
+function toNmeaDegMin(val, isLat) {
+  const abs = Math.abs(val);
+  const deg = Math.floor(abs);
+  const min = (abs - deg) * 60;
+  const dStr = String(deg).padStart(isLat ? 2 : 3, '0');
+  return dStr + min.toFixed(4).padStart(7, '0');
+}
+
+function buildNmeaText() {
+  const d = new Date();
+  const hh = String(d.getUTCHours()).padStart(2, '0');
+  const mm = String(d.getUTCMinutes()).padStart(2, '0');
+  const ss = String(d.getUTCSeconds()).padStart(2, '0');
+  const utc = `${hh}${mm}${ss}.00`;
+  const dd = String(d.getUTCDate()).padStart(2, '0');
+  const mo = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const yy = String(d.getUTCFullYear()).slice(-2);
+
+  const latDm = toNmeaDegMin(curLat, true);
+  const latH = curLat >= 0 ? 'N' : 'S';
+  const lonDm = toNmeaDegMin(curLon, false);
+  const lonH = curLon >= 0 ? 'E' : 'W';
+  const knots = (isCruising ? (curSpeedKmh / 1.852) : 0).toFixed(2);
+
+  const gga = `GPGGA,${utc},${latDm},${latH},${lonDm},${lonH},1,${String(svCount).padStart(2,'0')},0.7,${curAlt.toFixed(1)},M,-34.0,M,,`;
+  const rmc = `GPRMC,${utc},A,${latDm},${latH},${lonDm},${lonH},${knots},${curBearing.toFixed(1)},${dd}${mo}${yy},,,A`;
+  const gsa = `GNGSA,A,3,03,14,22,31,07,19,09,18,11,27,,,1.1,0.7,0.9`;
+  const gsv = `GPGSV,3,1,12,03,68,042,45,14,52,128,42,22,74,235,46,31,34,310,38`;
+
+  return [gga, rmc, gsa, gsv].map(b => `$${b}*${nmeaChecksum(b)}`).join('\n');
+}
+
+function renderNmeaStream() {
+  const el = document.getElementById('nmea-box');
+  if (el) el.textContent = buildNmeaText();
+}
+
+function copyNmeaStream() {
+  const txt = buildNmeaText();
+  if (window.AndroidBridge && window.AndroidBridge.copyToClipboard) {
+    window.AndroidBridge.copyToClipboard('NMEA-0183 Stream', txt);
+  } else if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).catch(() => {});
+  }
+  showToast('Copied Checksummed NMEA-0183 Stream');
+}
+
+/* =========================================================================
+   Search & Waypoint Presets + Light-Dismiss Dialog Fallback
+   ========================================================================= */
+const searchInputEl = document.getElementById('q');
+const searchFormEl = document.getElementById('search-form');
+let searchDebounce = null;
+
+searchInputEl.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Enter') {
+    ev.preventDefault();
+    if (!ev.isComposing && ev.keyCode !== 229) searchFormEl.requestSubmit();
+  }
+});
+
+function onSearchFocus() {
+  document.body.classList.add('searching-open');
+}
+
+function onSearchBlur() {
+  setTimeout(() => {
+    if (document.getElementById('search-results').style.display !== 'block') {
+      document.body.classList.remove('searching-open');
+    }
+  }, 180);
+}
+
+function closeSearchResults() {
+  document.getElementById('search-results').style.display = 'none';
+  if (document.activeElement !== searchInputEl) {
+    document.body.classList.remove('searching-open');
+  }
+}
+
+function clearSearchBox() {
+  searchInputEl.value = '';
+  document.getElementById('clear-q').style.display = 'none';
+  closeSearchResults();
+  searchInputEl.blur();
+  document.body.classList.remove('searching-open');
+}
+
+function onSearchInput() {
+  const q = searchInputEl.value.trim();
+  document.getElementById('clear-q').style.display = q ? 'flex' : 'none';
+  clearTimeout(searchDebounce);
+  if (!q) {
+    closeSearchResults();
+    return;
+  }
+  if (q.length >= 2) {
+    searchDebounce = setTimeout(doSearch, 240);
+  }
 }
 
 function doSearch() {
-  const q = document.getElementById('q').value.trim();
+  const q = searchInputEl.value.trim();
   if (!q) return;
+  const m = q.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+  if (m) {
+    clearSearchBox();
+    jumpTo(parseFloat(m[1]), parseFloat(m[2]), 'Direct Fix');
+    return;
+  }
   const box = document.getElementById('search-results');
   box.style.display = 'block';
-  box.innerHTML = '<div class="search-item">Searching OpenStreetMap...</div>';
-  fetch('https://nominatim.openstreetmap.org/search?format=json&limit=6&q=' + encodeURIComponent(q))
-    .then(r => r.json())
-    .then(list => {
-      if (!list || !list.length) {
-        box.innerHTML = '<div class="search-item">No results found</div>';
-        setTimeout(() => box.style.display='none', 2000);
-        return;
-      }
-      box.innerHTML = '';
-      list.forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'search-item';
-        div.innerText = item.display_name;
-        div.onclick = () => {
-          box.style.display = 'none';
-          jumpTo(parseFloat(item.lat), parseFloat(item.lon));
-        };
-        box.appendChild(div);
+  box.innerHTML = `<div class="search-item"><div class="s-col"><div class="s-title">Scanning Mapbox Geocoder...</div></div></div>`;
+
+  const mapboxUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?proximity=${curLon.toFixed(4)},${curLat.toFixed(4)}&limit=5&access_token=${MAPBOX_PK}`;
+  const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lat=${curLat.toFixed(4)}&lon=${curLon.toFixed(4)}&limit=4`;
+
+  Promise.allSettled([
+    fetch(mapboxUrl).then(r => r.json()),
+    fetch(photonUrl).then(r => r.json())
+  ]).then(results => {
+    const combined = [];
+    const seen = new Set();
+    if (results[0].status === 'fulfilled' && results[0].value && results[0].value.features) {
+      results[0].value.features.forEach(f => {
+        const c = f.center || (f.geometry && f.geometry.coordinates);
+        if (!c) return;
+        const title = f.text || (f.place_name ? f.place_name.split(',')[0] : q);
+        const sub = f.place_name ? f.place_name.split(',').slice(1).join(',').trim() : '';
+        const k = `${title.toLowerCase()}:${c[1].toFixed(3)}`;
+        if (!seen.has(k)) { seen.add(k); combined.push({ title, sub, lat: c[1], lon: c[0] }); }
       });
-    })
-    .catch(() => {
-      box.innerHTML = '<div class="search-item">Search error - check connection</div>';
+    }
+    if (results[1].status === 'fulfilled' && results[1].value && results[1].value.features) {
+      results[1].value.features.forEach(f => {
+        const p = f.properties || {};
+        const c = f.geometry && f.geometry.coordinates;
+        if (!c) return;
+        const title = p.name || p.street || p.locality || q;
+        const sub = [p.street, p.city || p.state, p.country].filter(Boolean).join(', ');
+        const k = `${title.toLowerCase()}:${c[1].toFixed(3)}`;
+        if (!seen.has(k)) { seen.add(k); combined.push({ title, sub, lat: c[1], lon: c[0] }); }
+      });
+    }
+    if (!combined.length) {
+      box.innerHTML = `<div class="search-item"><div class="s-col"><div class="s-title">No coordinates found</div></div></div>`;
+      return;
+    }
+    box.innerHTML = '';
+    combined.slice(0, 6).forEach(it => {
+      const row = document.createElement('div');
+      row.className = 'search-item';
+      row.innerHTML = `<div class="s-pin">⊕</div><div class="s-col"><div class="s-title"></div><div class="s-sub"></div></div>`;
+      row.querySelector('.s-title').textContent = it.title;
+      row.querySelector('.s-sub').textContent = it.sub || `${it.lat.toFixed(4)}, ${it.lon.toFixed(4)}`;
+      row.onclick = () => {
+        clearSearchBox();
+        jumpTo(it.lat, it.lon, it.title);
+      };
+      box.appendChild(row);
     });
+  });
 }
 
-function saveCustomPreset() {
-  const name = prompt('Enter name for this location:', 'My Spot');
+// Mandatory light-dismiss fallback per modern-web-guidance `light-dismiss-a-dialog`
+['dlg-sat', 'preset-dialog', 'coord-dialog'].forEach(id => {
+  const dlg = document.getElementById(id);
+  if (dlg && !('closedBy' in HTMLDialogElement.prototype)) {
+    dlg.addEventListener('click', (event) => {
+      if (event.target !== dlg) return;
+      const rect = dlg.getBoundingClientRect();
+      const isDialogContent = (
+        rect.top <= event.clientY &&
+        event.clientY <= rect.top + rect.height &&
+        rect.left <= event.clientX &&
+        event.clientX <= rect.left + rect.width
+      );
+      if (!isDialogContent) dlg.close();
+    });
+  }
+});
+
+function openSaveModal() {
+  document.getElementById('dlg-save-coords').textContent = `${curLat.toFixed(6)}, ${curLon.toFixed(6)}`;
+  const inp = document.getElementById('preset-name-input');
+  inp.value = '';
+  document.getElementById('preset-dialog').showModal();
+  setTimeout(() => inp.focus(), 50);
+}
+
+function confirmSavePreset(e) {
+  e.preventDefault();
+  const name = document.getElementById('preset-name-input').value.trim();
   if (!name) return;
   const saved = JSON.parse(localStorage.getItem('gnss_presets') || '[]');
   saved.push({ name, lat: curLat, lon: curLon });
   localStorage.setItem('gnss_presets', JSON.stringify(saved));
+  document.getElementById('preset-dialog').close();
   renderCustomPresets();
+  showToast('Saved Waypoint: ' + name);
 }
 
 function renderCustomPresets() {
-  document.querySelectorAll('.chip.custom-chip').forEach(e => e.remove());
+  document.querySelectorAll('.wp-chip.custom').forEach(el => el.remove());
   const bar = document.getElementById('chips-bar');
   const saved = JSON.parse(localStorage.getItem('gnss_presets') || '[]');
-  saved.forEach(p => {
-    const btn = document.createElement('button');
-    btn.className = 'chip custom-chip';
-    btn.style.borderColor = '#00e676';
-    btn.innerText = p.name;
-    btn.onclick = () => jumpTo(p.lat, p.lon);
-    bar.appendChild(btn);
+  saved.forEach((p, idx) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'wp-chip custom';
+    b.onclick = () => jumpTo(p.lat, p.lon, p.name);
+    const sp = document.createElement('span');
+    sp.textContent = p.name;
+    const del = document.createElement('span');
+    del.className = 'wp-del';
+    del.textContent = '×';
+    del.onclick = (ev) => {
+      ev.stopPropagation();
+      const arr = JSON.parse(localStorage.getItem('gnss_presets') || '[]');
+      arr.splice(idx, 1);
+      localStorage.setItem('gnss_presets', JSON.stringify(arr));
+      renderCustomPresets();
+    };
+    b.appendChild(sp);
+    b.appendChild(del);
+    bar.appendChild(b);
   });
 }
 
-function initFromBridge() {
-  renderCustomPresets();
-  if (window.AndroidBridge) {
-    try {
-      const st = JSON.parse(window.AndroidBridge.getStateJson());
-      if (st.lat && st.lon) {
-        setCoordsUI(st.lat, st.lon, false);
-        map.setView([st.lat, st.lon], 16);
-      }
-      updateBadge(!!st.active);
-    } catch (e) {}
+function openEditCoordModal() {
+  document.getElementById('in-lat').value = curLat.toFixed(6);
+  document.getElementById('in-lon').value = curLon.toFixed(6);
+  document.getElementById('in-acc').value = curAcc.toFixed(1);
+  document.getElementById('coord-dialog').showModal();
+}
+
+function applyManualCoords(e) {
+  e.preventDefault();
+  const la = parseFloat(document.getElementById('in-lat').value);
+  const lo = parseFloat(document.getElementById('in-lon').value);
+  curAcc = parseFloat(document.getElementById('in-acc').value) || 2.6;
+  document.getElementById('coord-dialog').close();
+  if (!isNaN(la) && !isNaN(lo)) {
+    jumpTo(la, lo, 'Manual WGS-84 Fix');
   }
 }
 
-setInterval(() => {
-  const sv = 12 + (Math.floor(Date.now() / 5000) % 4);
-  const cn0 = 41 + (Math.floor(Date.now() / 3000) % 4);
-  document.getElementById('sv-val').innerText = sv;
-  document.getElementById('cn0-val').innerText = cn0 + ' dB';
-}, 2000);
+/* =========================================================================
+   5-Step Game-Style Interactive Spotlight Live Demo Engine
+   ========================================================================= */
+const TOUR_KEY = 'bg6_gnss_pro_tour_v1';
+let tourActive = false;
+let tourStep = 0;
+let tourLang = 'bn';
+let tourAuto = false;
+let tourAutoTm = null;
+let userTouchedEarly = false;
 
-window.onload = initFromBridge;
+const TOUR_STEPS = [
+  {
+    target: () => document.getElementById('chip-banani'),
+    pos: 'below',
+    bnTitle: '১/৫ · ওয়েপয়েন্টে তাৎক্ষণিক জাম্প',
+    bnDesc: 'উপরের Banani 11 চিপে ট্যাপ করে ম্যাপ রেডারটি সাথে সাথে নতুন টার্গেট লোকেশনে নিয়ে যান (অথবা ম্যাপের যেকোনো জায়গায় ট্যাপ/ড্র্যাগ করুন)।',
+    bnHint: '⚡ Banani 11 চিপে ট্যাপ করুন',
+    enTitle: '1/5 · Instant Waypoint Jump',
+    enDesc: 'Tap the Banani 11 chip above to fly the radar reticle directly to a target waypoint (or tap anywhere on the map).',
+    enHint: '⚡ Tap the Banani 11 waypoint chip',
+    autoAct: () => document.getElementById('chip-banani').click()
+  },
+  {
+    target: () => document.getElementById('btn-lock'),
+    pos: 'above',
+    bnTitle: '২/৫ · Stealth GNSS লক (isMock=false)',
+    bnDesc: 'নিচের ENGAGE LOCK বাটনে ট্যাপ করে ৫-লেয়ার কার্নেল ইঞ্জিন দিয়ে পুরো ফোনে (GPS + Network + Fused) এই লোকেশন লক করুন!',
+    bnHint: '⚡ নিচের ENGAGE LOCK বাটনে ট্যাপ করুন',
+    enTitle: '2/5 · Engage Stealth GNSS Lock',
+    enDesc: 'Tap ENGAGE LOCK below to inject this fix across GPS, Network, and Fused providers with isMock=false.',
+    enHint: '⚡ Tap the ENGAGE LOCK button',
+    autoAct: () => lockHere()
+  },
+  {
+    target: () => document.getElementById('fab-3d'),
+    pos: 'middle',
+    bnTitle: '৩/৫ · ৫২° 3D পার্সপেক্টিভ রেডার',
+    bnDesc: 'ডানপাশের 3D বাটনে ট্যাপ করে Plane Finder-স্টাইল ৫২° থ্রিডি স্যাটেলাইট/নেভিগেশন অ্যাঙ্গেল চালু করুন!',
+    bnHint: '⚡ ডানপাশের 3D বাটনে ট্যাপ করুন',
+    enTitle: '3/5 · 52° 3D Radar Perspective',
+    enDesc: 'Tap the 3D button on the right rail to tilt the WebGL vector map into a 52° tactical perspective.',
+    enHint: '⚡ Tap the 3D button on the right',
+    autoAct: () => toggle3DPitch()
+  },
+  {
+    target: () => document.getElementById('btn-cruise'),
+    pos: 'above',
+    bnTitle: '৪/৫ · লাইভ রুট ক্রুজ সিমুলেটর',
+    bnDesc: '▶ CRUISE বাটনে ট্যাপ করুন — আপনার জিপিএস পিনটি ৪২ কিমি/ঘণ্টা গতিতে রাস্তায় চলতে শুরু করবে এবং লাইভ ট্রেইল আঁকবে!',
+    bnHint: '⚡ নিচের ▶ CRUISE বাটনে ট্যাপ করুন',
+    enTitle: '4/5 · Live Street Cruise Simulator',
+    enDesc: 'Tap ▶ CRUISE to glide your real system GPS smoothly along the heading vector at 42 km/h with a live trail.',
+    enHint: '⚡ Tap ▶ CRUISE below',
+    autoAct: () => { if (!isCruising) toggleCruise(); else advanceTour(); }
+  },
+  {
+    target: () => document.getElementById('btn-sat-open'),
+    pos: 'above',
+    bnTitle: '৫/৫ · স্যাটেলাইট স্কাইপ্লট ও NMEA স্ট্রিম',
+    bnDesc: 'সবশেষে SAT বাটনে ট্যাপ করে L1/L5 স্যাটেলাইট রেডার, স্পিড/অ্যাল্টিটিউড স্লাইডার এবং লাইভ NMEA-0183 ডাটা দেখুন!',
+    bnHint: '⚡ SAT বাটনে ট্যাপ করুন',
+    enTitle: '5/5 · GNSS Skyplot & NMEA Inspector',
+    enDesc: 'Finally, tap SAT to open the 3-tab Multi-GNSS Skyplot, Kinematics Sliders, and checksummed NMEA-0183 stream.',
+    enHint: '⚡ Tap the SAT button',
+    autoAct: () => openSatSheet()
+  }
+];
+
+function startInteractiveDemo(autoMode) {
+  closeSatSheet();
+  clearSearchBox();
+  if (isCruising) toggleCruise();
+  if (is3DPitch) toggle3DPitch();
+  document.getElementById('toast').classList.remove('show');
+
+  tourActive = true;
+  tourStep = 0;
+  tourAuto = !!autoMode;
+  const layer = document.getElementById('tourLayer');
+  try {
+    if (!layer.matches(':popover-open')) layer.showPopover();
+  } catch (e) {
+    layer.classList.add(':popover-open');
+    layer.style.display = 'block';
+  }
+  const focusBtn = document.getElementById('tourAutoBtn');
+  if (focusBtn) focusBtn.focus({ preventScroll: true });
+
+  renderTourStep();
+  scheduleTourAuto();
+}
+
+function stopInteractiveDemo(markSeen) {
+  tourActive = false;
+  tourAuto = false;
+  clearTimeout(tourAutoTm);
+  const layer = document.getElementById('tourLayer');
+  if (layer) {
+    try { if (layer.matches(':popover-open')) layer.hidePopover(); } catch (e) {}
+    layer.classList.remove(':popover-open');
+    layer.style.display = '';
+  }
+  if (markSeen) {
+    try { localStorage.setItem(TOUR_KEY, '1'); } catch (e) {}
+  }
+}
+
+function completeTour() {
+  stopInteractiveDemo(true);
+  showToast(tourLang === 'bn' ? '✓ Kernel GNSS লাইভ ডেমো সম্পন্ন!' : '✓ Kernel GNSS Live Demo Complete!');
+}
+
+function advanceTour() {
+  if (!tourActive) return;
+  clearTimeout(tourAutoTm);
+  tourStep++;
+  if (tourStep >= TOUR_STEPS.length) {
+    completeTour();
+    return;
+  }
+  requestAnimationFrame(() => {
+    renderTourStep();
+    scheduleTourAuto();
+  });
+}
+
+function toggleTourLang() {
+  tourLang = (tourLang === 'bn') ? 'en' : 'bn';
+  renderTourStep();
+}
+
+function toggleTourAuto() {
+  tourAuto = !tourAuto;
+  renderTourStep();
+  if (tourAuto) scheduleTourAuto();
+  else clearTimeout(tourAutoTm);
+}
+
+function scheduleTourAuto() {
+  clearTimeout(tourAutoTm);
+  if (!tourActive || !tourAuto) return;
+  tourAutoTm = setTimeout(() => {
+    if (!tourActive || !tourAuto) return;
+    const st = TOUR_STEPS[tourStep];
+    if (st && st.autoAct) st.autoAct();
+  }, 1650);
+}
+
+function renderTourStep() {
+  if (!tourActive) return;
+  const st = TOUR_STEPS[tourStep];
+  if (!st) return;
+
+  document.getElementById('tourStepPill').textContent = `MISSION 0${tourStep + 1} / 0${TOUR_STEPS.length}`;
+  document.getElementById('tourTitle').textContent = tourLang === 'bn' ? st.bnTitle : st.enTitle;
+  document.getElementById('tourDesc').textContent = tourLang === 'bn' ? st.bnDesc : st.enDesc;
+  document.getElementById('tourHint').textContent = tourLang === 'bn' ? st.bnHint : st.enHint;
+  document.getElementById('tourLangBtn').textContent = tourLang === 'bn' ? 'EN' : 'বাংলা';
+
+  const autoBtn = document.getElementById('tourAutoBtn');
+  autoBtn.textContent = tourAuto ? '⏸ AUTO' : '▶ AUTO';
+  autoBtn.classList.toggle('auto-on', tourAuto);
+
+  document.getElementById('tourDots').innerHTML = TOUR_STEPS.map((_, i) =>
+    `<span class="t-dot ${i === tourStep ? 'on' : ''}"></span>`
+  ).join('');
+
+  positionTourSpotlight();
+}
+
+function positionTourSpotlight() {
+  if (!tourActive) return;
+  const st = TOUR_STEPS[tourStep];
+  if (!st) return;
+  const el = st.target ? st.target() : null;
+  const spot = document.getElementById('tourSpotlight');
+  const cue = document.getElementById('tourCue');
+  const card = document.getElementById('tourCard');
+  if (!el || !spot || !card) return;
+
+  const r = el.getBoundingClientRect();
+  const pad = 5;
+  const sx = Math.max(4, r.left - pad);
+  const sy = Math.max(4, r.top - pad);
+  const sw = Math.min(window.innerWidth - 8, r.width + pad * 2);
+  const sh = r.height + pad * 2;
+
+  spot.style.left = sx + 'px';
+  spot.style.top = sy + 'px';
+  spot.style.width = sw + 'px';
+  spot.style.height = sh + 'px';
+
+  cue.style.left = (sx + sw * 0.5) + 'px';
+  cue.style.top = Math.max(24, sy - 4) + 'px';
+
+  if (st.pos === 'below') {
+    card.style.top = Math.min(window.innerHeight - 200, sy + sh + 14) + 'px';
+    card.style.bottom = 'auto';
+  } else if (st.pos === 'middle') {
+    card.style.top = '112px';
+    card.style.bottom = 'auto';
+  } else {
+    card.style.top = '106px';
+    card.style.bottom = 'auto';
+  }
+}
+
+function handleAndroidBack() {
+  for (const id of ['dlg-sat', 'preset-dialog', 'coord-dialog']) {
+    const d = document.getElementById(id);
+    if (d && d.open) { d.close(); return true; }
+  }
+  if (tourActive) {
+    stopInteractiveDemo(true);
+    return true;
+  }
+  if (document.getElementById('search-results').style.display === 'block') {
+    clearSearchBox();
+    return true;
+  }
+  return false;
+}
+
+window.addEventListener('resize', () => {
+  if (tourActive) positionTourSpotlight();
+});
+
+window.addEventListener('pointerdown', () => { userTouchedEarly = true; }, { once: true, passive: true });
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderCustomPresets();
+  applyThemeForStyle(mapStyles[0]);
+  syncAllSliders();
+
+  if (window.AndroidBridge && window.AndroidBridge.getStateJson) {
+    try {
+      const st = JSON.parse(window.AndroidBridge.getStateJson());
+      if (st.lat && st.lon) {
+        curLat = parseFloat(st.lat);
+        curLon = parseFloat(st.lon);
+        trailCoords = [[curLon, curLat]];
+        pinMarker.setLngLat([curLon, curLat]);
+        map.jumpTo({ center: [curLon, curLat], zoom: 15.6 });
+      }
+      if (st.alt) curAlt = parseFloat(st.alt) || 15.2;
+      if (st.acc) curAcc = parseFloat(st.acc) || 2.6;
+      isLocked = !!st.active;
+      isCruising = !!st.cruise;
+    } catch (e) {}
+  }
+
+  renderHudMetrics();
+  updateReverseGeocode(curLat, curLon);
+
+  let seen = false;
+  try { seen = !!localStorage.getItem(TOUR_KEY); } catch (e) {}
+  if (!seen) {
+    setTimeout(() => {
+      if (!userTouchedEarly && !tourActive) {
+        startInteractiveDemo(false);
+      }
+    }, 340);
+  }
+});
 </script>
 </body>
 </html>

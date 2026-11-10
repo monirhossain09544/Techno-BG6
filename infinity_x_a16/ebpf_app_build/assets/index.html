@@ -1,0 +1,2802 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>Kernel eBPF Shield Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=Hind+Siliguri:wght@500;600;700&family=JetBrains+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+<style>
+:root,
+[data-theme="dark"] {
+  --bg-chassis: #06080E;
+  --bg-header: #090D16;
+  --bg-deck: #0B101B;
+  --bg-recess: #060911;
+  --bg-card: #0E1422;
+  --bg-card-alt: #121A2B;
+  --bg-key: #141D30;
+  --bg-key-active: #1B2740;
+  --bg-dock: #080C14;
+
+  --border-hair: #1A2438;
+  --border-strong: #283754;
+  --bevel-light: rgba(255, 255, 255, 0.07);
+
+  --txt-hi: #F1F5F9;
+  --txt-mid: #94A3B8;
+  --txt-lo: #64748B;
+
+  --emerald: #10B981;
+  --emerald-soft: rgba(16, 185, 129, 0.14);
+  --emerald-rim: rgba(16, 185, 129, 0.44);
+
+  --cyan: #38BDF8;
+  --cyan-soft: rgba(56, 189, 248, 0.14);
+  --cyan-rim: rgba(56, 189, 248, 0.44);
+
+  --amber: #F59E0B;
+  --amber-soft: rgba(245, 158, 11, 0.15);
+  --amber-rim: rgba(245, 158, 11, 0.48);
+
+  --coral: #F43F5E;
+  --coral-soft: rgba(244, 63, 94, 0.16);
+  --coral-rim: rgba(244, 63, 94, 0.50);
+
+  --grid-line: rgba(148, 163, 184, 0.10);
+  --grid-tick: rgba(148, 163, 184, 0.16);
+  --bar-track: #182236;
+  --backdrop-dim: rgba(3, 5, 10, 0.78);
+}
+
+[data-theme="light"] {
+  --bg-chassis: #ECEAE4;
+  --bg-header: #E4E1D9;
+  --bg-deck: #DFDCD3;
+  --bg-recess: #D5D1C7;
+  --bg-card: #F8F7F3;
+  --bg-card-alt: #EFECE5;
+  --bg-key: #EAE7DF;
+  --bg-key-active: #DDD9CE;
+  --bg-dock: #E3E0D8;
+
+  --border-hair: #CCC8BC;
+  --border-strong: #B2ADA0;
+  --bevel-light: rgba(255, 255, 255, 0.85);
+
+  --txt-hi: #0F172A;
+  --txt-mid: #334155;
+  --txt-lo: #64748B;
+
+  --emerald: #047857;
+  --emerald-soft: rgba(4, 120, 87, 0.12);
+  --emerald-rim: rgba(4, 120, 87, 0.42);
+
+  --cyan: #0369A1;
+  --cyan-soft: rgba(3, 105, 161, 0.12);
+  --cyan-rim: rgba(3, 105, 161, 0.40);
+
+  --amber: #B45309;
+  --amber-soft: rgba(180, 83, 9, 0.13);
+  --amber-rim: rgba(180, 83, 9, 0.44);
+
+  --coral: #BE123C;
+  --coral-soft: rgba(190, 18, 60, 0.12);
+  --coral-rim: rgba(190, 18, 60, 0.45);
+
+  --grid-line: rgba(15, 23, 42, 0.09);
+  --grid-tick: rgba(15, 23, 42, 0.15);
+  --bar-track: #D3CFC4;
+  --backdrop-dim: rgba(15, 23, 42, 0.54);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-chassis);
+  color: var(--txt-hi);
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+button, input {
+  font-family: inherit;
+  color: inherit;
+}
+
+/* Full-Viewport Responsive Flex Shell (Zero page overflow across all aspect ratios) */
+.app-shell {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-chassis);
+}
+
+/* 1. Top Machined Security Header */
+.top-bezel {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border-hair);
+  box-shadow: inset 0 1px 0 var(--bevel-light);
+}
+
+.brand-cluster {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.shield-emblem {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--emerald-soft);
+  border: 1px solid var(--emerald-rim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--emerald);
+  flex-shrink: 0;
+}
+
+.shield-emblem.alert {
+  background: var(--amber-soft);
+  border-color: var(--amber-rim);
+  color: var(--amber);
+}
+
+.shield-emblem svg {
+  width: 16px;
+  height: 16px;
+}
+
+.led-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--emerald);
+  border: 1.5px solid var(--bg-header);
+}
+
+.shield-emblem.alert .led-dot {
+  background: var(--amber);
+}
+
+.brand-titles {
+  min-width: 0;
+}
+
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.brand-name {
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 14.5px;
+  letter-spacing: 0.05em;
+  color: var(--txt-hi);
+  white-space: nowrap;
+}
+
+.ring0-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--emerald-soft);
+  border: 1px solid var(--emerald-rim);
+  color: var(--emerald);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.brand-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  color: var(--txt-lo);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.hdr-btn {
+  height: 30px;
+  min-width: 30px;
+  padding: 0 7px;
+  border-radius: 7px;
+  background: var(--bg-key);
+  border: 1px solid var(--border-hair);
+  box-shadow: inset 0 1px 0 var(--bevel-light);
+  color: var(--txt-mid);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.hdr-btn:active {
+  transform: translateY(1px);
+}
+
+.hdr-btn.active {
+  background: var(--cyan-soft);
+  border-color: var(--cyan-rim);
+  color: var(--cyan);
+}
+
+.hdr-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.demo-pill {
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  padding: 0 9px;
+  background: var(--amber-soft);
+  border-color: var(--amber-rim);
+  color: var(--amber);
+}
+
+/* 2. Collapsible Crisp Search Bar */
+.search-drawer {
+  flex-shrink: 0;
+  display: none;
+  padding: 6px 10px;
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border-hair);
+  gap: 6px;
+  align-items: center;
+}
+
+.search-drawer.open {
+  display: flex;
+}
+
+.search-input-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 7px;
+  background: var(--bg-recess);
+  border: 1px solid var(--border-strong);
+}
+
+.search-input-wrap svg {
+  width: 13px;
+  height: 13px;
+  color: var(--txt-lo);
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  outline: none;
+  font-size: 12.5px;
+  color: var(--txt-hi);
+  user-select: text;
+}
+
+.search-input::placeholder {
+  color: var(--txt-lo);
+}
+
+.search-clear {
+  background: transparent;
+  border: 0;
+  color: var(--txt-mid);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+
+/* 3. Opal + 1Password Refero Machined Telemetry Deck */
+.telemetry-deck {
+  flex-shrink: 0;
+  margin: 7px 10px 5px;
+  padding: 8px 9px 7px;
+  border-radius: 12px;
+  background: var(--bg-deck);
+  border: 1px solid var(--border-hair);
+  box-shadow: inset 0 1px 0 var(--bevel-light);
+}
+
+.telemetry-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 7px;
+}
+
+.tele-cell {
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--bg-recess);
+  border: 1px solid var(--border-hair);
+  min-width: 0;
+}
+
+.tele-lbl {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--txt-lo);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.dot-rx { width: 6px; height: 6px; border-radius: 50%; background: var(--emerald); flex-shrink: 0; }
+.dot-tx { width: 6px; height: 6px; border-radius: 50%; background: var(--cyan); flex-shrink: 0; }
+.dot-sh { width: 6px; height: 6px; border-radius: 50%; background: var(--amber); flex-shrink: 0; }
+
+.tele-val-row {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  margin-top: 2px;
+}
+
+.tele-val {
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1.08;
+  font-variant-numeric: tabular-nums;
+  color: var(--txt-hi);
+}
+
+.tele-unit {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--txt-mid);
+}
+
+.tele-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  color: var(--txt-lo);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tele-sub.rx-accent { color: var(--emerald); }
+.tele-sub.tx-accent { color: var(--cyan); }
+.tele-sub.sh-accent { color: var(--amber); }
+
+.scope-frame {
+  position: relative;
+  height: clamp(46px, 7.2dvh, 62px);
+  border-radius: 8px;
+  background: var(--bg-recess);
+  border: 1px solid var(--border-hair);
+  overflow: hidden;
+}
+
+#wave-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.scope-hud {
+  position: absolute;
+  top: 4px;
+  left: 7px;
+  right: 7px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.8px;
+  font-weight: 600;
+  color: var(--txt-lo);
+}
+
+.scope-badge {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-hair);
+  color: var(--txt-mid);
+}
+
+/* 4. Dynamic Workspace (Sub-Toolbar + Isolated High-FPS Scroll Surface) */
+.workspace {
+  flex: 1 1 0%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 10px;
+}
+
+.sub-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 3px 0 6px;
+  flex-shrink: 0;
+}
+
+.seg-pills {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.seg-pills::-webkit-scrollbar {
+  display: none;
+}
+
+.seg-pill {
+  height: 27px;
+  padding: 0 9px;
+  border-radius: 7px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-hair);
+  color: var(--txt-mid);
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.seg-pill.active {
+  background: var(--emerald-soft);
+  border-color: var(--emerald-rim);
+  color: var(--emerald);
+}
+
+.seg-cnt {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+  opacity: 0.88;
+}
+
+.toolbar-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  color: var(--txt-lo);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.list-surface {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 10px;
+  display: block;
+  scrollbar-width: none;
+}
+
+.list-surface > * + * {
+  margin-top: 6px;
+}
+
+.list-surface::-webkit-scrollbar {
+  display: none;
+}
+
+/* App Firewall Card (with content-visibility per modern-web-guidance) */
+.app-card {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 9px;
+  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-hair);
+  box-shadow: inset 0 1px 0 var(--bevel-light);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 64px;
+}
+
+@supports not (content-visibility: auto) {
+  .app-card {
+    contain: layout style paint;
+  }
+}
+
+.app-card.is-blocked {
+  border-color: var(--coral-rim);
+}
+
+.app-card.is-partial {
+  border-color: var(--amber-rim);
+}
+
+.icon-box {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--bg-recess);
+  border: 1px solid var(--border-hair);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.app-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  object-fit: cover;
+  display: block;
+}
+
+.card-info {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.card-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--txt-hi);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.uid-chip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--bg-recess);
+  border: 1px solid var(--border-hair);
+  color: var(--txt-lo);
+  flex-shrink: 0;
+}
+
+/* Proportional Bandwidth Bar (Refero Opal + Roots pattern) */
+.bw-track {
+  height: 4px;
+  width: 100%;
+  border-radius: 2px;
+  background: var(--bar-track);
+  overflow: hidden;
+  display: flex;
+  margin: 5px 0 4px;
+}
+
+.bw-rx {
+  height: 100%;
+  background: var(--emerald);
+}
+
+.bw-tx {
+  height: 100%;
+  background: var(--cyan);
+}
+
+.bw-drop {
+  height: 100%;
+  background: var(--coral);
+}
+
+.bw-warn {
+  height: 100%;
+  background: var(--amber);
+}
+
+.card-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--txt-lo);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-sub.st-live { color: var(--emerald); }
+.card-sub.st-warn { color: var(--amber); font-weight: 600; }
+.card-sub.st-drop { color: var(--coral); font-weight: 600; }
+
+/* Dual Machined Tactile Network Lock Keys */
+.net-keys {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.net-key {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--bg-key);
+  border: 1px solid var(--border-strong);
+  box-shadow: inset 0 1px 0 var(--bevel-light);
+  color: var(--txt-mid);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  cursor: pointer;
+}
+
+.net-key:active {
+  transform: translateY(1px);
+}
+
+.net-key svg {
+  width: 14px;
+  height: 14px;
+}
+
+.net-key .k-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 7.5px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.net-key.allow-live {
+  background: var(--emerald-soft);
+  border-color: var(--emerald-rim);
+  color: var(--emerald);
+}
+
+.net-key.blocked {
+  background: var(--coral-soft);
+  border-color: var(--coral-rim);
+  color: var(--coral);
+}
+
+.net-key.blocked::after {
+  content: "";
+  position: absolute;
+  width: 22px;
+  height: 2px;
+  background: var(--coral);
+  transform: rotate(-38deg);
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+/* Sockets & Rules Cards */
+.sock-card {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-hair);
+  box-shadow: inset 0 1px 0 var(--bevel-light);
+}
+
+.proto-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--cyan-soft);
+  border: 1px solid var(--cyan-rim);
+  color: var(--cyan);
+}
+
+.proto-pill.est {
+  background: var(--emerald-soft);
+  border-color: var(--emerald-rim);
+  color: var(--emerald);
+}
+
+.act-btn {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 7px;
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  flex-shrink: 0;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-key);
+  color: var(--txt-hi);
+}
+
+.act-btn.drop {
+  background: var(--coral-soft);
+  border-color: var(--coral-rim);
+  color: var(--coral);
+}
+
+.act-btn.allow {
+  background: var(--emerald-soft);
+  border-color: var(--emerald-rim);
+  color: var(--emerald);
+}
+
+/* Rule Composer Deck */
+.composer-card {
+  padding: 10px;
+  border-radius: 11px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  box-shadow: inset 0 1px 0 var(--bevel-light);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.comp-hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--txt-mid);
+  letter-spacing: 0.04em;
+}
+
+.comp-form {
+  display: flex;
+  gap: 6px;
+}
+
+.comp-input {
+  flex: 1;
+  height: 35px;
+  padding: 0 10px;
+  border-radius: 7px;
+  background: var(--bg-recess);
+  border: 1px solid var(--border-strong);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--txt-hi);
+  outline: none;
+  user-select: text;
+}
+
+.comp-input:focus {
+  border-color: var(--cyan);
+}
+
+.comp-submit {
+  height: 35px;
+  padding: 0 14px;
+  border-radius: 7px;
+  background: var(--coral-soft);
+  border: 1px solid var(--coral-rim);
+  color: var(--coral);
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+
+.preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.preset-chip {
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: var(--bg-key);
+  border: 1px solid var(--border-hair);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--txt-mid);
+  cursor: pointer;
+}
+
+.preset-chip.reset {
+  background: var(--amber-soft);
+  border-color: var(--amber-rim);
+  color: var(--amber);
+}
+
+/* Ring-0 BPF Maps Hardware Dashboard */
+.bpf-section-card {
+  padding: 10px;
+  border-radius: 11px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-hair);
+  box-shadow: inset 0 1px 0 var(--bevel-light);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bpf-sec-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.bpf-sec-title {
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 12.5px;
+  letter-spacing: 0.05em;
+  color: var(--txt-hi);
+}
+
+.bpf-kv-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.bpf-kv {
+  padding: 6px 8px;
+  border-radius: 7px;
+  background: var(--bg-recess);
+  border: 1px solid var(--border-hair);
+}
+
+.bpf-k {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.8px;
+  color: var(--txt-lo);
+  text-transform: uppercase;
+}
+
+.bpf-v {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--txt-hi);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.bpf-map-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  background: var(--bg-recess);
+  border: 1px solid var(--border-hair);
+}
+
+.bpf-map-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--txt-hi);
+}
+
+.bpf-map-desc {
+  font-size: 10.5px;
+  color: var(--txt-mid);
+  margin-top: 1px;
+}
+
+.bpf-id-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: var(--emerald-soft);
+  border: 1px solid var(--emerald-rim);
+  color: var(--emerald);
+  white-space: nowrap;
+}
+
+.cli-box {
+  padding: 8px;
+  border-radius: 7px;
+  background: var(--bg-recess);
+  border: 1px solid var(--border-strong);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--cyan);
+  word-break: break-all;
+}
+
+.empty-box {
+  padding: 26px 14px;
+  text-align: center;
+  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1px dashed var(--border-strong);
+  color: var(--txt-mid);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* 5. Refero (1Password + Opal + Roots) 4-Tab Machined Bottom Navigation Dock */
+.bottom-dock {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+  padding: 6px 10px 7px;
+  background: var(--bg-dock);
+  border-top: 1px solid var(--border-hair);
+  box-shadow: inset 0 1px 0 var(--bevel-light);
+}
+
+.dock-tab {
+  height: 44px;
+  border-radius: 9px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--txt-lo);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  position: relative;
+}
+
+.dock-tab svg {
+  width: 16px;
+  height: 16px;
+}
+
+.dock-lbl-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dock-lbl {
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+}
+
+.dock-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5px;
+  font-weight: 700;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--bg-key);
+  border: 1px solid var(--border-hair);
+  color: var(--txt-mid);
+}
+
+.dock-tab.active {
+  background: var(--bg-key);
+  border-color: var(--border-strong);
+  box-shadow: inset 0 1px 0 var(--bevel-light);
+  color: var(--emerald);
+}
+
+.dock-tab.active .dock-badge {
+  background: var(--emerald-soft);
+  border-color: var(--emerald-rim);
+  color: var(--emerald);
+}
+
+/* Per-App Ring-0 Inspector Bottom Sheet (<dialog>) — ZERO backdrop blur */
+dialog.hw-sheet {
+  position: fixed;
+  inset: auto 0 0 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: 84dvh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-top: 1px solid var(--border-strong);
+  border-radius: 18px 18px 0 0;
+  background: var(--bg-deck);
+  color: var(--txt-hi);
+  overflow: hidden;
+}
+
+dialog.hw-sheet::backdrop {
+  background: var(--backdrop-dim);
+}
+
+.sheet-inner {
+  padding: 12px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 84dvh;
+  overflow-y: auto;
+}
+
+.sheet-handle {
+  width: 38px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-strong);
+  margin: 0 auto 2px;
+}
+
+.sheet-app-hdr {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sheet-app-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-recess);
+  flex-shrink: 0;
+}
+
+.sheet-app-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.sheet-app-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--txt-hi);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sheet-app-pkg {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: var(--txt-mid);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sheet-close {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--bg-key);
+  border: 1px solid var(--border-hair);
+  color: var(--txt-mid);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mode-grid-4 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.mode-btn {
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mode-btn .m-title {
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.mode-btn .m-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  color: var(--txt-lo);
+}
+
+.mode-btn.sel-allow {
+  background: var(--emerald-soft);
+  border-color: var(--emerald-rim);
+  color: var(--emerald);
+}
+
+.mode-btn.sel-warn {
+  background: var(--amber-soft);
+  border-color: var(--amber-rim);
+  color: var(--amber);
+}
+
+.mode-btn.sel-drop {
+  background: var(--coral-soft);
+  border-color: var(--coral-rim);
+  color: var(--coral);
+}
+
+/* Crisp Toast */
+.toast-pill {
+  position: fixed;
+  left: 50%;
+  bottom: 68px;
+  transform: translateX(-50%);
+  padding: 7px 13px;
+  border-radius: 8px;
+  background: var(--bg-card-alt);
+  border: 1px solid var(--emerald-rim);
+  color: var(--txt-hi);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  z-index: 9500;
+  display: none;
+  white-space: nowrap;
+  max-width: 92vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+/* =========================================================================
+   Game-Style Interactive Spotlight Live Demo Layer (Top-Layer Popover API)
+   ========================================================================= */
+.tour-layer {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.tour-layer:not(:popover-open) {
+  display: none;
+}
+
+.tour-spotlight {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  border-radius: 10px;
+  box-shadow: 0 0 0 4000px rgba(3, 6, 12, 0.78);
+  border: 2px solid #FFB800;
+  pointer-events: none;
+  transition: left 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+              top 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+              width 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+              height 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tour-spotlight::before,
+.tour-spotlight::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 13px;
+  border: 2px solid rgba(255, 184, 0, 0.55);
+  pointer-events: none;
+}
+
+.tour-cue {
+  position: fixed;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: #FFB800;
+  color: #06080E;
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  animation: cueBounce 0.95s ease-in-out infinite alternate;
+}
+
+@keyframes cueBounce {
+  from { margin-top: -4px; }
+  to   { margin-top: -11px; }
+}
+
+.tour-card {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  top: 64px;
+  padding: 12px 13px;
+  border-radius: 13px;
+  background: #0D1320;
+  border: 1.5px solid #FFB800;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.72);
+  color: #F8FAFC;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tour-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.tour-step-pill {
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: rgba(255, 184, 0, 0.16);
+  border: 1px solid rgba(255, 184, 0, 0.55);
+  color: #FFB800;
+}
+
+.tour-ctrl-cluster {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.t-btn {
+  height: 25px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: #172238;
+  border: 1px solid #2C3E63;
+  color: #E2E8F0;
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.t-btn.auto-on {
+  background: rgba(16, 185, 129, 0.22);
+  border-color: #10B981;
+  color: #34D399;
+}
+
+.tour-title {
+  font-family: 'Chakra Petch', 'Hind Siliguri', sans-serif;
+  font-weight: 700;
+  font-size: 14.5px;
+  color: #FFFFFF;
+}
+
+.tour-desc {
+  font-family: 'Hind Siliguri', 'Plus Jakarta Sans', sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #CBD5E1;
+}
+
+.tour-action-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px solid #1E2C47;
+  font-family: 'JetBrains Mono', 'Hind Siliguri', monospace;
+  font-size: 10.5px;
+  color: #FFB800;
+}
+
+.tour-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.t-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #283856;
+}
+
+.t-dot.on {
+  width: 16px;
+  border-radius: 4px;
+  background: #FFB800;
+}
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+  <!-- 1. Top Machined Security Header -->
+  <header class="top-bezel">
+    <div class="brand-cluster">
+      <div id="shield-emblem" class="shield-emblem">
+        <span class="led-dot"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <path d="m9 12 2 2 4-4"/>
+        </svg>
+      </div>
+      <div class="brand-titles">
+        <div class="brand-row">
+          <span class="brand-name">eBPF SHIELD</span>
+          <span id="hdr-ring-pill" class="ring0-pill">RING-0 #27</span>
+        </div>
+        <div id="hdr-sub" class="brand-sub">Linux 5.4.210 · SYS_bpf #280 · ARM64 JIT</div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button id="btn-search-toggle" class="hdr-btn" type="button" onclick="toggleSearchDrawer()" aria-label="Search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+        </svg>
+      </button>
+      <button id="btn-demo" class="hdr-btn demo-pill" type="button" onclick="startInteractiveDemo(false)">▶ DEMO</button>
+      <button id="btn-theme" class="hdr-btn" type="button" onclick="toggleTheme()" aria-label="Switch Theme">
+        <svg id="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- 2. Collapsible Crisp Search Bar -->
+  <div id="search-drawer" class="search-drawer">
+    <div class="search-input-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+      </svg>
+      <input id="search-box" class="search-input" type="text" placeholder="Filter app, UID, package, or remote IP..." autocomplete="off" oninput="onSearchInput()" />
+      <button class="search-clear" type="button" onclick="clearSearch()">✕</button>
+    </div>
+  </div>
+
+  <!-- 3. Refero (Opal + 1Password) Machined Ring-0 Telemetry Deck -->
+  <section class="telemetry-deck">
+    <div class="telemetry-grid">
+      <div class="tele-cell">
+        <div class="tele-lbl"><span class="dot-rx"></span>INGRESS RX</div>
+        <div class="tele-val-row">
+          <span id="val-rx" class="tele-val">0.0</span>
+          <span id="unit-rx" class="tele-unit">MB</span>
+        </div>
+        <div id="sub-rx" class="tele-sub rx-accent">0.0 KB/s · 0 pkts</div>
+      </div>
+
+      <div class="tele-cell">
+        <div class="tele-lbl"><span class="dot-tx"></span>EGRESS TX</div>
+        <div class="tele-val-row">
+          <span id="val-tx" class="tele-val">0.0</span>
+          <span id="unit-tx" class="tele-unit">MB</span>
+        </div>
+        <div id="sub-tx" class="tele-sub tx-accent">0.0 KB/s · 0 pkts</div>
+      </div>
+
+      <div class="tele-cell">
+        <div class="tele-lbl"><span class="dot-sh"></span>SHIELD MATRIX</div>
+        <div class="tele-val-row">
+          <span id="val-rules" class="tele-val">0</span>
+          <span id="unit-rules" class="tele-unit">RULES</span>
+        </div>
+        <div id="sub-shield" class="tele-sub sh-accent">0 live sockets</div>
+      </div>
+    </div>
+
+    <div class="scope-frame">
+      <canvas id="wave-canvas"></canvas>
+      <div class="scope-hud">
+        <span id="hud-left" class="scope-badge">JIT #39 · 376B ARM64</span>
+        <span id="hud-right" class="scope-badge">WLAN0 + LTE0 HOOKED</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Dynamic Main Workspace -->
+  <main class="workspace">
+    <div id="sub-toolbar" class="sub-toolbar"></div>
+    <div id="list-surface" class="list-surface"></div>
+  </main>
+
+  <!-- 5. 4-Tab Machined Bottom Navigation Dock -->
+  <nav class="bottom-dock" aria-label="Primary Sections">
+    <button id="tab-apps" class="dock-tab active" type="button" onclick="switchTab('apps')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+        <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+      </svg>
+      <div class="dock-lbl-row">
+        <span class="dock-lbl">APPS</span>
+        <span id="badge-apps" class="dock-badge">0</span>
+      </div>
+    </button>
+
+    <button id="tab-sockets" class="dock-tab" type="button" onclick="switchTab('sockets')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"/><path d="M12 12 16.5 7.5"/><circle cx="12" cy="12" r="2"/>
+      </svg>
+      <div class="dock-lbl-row">
+        <span class="dock-lbl">SOCKETS</span>
+        <span id="badge-sockets" class="dock-badge">0</span>
+      </div>
+    </button>
+
+    <button id="tab-rules" class="dock-tab" type="button" onclick="switchTab('rules')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9.5 9.5 14.5 14.5M14.5 9.5l-5 5"/>
+      </svg>
+      <div class="dock-lbl-row">
+        <span class="dock-lbl">RULES</span>
+        <span id="badge-rules" class="dock-badge">0</span>
+      </div>
+    </button>
+
+    <button id="tab-bpf" class="dock-tab" type="button" onclick="switchTab('bpf')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6"/>
+        <path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/>
+      </svg>
+      <div class="dock-lbl-row">
+        <span class="dock-lbl">BPF MAPS</span>
+        <span id="badge-bpf" class="dock-badge">6</span>
+      </div>
+    </button>
+  </nav>
+</div>
+
+<!-- Per-App Ring-0 Hardware Inspector Bottom Sheet -->
+<dialog id="dlg-app" class="hw-sheet" closedby="any">
+  <div id="dlg-app-content" class="sheet-inner"></div>
+</dialog>
+
+<!-- Crisp Status Toast -->
+<div id="toast-pill" class="toast-pill"></div>
+
+<!-- Top-Layer Game-Style Interactive Spotlight Demo -->
+<div id="tourLayer" class="tour-layer" popover="manual">
+  <div id="tourSpotlight" class="tour-spotlight"></div>
+  <div id="tourCue" class="tour-cue">TAP</div>
+  <div id="tourCard" class="tour-card">
+    <div class="tour-top">
+      <span id="tourStepPill" class="tour-step-pill">MISSION 01 / 05</span>
+      <div class="tour-ctrl-cluster">
+        <button id="tourAutoBtn" class="t-btn" type="button" onclick="toggleTourAuto()">▶ AUTO</button>
+        <button id="tourLangBtn" class="t-btn" type="button" onclick="toggleTourLang()">EN</button>
+        <button class="t-btn" type="button" onclick="stopInteractiveDemo(true)">SKIP ✕</button>
+      </div>
+    </div>
+    <div id="tourTitle" class="tour-title">Ring-0 Mobile Data Lock</div>
+    <div id="tourDesc" class="tour-desc">প্রথম অ্যাপটির LTE বাটনে ট্যাপ করে কার্নেল লেভেলে Mobile Data ব্লক করুন।</div>
+    <div class="tour-action-hint">
+      <span id="tourHintText">⚡ হাইলাইট করা বাটনে ট্যাপ করুন</span>
+      <div id="tourDots" class="tour-dots"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const WAVE_POINTS = 40;
+let isLight = false;
+let currentTab = 'apps';       // 'apps' | 'sockets' | 'rules' | 'bpf'
+let appFilter = 'all';         // 'all' | 'active' | 'restricted' | 'system'
+let sockFilter = 'all';        // 'all' | 'https' | 'quic' | 'dns'
+let selectedUid = null;
+
+let initInfo = {};
+let telemetry = {};
+let appsData = [];
+let connsData = [];
+let maxAppBytes = 1;
+
+let lastRx = 0;
+let lastTx = 0;
+let lastTs = 0;
+let lastRxRate = 0;
+let lastTxRate = 0;
+let rxWave = new Array(WAVE_POINTS).fill(28);
+let txWave = new Array(WAVE_POINTS).fill(16);
+let lastSocketsSig = '';
+let toastTm = null;
+
+const SVG_WIFI = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="19.5" r="1.2" fill="currentColor"/></svg>`;
+const SVG_CELL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h.01"/><path d="M8 20v-4"/><path d="M13 20v-9"/><path d="M18 20V9"/><path d="M22 5v15"/></svg>`;
+
+function esc(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+function splitBytes(b) {
+  b = Number(b) || 0;
+  if (b >= 1073741824) return { v: (b / 1073741824).toFixed(2), u: 'GB' };
+  if (b >= 1048576) return { v: (b / 1048576).toFixed(1), u: 'MB' };
+  if (b >= 1024) return { v: (b / 1024).toFixed(1), u: 'KB' };
+  return { v: String(Math.round(b)), u: 'B' };
+}
+
+function fmtBytes(b) {
+  const s = splitBytes(b);
+  return s.v + ' ' + s.u;
+}
+
+function fmtPkts(n) {
+  n = Number(n) || 0;
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+  return String(n);
+}
+
+function toast(msg) {
+  const el = document.getElementById('toast-pill');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(toastTm);
+  toastTm = setTimeout(() => { el.style.display = 'none'; }, 1900);
+}
+
+function copyCmd(label, text) {
+  let ok = false;
+  if (window.AndroidBridge && window.AndroidBridge.copyToClipboard) {
+    ok = window.AndroidBridge.copyToClipboard(label, text);
+  }
+  if (!ok && navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).catch(() => {});
+    ok = true;
+  }
+  toast(ok ? ('Copied: ' + label) : text);
+}
+
+function toggleTheme() {
+  isLight = !isLight;
+  document.documentElement.setAttribute('data-theme', isLight ? 'light' : 'dark');
+  const icon = document.getElementById('theme-icon');
+  if (isLight) {
+    icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+  } else {
+    icon.innerHTML = '<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>';
+  }
+  if (window.AndroidBridge && window.AndroidBridge.syncSystemBars) {
+    window.AndroidBridge.syncSystemBars(isLight);
+  }
+  drawWave();
+}
+
+function toggleSearchDrawer() {
+  const dr = document.getElementById('search-drawer');
+  const btn = document.getElementById('btn-search-toggle');
+  const open = dr.classList.toggle('open');
+  btn.classList.toggle('active', open);
+  if (open) {
+    document.getElementById('search-box').focus();
+  } else {
+    document.getElementById('search-box').value = '';
+    renderWorkspace();
+  }
+  if (tourActive) requestAnimationFrame(positionTourSpotlight);
+}
+
+function clearSearch() {
+  const inp = document.getElementById('search-box');
+  inp.value = '';
+  renderWorkspace();
+}
+
+function onSearchInput() {
+  renderWorkspace();
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  ['apps', 'sockets', 'rules', 'bpf'].forEach(id => {
+    const el = document.getElementById('tab-' + id);
+    if (el) el.classList.toggle('active', id === tab);
+  });
+  renderWorkspace();
+  if (tourActive) {
+    if (tourStep === 3 && tab === 'sockets') {
+      advanceTour();
+    } else if (tourStep === 4 && tab === 'bpf') {
+      completeTour();
+    } else {
+      requestAnimationFrame(positionTourSpotlight);
+    }
+  }
+}
+
+function setAppFilter(f) {
+  appFilter = f;
+  renderWorkspace();
+}
+
+function setSockFilter(f) {
+  sockFilter = f;
+  renderWorkspace();
+}
+
+/* Mode mapping in bg6_ebpf_fw_jni:
+   0 = ALLOW_ALL, 1 = BLOCK_ALL, 2 = WIFI_ONLY (block LTE), 3 = CELL_ONLY (block Wi-Fi) */
+function applyAppMode(uid, nextMode) {
+  const app = appsData.find(a => a.uid === uid);
+  if (app) {
+    app.mode = nextMode;
+    if (nextMode === 0) { app.rule = 0; app.iif = 0; }
+    else if (nextMode === 1) { app.rule = 2562; app.iif = 0; }
+    else if (nextMode === 2) { app.rule = 128; app.iif = initInfo.wlan_ifindex || 28; }
+    else if (nextMode === 3) { app.rule = 128; app.iif = initInfo.lte_ifindex || 14; }
+  }
+  if (window.AndroidBridge && window.AndroidBridge.setAppFirewallMode) {
+    try {
+      const res = JSON.parse(window.AndroidBridge.setAppFirewallMode(uid, nextMode));
+      if (app && typeof res.rule === 'number') {
+        app.rule = res.rule;
+        app.iif = res.iif || 0;
+      }
+    } catch (e) {}
+  }
+  const desc = {
+    0: 'ALLOW ALL (Wi-Fi + LTE)',
+    1: 'RING-0 DROPPED (All Networks)',
+    2: 'WI-FI ONLY (LTE Blocked)',
+    3: 'MOBILE ONLY (Wi-Fi Blocked)'
+  }[nextMode];
+  toast((app ? app.name : ('UID ' + uid)) + ' → ' + desc);
+  updateMetrics();
+  renderWorkspace();
+}
+
+function toggleAppNet(uid, net, ev) {
+  if (ev) ev.stopPropagation();
+  const app = appsData.find(a => a.uid === uid);
+  if (!app) return;
+  const m = app.mode || 0;
+  let wifiAllowed = (m === 0 || m === 2);
+  let cellAllowed = (m === 0 || m === 3);
+
+  if (net === 'wifi') wifiAllowed = !wifiAllowed;
+  if (net === 'cell') cellAllowed = !cellAllowed;
+
+  let next = 0;
+  if (wifiAllowed && cellAllowed) next = 0;
+  else if (!wifiAllowed && !cellAllowed) next = 1;
+  else if (wifiAllowed && !cellAllowed) next = 2;
+  else if (!wifiAllowed && cellAllowed) next = 3;
+
+  applyAppMode(uid, next);
+
+  if (tourActive && tourStep === 0 && net === 'cell') {
+    advanceTour();
+  }
+}
+
+/* Per-App Ring-0 Inspector Sheet */
+function openAppInspector(uid) {
+  const app = appsData.find(a => a.uid === uid);
+  if (!app) return;
+  selectedUid = uid;
+  const dlg = document.getElementById('dlg-app');
+  dlg.setAttribute('closedby', tourActive ? 'closerequest' : 'any');
+  renderAppInspector(app);
+  if (!dlg.open) {
+    dlg.showModal();
+  }
+  if (tourActive) {
+    promoteTourLayer();
+    if (tourStep === 1) {
+      advanceTour();
+    } else {
+      requestAnimationFrame(positionTourSpotlight);
+    }
+  }
+}
+
+function closeAppInspector() {
+  const dlg = document.getElementById('dlg-app');
+  if (dlg && dlg.open) dlg.close();
+  selectedUid = null;
+  if (tourActive) requestAnimationFrame(positionTourSpotlight);
+}
+
+function setAppModeFromModal(uid, mode) {
+  applyAppMode(uid, mode);
+  const app = appsData.find(a => a.uid === uid);
+  if (tourActive && tourStep === 2 && mode === 0) {
+    closeAppInspector();
+    advanceTour();
+    return;
+  }
+  if (app) renderAppInspector(app);
+}
+
+function renderAppInspector(app) {
+  const m = app.mode || 0;
+  const uidConns = connsData.filter(c => c.uid === app.uid).slice(0, 6);
+  const ruleHex = '0x' + Number(app.rule || 0).toString(16).padStart(6, '0').toUpperCase();
+  const totalPkts = (app.rx_pkts || 0) + (app.tx_pkts || 0);
+
+  let sockHtml = '';
+  if (uidConns.length === 0) {
+    sockHtml = `<div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--txt-lo);padding:6px 2px;">No open sockets for UID ${app.uid} right now.</div>`;
+  } else {
+    sockHtml = uidConns.map(c => `
+      <div class="bpf-map-row">
+        <div>
+          <div class="bpf-map-name">${esc(c.remote_ip)}:${c.remote_port}</div>
+          <div class="bpf-map-desc">${esc(c.service || c.proto)} · ${esc(c.state || 'ACTIVE')}</div>
+        </div>
+        <span class="proto-pill ${c.state === 'ESTABLISHED' ? 'est' : ''}">${esc(c.proto)}</span>
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('dlg-app-content').innerHTML = `
+    <div class="sheet-handle"></div>
+    <div class="sheet-app-hdr">
+      <img class="sheet-app-icon" src="https://ebpf.local/icon/${app.uid}" alt="" />
+      <div class="sheet-app-meta">
+        <div class="sheet-app-name">${esc(app.name)}</div>
+        <div class="sheet-app-pkg">${esc(app.pkg)} · UID ${app.uid} · ${app.is_user ? 'USER APP' : 'RING-0 SYS'}</div>
+      </div>
+      <button class="sheet-close" type="button" onclick="closeAppInspector()">✕</button>
+    </div>
+
+    <div class="bpf-kv-grid">
+      <div class="bpf-kv">
+        <div class="bpf-k">↓ Ingress RX</div>
+        <div class="bpf-v" style="color:var(--emerald)">${fmtBytes(app.rx_bytes)}</div>
+      </div>
+      <div class="bpf-kv">
+        <div class="bpf-k">↑ Egress TX</div>
+        <div class="bpf-v" style="color:var(--cyan)">${fmtBytes(app.tx_bytes)}</div>
+      </div>
+      <div class="bpf-kv">
+        <div class="bpf-k">UID Map #23 Pkts</div>
+        <div class="bpf-v">${fmtPkts(totalPkts)} pkts</div>
+      </div>
+      <div class="bpf-kv">
+        <div class="bpf-k">BPF Rule / IIF</div>
+        <div class="bpf-v">${ruleHex} · #${app.iif || 0}</div>
+      </div>
+    </div>
+
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;color:var(--txt-lo);letter-spacing:0.04em;">
+      RING-0 CGROUP_SKB POLICY (MAP #${telemetry.uid_owner_map_id || initInfo.uid_owner_map_id || 27})
+    </div>
+
+    <div class="mode-grid-4">
+      <button id="dlg-mode-0" class="mode-btn ${m === 0 ? 'sel-allow' : ''}" type="button" onclick="setAppModeFromModal(${app.uid}, 0)">
+        <span class="m-title">✓ ALLOW ALL</span>
+        <span class="m-sub">Wi-Fi + Mobile LTE</span>
+      </button>
+      <button id="dlg-mode-2" class="mode-btn ${m === 2 ? 'sel-warn' : ''}" type="button" onclick="setAppModeFromModal(${app.uid}, 2)">
+        <span class="m-title">WI-FI ONLY</span>
+        <span class="m-sub">Drop LTE (IIF #${initInfo.wlan_ifindex || 28})</span>
+      </button>
+      <button id="dlg-mode-3" class="mode-btn ${m === 3 ? 'sel-warn' : ''}" type="button" onclick="setAppModeFromModal(${app.uid}, 3)">
+        <span class="m-title">MOBILE ONLY</span>
+        <span class="m-sub">Drop Wi-Fi (IIF #${initInfo.lte_ifindex || 14})</span>
+      </button>
+      <button id="dlg-mode-1" class="mode-btn ${m === 1 ? 'sel-drop' : ''}" type="button" onclick="setAppModeFromModal(${app.uid}, 1)">
+        <span class="m-title">✕ BLOCK ALL</span>
+        <span class="m-sub">OEM_DENY + PENALTY</span>
+      </button>
+    </div>
+
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;color:var(--txt-lo);letter-spacing:0.04em;">
+      LIVE UID SOCKETS (${uidConns.length})
+    </div>
+    <div style="display:flex;flex-direction:column;gap:5px;">
+      ${sockHtml}
+    </div>
+  `;
+}
+
+/* L3/L4 Firewall Actions */
+function toggleIpBlock(ip, block) {
+  if (!window.AndroidBridge) return;
+  window.AndroidBridge.setIpBlocked(ip, block);
+  toast((block ? 'Ring-0 Dropped IP ' : 'Unblocked IP ') + ip);
+  refreshEverything();
+}
+
+function togglePortBlock(port, block) {
+  if (!window.AndroidBridge) return;
+  window.AndroidBridge.setPortBlocked(port, block);
+  toast((block ? 'Ring-0 Dropped Port :' : 'Unblocked Port :') + port);
+  refreshEverything();
+}
+
+function submitInlineRule(ev) {
+  ev.preventDefault();
+  const inp = document.getElementById('inline-target');
+  if (!inp) return;
+  const raw = (inp.value || '').trim();
+  if (!raw || !window.AndroidBridge) return;
+  if (/^\d+$/.test(raw)) {
+    const p = parseInt(raw, 10);
+    if (p >= 1 && p <= 65535) {
+      window.AndroidBridge.setPortBlocked(p, true);
+      inp.value = '';
+      toast('Ring-0 Dropped Port :' + p);
+      refreshEverything();
+      return;
+    }
+  }
+  window.AndroidBridge.setIpBlocked(raw, true);
+  inp.value = '';
+  toast('Ring-0 Dropped ' + raw);
+  refreshEverything();
+}
+
+function resetAllRules() {
+  if (!window.AndroidBridge) return;
+  if (window.AndroidBridge.resetAllFirewallRules) {
+    window.AndroidBridge.resetAllFirewallRules();
+  }
+  (telemetry.blocked_ips || []).forEach(x => window.AndroidBridge.setIpBlocked(x.ip, false));
+  (telemetry.blocked_ports || []).forEach(p => window.AndroidBridge.setPortBlocked(p, false));
+  appsData.forEach(a => {
+    if (a.mode && a.mode !== 0) {
+      window.AndroidBridge.setAppFirewallMode(a.uid, 0);
+      a.mode = 0;
+    }
+  });
+  toast('All Ring-0 firewall rules cleared');
+  refreshEverything();
+}
+
+/* Workspace Rendering */
+function renderWorkspace() {
+  const sub = document.getElementById('sub-toolbar');
+  const surf = document.getElementById('list-surface');
+  const q = (document.getElementById('search-box').value || '').trim().toLowerCase();
+
+  if (currentTab === 'apps') {
+    const cntAll = appsData.length;
+    const cntAct = appsData.filter(a => ((a.rx_bytes || 0) + (a.tx_bytes || 0)) > 0).length;
+    const cntRes = appsData.filter(a => a.mode && a.mode !== 0).length;
+    const cntSys = appsData.filter(a => !a.is_user).length;
+
+    sub.innerHTML = `
+      <div class="seg-pills">
+        <button class="seg-pill ${appFilter === 'all' ? 'active' : ''}" type="button" onclick="setAppFilter('all')">All <span class="seg-cnt">${cntAll}</span></button>
+        <button class="seg-pill ${appFilter === 'active' ? 'active' : ''}" type="button" onclick="setAppFilter('active')">Active <span class="seg-cnt">${cntAct}</span></button>
+        <button class="seg-pill ${appFilter === 'restricted' ? 'active' : ''}" type="button" onclick="setAppFilter('restricted')">Locked <span class="seg-cnt">${cntRes}</span></button>
+        <button class="seg-pill ${appFilter === 'system' ? 'active' : ''}" type="button" onclick="setAppFilter('system')">System <span class="seg-cnt">${cntSys}</span></button>
+      </div>
+      <span class="toolbar-meta">W / M KEYS</span>
+    `;
+
+    const filtered = appsData.filter(a => {
+      if (q && !String(a.name).toLowerCase().includes(q) && !String(a.pkg).toLowerCase().includes(q) && !String(a.uid).includes(q)) {
+        return false;
+      }
+      if (appFilter === 'active') return ((a.rx_bytes || 0) + (a.tx_bytes || 0)) > 0;
+      if (appFilter === 'restricted') return a.mode && a.mode !== 0;
+      if (appFilter === 'system') return !a.is_user;
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      surf.innerHTML = `<div class="empty-box">No matching apps in this filter.<br/>Switch to <b>All</b> or clear search.</div>`;
+      return;
+    }
+
+    surf.innerHTML = filtered.slice(0, 95).map((a, idx) => {
+      const m = a.mode || 0;
+      const wifiOk = (m === 0 || m === 2);
+      const cellOk = (m === 0 || m === 3);
+      const rxB = a.rx_bytes || 0;
+      const txB = a.tx_bytes || 0;
+      const totB = rxB + txB;
+      const pkts = (a.rx_pkts || 0) + (a.tx_pkts || 0);
+
+      let cardCls = '';
+      let subText = '';
+      let subCls = '';
+      let barHtml = '';
+
+      const pct = totB > 0 ? Math.min(100, Math.max(8, Math.round((Math.log10(totB + 10) / Math.log10(maxAppBytes + 10)) * 100))) : 0;
+      const rxShare = totB > 0 ? Math.round((rxB / totB) * pct) : 0;
+      const txShare = Math.max(0, pct - rxShare);
+
+      if (m === 1) {
+        cardCls = 'is-blocked';
+        subText = 'RING-0 DROPPED · ALL NETWORKS';
+        subCls = 'st-drop';
+        barHtml = `<div class="bw-drop" style="width:100%"></div>`;
+      } else if (m === 2) {
+        cardCls = 'is-partial';
+        subText = 'WI-FI ONLY · LTE DROPPED (IIF #' + (initInfo.wlan_ifindex || 28) + ')';
+        subCls = 'st-warn';
+        barHtml = `<div class="bw-warn" style="width:${ Math.max(35, pct) }%"></div>`;
+      } else if (m === 3) {
+        cardCls = 'is-partial';
+        subText = 'MOBILE ONLY · WI-FI DROPPED (IIF #' + (initInfo.lte_ifindex || 14) + ')';
+        subCls = 'st-warn';
+        barHtml = `<div class="bw-warn" style="width:${ Math.max(35, pct) }%"></div>`;
+      } else if (totB > 0) {
+        subText = `↓ ${fmtBytes(rxB)} · ↑ ${fmtBytes(txB)} · ${fmtPkts(pkts)} pkts`;
+        subCls = 'st-live';
+        barHtml = `<div class="bw-rx" style="width:${rxShare}%"></div><div class="bw-tx" style="width:${txShare}%"></div>`;
+      } else {
+        subText = `${esc(a.pkg)} · idle`;
+        barHtml = `<div class="bw-rx" style="width:0%"></div>`;
+      }
+
+      const wCls = !wifiOk ? 'blocked' : (totB > 0 ? 'allow-live' : '');
+      const cCls = !cellOk ? 'blocked' : (totB > 0 ? 'allow-live' : '');
+
+      const infoId = idx === 0 ? 'id="first-app-info"' : '';
+      const cellBtnId = idx === 0 ? 'id="first-cell-btn"' : '';
+
+      return `<div class="app-card ${cardCls}">
+        <div class="icon-box" onclick="openAppInspector(${a.uid})">
+          <img class="app-icon" src="https://ebpf.local/icon/${a.uid}" alt="" loading="lazy" />
+        </div>
+        <div ${infoId} class="card-info" onclick="openAppInspector(${a.uid})">
+          <div class="card-top">
+            <span class="card-title">${esc(a.name)}</span>
+            <span class="uid-chip">UID ${a.uid}</span>
+          </div>
+          <div class="bw-track">${barHtml}</div>
+          <div class="card-sub ${subCls}">${subText}</div>
+        </div>
+        <div class="net-keys">
+          <button class="net-key ${wCls}" type="button" onclick="toggleAppNet(${a.uid}, 'wifi', event)" aria-label="Toggle Wi-Fi">
+            ${SVG_WIFI}<span class="k-tag">W</span>
+          </button>
+          <button ${cellBtnId} class="net-key ${cCls}" type="button" onclick="toggleAppNet(${a.uid}, 'cell', event)" aria-label="Toggle Mobile">
+            ${SVG_CELL}<span class="k-tag">LTE</span>
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+    return;
+  }
+
+  if (currentTab === 'sockets') {
+    const blockedSet = new Set((telemetry.blocked_ips || []).map(x => x.ip));
+    const list = connsData.filter(c => {
+      if (q && !String(c.app_name || '').toLowerCase().includes(q) &&
+          !String(c.remote_ip || '').toLowerCase().includes(q) &&
+          !String(c.service || '').toLowerCase().includes(q)) {
+        return false;
+      }
+      const svc = String(c.service || '').toUpperCase();
+      if (sockFilter === 'https') return svc.includes('HTTPS') || c.remote_port === 443;
+      if (sockFilter === 'quic') return svc.includes('QUIC') || String(c.proto || '').startsWith('UDP');
+      if (sockFilter === 'dns') return svc.includes('DNS') || svc.includes('FCM') || c.remote_port === 53 || c.remote_port === 853;
+      return true;
+    });
+
+    sub.innerHTML = `
+      <div class="seg-pills">
+        <button class="seg-pill ${sockFilter === 'all' ? 'active' : ''}" type="button" onclick="setSockFilter('all')">All <span class="seg-cnt">${connsData.length}</span></button>
+        <button class="seg-pill ${sockFilter === 'https' ? 'active' : ''}" type="button" onclick="setSockFilter('https')">TLS :443</button>
+        <button class="seg-pill ${sockFilter === 'quic' ? 'active' : ''}" type="button" onclick="setSockFilter('quic')">QUIC / UDP</button>
+        <button class="seg-pill ${sockFilter === 'dns' ? 'active' : ''}" type="button" onclick="setSockFilter('dns')">DNS / PUSH</button>
+      </div>
+      <span class="toolbar-meta">LIVE /PROC/NET</span>
+    `;
+
+    if (list.length === 0) {
+      surf.innerHTML = `<div class="empty-box">No active kernel sockets matching this filter.</div>`;
+      return;
+    }
+
+    surf.innerHTML = list.map(c => {
+      const ip = c.remote_ip || '';
+      const port = c.remote_port || 0;
+      const isBlocked = blockedSet.has(ip);
+      const canBlockIp = /^\d+\.\d+\.\d+\.\d+$/.test(ip) && ip !== '0.0.0.0' && !ip.startsWith('127.');
+      return `<div class="sock-card">
+        <div class="icon-box" onclick="openAppInspector(${c.uid})">
+          <img class="app-icon" src="https://ebpf.local/icon/${c.uid}" alt="" loading="lazy" />
+        </div>
+        <div class="card-info" onclick="openAppInspector(${c.uid})">
+          <div class="card-top">
+            <span class="card-title">${esc(c.app_name || ('UID ' + c.uid))}</span>
+            <span class="proto-pill ${c.state === 'ESTABLISHED' ? 'est' : ''}">${esc(c.service || c.proto)}</span>
+          </div>
+          <div class="card-sub st-live" style="margin-top:3px;">${esc(ip)}:${port} · ${esc(c.proto)} ${esc(c.state || '')}</div>
+        </div>
+        ${canBlockIp ? (
+          isBlocked
+            ? `<button class="act-btn allow" type="button" onclick="toggleIpBlock('${esc(ip)}', false)">UNBLOCK</button>`
+            : `<button class="act-btn drop" type="button" onclick="toggleIpBlock('${esc(ip)}', true)">DROP IP</button>`
+        ) : `<span class="uid-chip">UID ${c.uid}</span>`}
+      </div>`;
+    }).join('');
+    return;
+  }
+
+  if (currentTab === 'rules') {
+    const ips = telemetry.blocked_ips || [];
+    const ports = telemetry.blocked_ports || [];
+    const lockedApps = appsData.filter(a => a.mode && a.mode !== 0);
+    const total = ips.length + ports.length + lockedApps.length;
+
+    sub.innerHTML = `
+      <div class="seg-pills">
+        <span class="seg-pill active">Active Enforcements <span class="seg-cnt">${total}</span></span>
+      </div>
+      <span class="toolbar-meta">O(1) RING-0 DROP</span>
+    `;
+
+    let ruleRows = '';
+    ips.forEach(item => {
+      ruleRows += `<div class="sock-card">
+        <div class="card-info">
+          <div class="card-top">
+            <span class="card-title" style="font-family:'JetBrains Mono',monospace;">${esc(item.ip)}</span>
+            <span class="proto-pill" style="background:var(--coral-soft);border-color:var(--coral-rim);color:var(--coral);">L3 IPV4 DROP</span>
+          </div>
+          <div class="card-sub" style="margin-top:3px;">map_netd_ingress_discard_map (#${telemetry.ingress_discard_map_id || initInfo.ingress_discard_map_id || 29})</div>
+        </div>
+        <button class="act-btn allow" type="button" onclick="toggleIpBlock('${esc(item.ip)}', false)">REMOVE</button>
+      </div>`;
+    });
+
+    ports.forEach(p => {
+      ruleRows += `<div class="sock-card">
+        <div class="card-info">
+          <div class="card-top">
+            <span class="card-title" style="font-family:'JetBrains Mono',monospace;">PORT :${p}</span>
+            <span class="proto-pill" style="background:var(--amber-soft);border-color:var(--amber-rim);color:var(--amber);">L4 BITMAP</span>
+          </div>
+          <div class="card-sub" style="margin-top:3px;">map_netd_blocked_ports_map (#${telemetry.blocked_ports_map_id || 20}) · TCP + UDP</div>
+        </div>
+        <button class="act-btn allow" type="button" onclick="togglePortBlock(${p}, false)">REMOVE</button>
+      </div>`;
+    });
+
+    lockedApps.forEach(a => {
+      const lbl = a.mode === 1 ? 'BLOCKED ALL NETWORKS' : (a.mode === 2 ? 'WI-FI ONLY (LTE DROPPED)' : 'MOBILE ONLY (WI-FI DROPPED)');
+      ruleRows += `<div class="sock-card">
+        <div class="icon-box" onclick="openAppInspector(${a.uid})">
+          <img class="app-icon" src="https://ebpf.local/icon/${a.uid}" alt="" loading="lazy" />
+        </div>
+        <div class="card-info" onclick="openAppInspector(${a.uid})">
+          <div class="card-top">
+            <span class="card-title">${esc(a.name)}</span>
+            <span class="uid-chip">UID ${a.uid}</span>
+          </div>
+          <div class="card-sub ${a.mode === 1 ? 'st-drop' : 'st-warn'}" style="margin-top:3px;">${lbl}</div>
+        </div>
+        <button class="act-btn allow" type="button" onclick="applyAppMode(${a.uid}, 0)">ALLOW</button>
+      </div>`;
+    });
+
+    if (!ruleRows) {
+      ruleRows = `<div class="empty-box">Zero active drop rules.<br/>Add an IPv4, Domain, or Port above, or lock any app in <b>APPS</b>.</div>`;
+    }
+
+    surf.innerHTML = `
+      <div class="composer-card">
+        <div class="comp-hdr">
+          <span>L3 IPV4 / DOMAIN &amp; L4 PORT BLOCKER</span>
+          <span style="color:var(--emerald)">SYS_BPF #280</span>
+        </div>
+        <form class="comp-form" onsubmit="submitInlineRule(event)">
+          <input id="inline-target" class="comp-input" type="text" placeholder="IPv4, domain, or port (e.g. 853)" autocomplete="off" />
+          <button class="comp-submit" type="submit">DROP</button>
+        </form>
+        <div class="preset-row">
+          <button class="preset-chip" type="button" onclick="togglePortBlock(853, true)">+ DoT :853</button>
+          <button class="preset-chip" type="button" onclick="togglePortBlock(5353, true)">+ mDNS :5353</button>
+          <button class="preset-chip" type="button" onclick="togglePortBlock(8080, true)">+ Proxy :8080</button>
+          <button class="preset-chip" type="button" onclick="toggleIpBlock('198.51.100.42', true)">+ Test IP</button>
+          <button class="preset-chip reset" type="button" onclick="resetAllRules()">↺ Reset All</button>
+        </div>
+      </div>
+      ${ruleRows}
+    `;
+    return;
+  }
+
+  /* currentTab === 'bpf' — Hardware-Grade Ring-0 BPF Maps & JIT Inspector */
+  sub.innerHTML = `
+    <div class="seg-pills">
+      <span class="seg-pill active">Pinned /sys/fs/bpf/netd_shared <span class="seg-cnt">6 MAPS</span></span>
+    </div>
+    <span class="toolbar-meta">ARM64 LINUX 5.4</span>
+  `;
+
+  const progId = telemetry.custom_prog_id || initInfo.custom_prog_id || 39;
+  const jitBytes = telemetry.custom_jited_bytes || initInfo.custom_jited_bytes || 376;
+  const ownerId = telemetry.uid_owner_map_id || initInfo.uid_owner_map_id || 27;
+  const statsId = telemetry.uid_stats_map_id || initInfo.uid_stats_map_id || 23;
+  const dropId = telemetry.ingress_discard_map_id || initInfo.ingress_discard_map_id || 29;
+  const portId = telemetry.blocked_ports_map_id || 20;
+  const cfgHex = '0x' + Number(telemetry.owner_cfg || 0).toString(16).padStart(8, '0').toUpperCase();
+  const wakeups = telemetry.kprobe_wakeups || 0;
+  const ifaces = telemetry.ifaces || [];
+  const bpftoolCmd = `su -c "bpftool map dump pinned /sys/fs/bpf/netd_shared/map_netd_uid_owner_map"`;
+
+  const ifaceRows = ifaces.length > 0
+    ? ifaces.map(inf => `
+        <div class="bpf-map-row">
+          <div>
+            <div class="bpf-map-name">${esc(inf.name)} <span style="color:var(--txt-lo)">(ifindex #${inf.ifindex})</span></div>
+            <div class="bpf-map-desc">↓ ${fmtBytes(inf.rx_bytes)} (${fmtPkts(inf.rx_pkts)} pkts) · ↑ ${fmtBytes(inf.tx_bytes)} (${fmtPkts(inf.tx_pkts)} pkts)</div>
+          </div>
+          <span class="bpf-id-tag">TC HOOK</span>
+        </div>
+      `).join('')
+    : `<div class="bpf-map-row"><div class="bpf-map-name">wlan0 (#28) · seth_lte0 (#14)</div><span class="bpf-id-tag">ACTIVE</span></div>`;
+
+  surf.innerHTML = `
+    <div class="bpf-section-card">
+      <div class="bpf-sec-hdr">
+        <span class="bpf-sec-title">#[NO_STD] RUST ARM64 JIT ENGINE</span>
+        <span class="bpf-id-tag">PROG #${progId} · ${jitBytes}B</span>
+      </div>
+      <div class="bpf-kv-grid">
+        <div class="bpf-kv">
+          <div class="bpf-k">Syscall Interface</div>
+          <div class="bpf-v" style="color:var(--emerald)">SYS_bpf (#280)</div>
+        </div>
+        <div class="bpf-kv">
+          <div class="bpf-k">Owner Config Mask</div>
+          <div class="bpf-v" style="color:var(--cyan)">${cfgHex}</div>
+        </div>
+        <div class="bpf-kv">
+          <div class="bpf-k">Total Kernel Pkts</div>
+          <div id="bpf-live-pkts" class="bpf-v">${fmtPkts((telemetry.total_rx_pkts || 0) + (telemetry.total_tx_pkts || 0))}</div>
+        </div>
+        <div class="bpf-kv">
+          <div class="bpf-k">Kprobe / TinyML</div>
+          <div id="bpf-live-wake" class="bpf-v">${wakeups} · ${esc(telemetry.ring0_class || 'ACTIVE')}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bpf-section-card">
+      <div class="bpf-sec-hdr">
+        <span class="bpf-sec-title">INTERFACE STATS MAP (IFACE_STATS)</span>
+        <span class="toolbar-meta">${ifaces.length || 2} IFACES</span>
+      </div>
+      ${ifaceRows}
+    </div>
+
+    <div class="bpf-section-card">
+      <div class="bpf-sec-hdr">
+        <span class="bpf-sec-title">PINNED KERNEL EBPF MAPS</span>
+        <span class="toolbar-meta">O(1) LOOKUP</span>
+      </div>
+      <div class="bpf-map-row">
+        <div>
+          <div class="bpf-map-name">map_netd_uid_owner_map</div>
+          <div class="bpf-map-desc">Per-UID Wi-Fi / LTE IIF_MATCH &amp; OEM_DENY hash</div>
+        </div>
+        <span class="bpf-id-tag">ID #${ownerId}</span>
+      </div>
+      <div class="bpf-map-row">
+        <div>
+          <div class="bpf-map-name">map_netd_app_uid_stats_map</div>
+          <div class="bpf-map-desc">Live Ring-0 per-UID RX/TX byte &amp; packet counters</div>
+        </div>
+        <span class="bpf-id-tag">ID #${statsId}</span>
+      </div>
+      <div class="bpf-map-row">
+        <div>
+          <div class="bpf-map-name">map_netd_ingress_discard_map</div>
+          <div class="bpf-map-desc">L3 IPv4 remote endpoint hardware drop table</div>
+        </div>
+        <span class="bpf-id-tag">ID #${dropId}</span>
+      </div>
+      <div class="bpf-map-row">
+        <div>
+          <div class="bpf-map-name">map_netd_blocked_ports_map</div>
+          <div class="bpf-map-desc">65,536-bit (1024×u64) L4 TCP/UDP port drop bitmap</div>
+        </div>
+        <span class="bpf-id-tag">ID #${portId}</span>
+      </div>
+    </div>
+
+    <div class="bpf-section-card">
+      <div class="bpf-sec-hdr">
+        <span class="bpf-sec-title">ROOT DIAGNOSTIC CLI</span>
+        <button class="act-btn allow" type="button" onclick='copyCmd("bpftool dump", ${JSON.stringify(bpftoolCmd)})'>COPY CMD</button>
+      </div>
+      <div class="cli-box">${esc(bpftoolCmd)}</div>
+    </div>
+  `;
+}
+
+/* High-DPI 2.5x+ Retina Oscilloscope + 36-Slot Cadence Matrix (Zero Blur) */
+function drawWave() {
+  const c = document.getElementById('wave-canvas');
+  if (!c) return;
+  const dpr = Math.max(window.devicePixelRatio || 1, 2.5);
+  const w = c.clientWidth || 360;
+  const h = c.clientHeight || 54;
+  const pw = Math.round(w * dpr);
+  const ph = Math.round(h * dpr);
+  if (c.width !== pw || c.height !== ph) {
+    c.width = pw;
+    c.height = ph;
+  }
+  const ctx = c.getContext('2d');
+  ctx.save();
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, w, h);
+
+  const cs = getComputedStyle(document.documentElement);
+  const gridCol = cs.getPropertyValue('--grid-line').trim() || 'rgba(148,163,184,0.10)';
+  const tickCol = cs.getPropertyValue('--grid-tick').trim() || 'rgba(148,163,184,0.16)';
+  const rxCol = cs.getPropertyValue('--emerald').trim() || '#10B981';
+  const txCol = cs.getPropertyValue('--cyan').trim() || '#38BDF8';
+
+  // Crisp .5 pixel-snapped horizontal graticules
+  ctx.strokeStyle = gridCol;
+  ctx.lineWidth = 1;
+  [0.33, 0.66].forEach(r => {
+    const gy = Math.floor(h * r) + 0.5;
+    ctx.beginPath();
+    ctx.moveTo(0, gy);
+    ctx.lineTo(w, gy);
+    ctx.stroke();
+  });
+
+  // Opal-inspired vertical cadence bars along bottom axis
+  const slots = 36;
+  const slotStep = w / slots;
+  ctx.fillStyle = tickCol;
+  for (let i = 0; i < slots; i++) {
+    const idx = Math.min(WAVE_POINTS - 1, Math.floor((i / slots) * WAVE_POINTS));
+    const amp = Math.max(3, ((rxWave[idx] || 20) * 0.22));
+    const bx = Math.round(i * slotStep + slotStep * 0.35);
+    ctx.fillRect(bx, h - amp, 1.5, amp);
+  }
+
+  function renderTrace(pts, strokeHex, alphaTop) {
+    const step = w / (WAVE_POINTS - 1);
+    ctx.beginPath();
+    for (let i = 0; i < pts.length; i++) {
+      const x = i * step;
+      const y = h - 4 - (pts[i] / 100) * (h - 14);
+      if (i === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        const px = (i - 1) * step;
+        const py = h - 4 - (pts[i - 1] / 100) * (h - 14);
+        const cx = (px + x) * 0.5;
+        ctx.bezierCurveTo(cx, py, cx, y, x, y);
+      }
+    }
+    ctx.strokeStyle = strokeHex;
+    ctx.lineWidth = 1.85;
+    ctx.stroke();
+
+    ctx.lineTo(w, h);
+    ctx.lineTo(0, h);
+    ctx.closePath();
+    const g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, alphaTop);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.fill();
+  }
+
+  renderTrace(txWave, txCol, isLight ? 'rgba(3,105,161,0.16)' : 'rgba(56,189,248,0.20)');
+  renderTrace(rxWave, rxCol, isLight ? 'rgba(4,120,87,0.18)' : 'rgba(16,185,129,0.24)');
+  ctx.restore();
+}
+
+function updateMetrics() {
+  const rxTot = telemetry.total_rx_bytes || 0;
+  const txTot = telemetry.total_tx_bytes || 0;
+  const rxPkts = telemetry.total_rx_pkts || 0;
+  const txPkts = telemetry.total_tx_pkts || 0;
+  const now = performance.now();
+
+  if (lastTs > 0 && now > lastTs) {
+    const dt = (now - lastTs) / 1000;
+    lastRxRate = Math.max(0, rxTot - lastRx) / dt;
+    lastTxRate = Math.max(0, txTot - lastTx) / dt;
+  }
+  lastRx = rxTot;
+  lastTx = txTot;
+  lastTs = now;
+
+  const t = now * 0.003;
+  const rxH = lastRxRate > 8
+    ? Math.min(92, Math.max(24, Math.log10(lastRxRate + 10) * 22))
+    : (30 + Math.sin(t) * 12 + Math.cos(t * 1.7) * 6);
+  const txH = lastTxRate > 8
+    ? Math.min(84, Math.max(16, Math.log10(lastTxRate + 10) * 19))
+    : (17 + Math.cos(t * 1.1) * 7 + Math.sin(t * 1.4) * 4);
+
+  rxWave.push(rxH);
+  if (rxWave.length > WAVE_POINTS) rxWave.shift();
+  txWave.push(txH);
+  if (txWave.length > WAVE_POINTS) txWave.shift();
+
+  const rxS = splitBytes(rxTot);
+  const txS = splitBytes(txTot);
+  document.getElementById('val-rx').textContent = rxS.v;
+  document.getElementById('unit-rx').textContent = rxS.u;
+  document.getElementById('sub-rx').textContent = `${fmtBytes(lastRxRate)}/s · ${fmtPkts(rxPkts)} pkts`;
+
+  document.getElementById('val-tx').textContent = txS.v;
+  document.getElementById('unit-tx').textContent = txS.u;
+  document.getElementById('sub-tx').textContent = `${fmtBytes(lastTxRate)}/s · ${fmtPkts(txPkts)} pkts`;
+
+  const bIps = (telemetry.blocked_ips || []).length;
+  const bPorts = (telemetry.blocked_ports || []).length;
+  const rApps = appsData.filter(a => a.mode && a.mode !== 0).length;
+  const totalRules = bIps + bPorts + rApps;
+
+  document.getElementById('val-rules').textContent = String(totalRules);
+  document.getElementById('unit-rules').textContent = totalRules === 1 ? 'RULE' : 'RULES';
+  document.getElementById('sub-shield').textContent = `${connsData.length} live sockets`;
+
+  const emb = document.getElementById('shield-emblem');
+  if (emb) emb.classList.toggle('alert', totalRules > 0);
+
+  const ownerMapId = telemetry.uid_owner_map_id || initInfo.uid_owner_map_id || 27;
+  const progId = telemetry.custom_prog_id || initInfo.custom_prog_id || 39;
+  const jitB = telemetry.custom_jited_bytes || initInfo.custom_jited_bytes || 376;
+
+  document.getElementById('hdr-ring-pill').textContent = `RING-0 #${ownerMapId}`;
+  document.getElementById('hdr-sub').textContent = `Linux 5.4 · SYS_bpf #280 · JIT #${progId}`;
+  document.getElementById('hud-left').textContent = `JIT #${progId} · ${jitB}B ARM64`;
+  document.getElementById('hud-right').textContent = totalRules > 0
+    ? `${totalRules} ACTIVE DROPS · MAP #${ownerMapId}`
+    : `WLAN0 #${initInfo.wlan_ifindex || 28} · LTE0 #${initInfo.lte_ifindex || 14}`;
+
+  document.getElementById('badge-apps').textContent = rApps > 0 ? `${rApps}/${appsData.length}` : String(appsData.length);
+  document.getElementById('badge-sockets').textContent = String(connsData.length);
+  document.getElementById('badge-rules').textContent = String(totalRules);
+
+  if (currentTab === 'bpf') {
+    const pEl = document.getElementById('bpf-live-pkts');
+    const wEl = document.getElementById('bpf-live-wake');
+    if (pEl) pEl.textContent = fmtPkts(rxPkts + txPkts);
+    if (wEl) wEl.textContent = `${telemetry.kprobe_wakeups || 0} · ${telemetry.ring0_class || 'ACTIVE'}`;
+  }
+
+  drawWave();
+}
+
+function sortAndComputeApps() {
+  maxAppBytes = 1024;
+  appsData.forEach(a => {
+    const tot = (a.rx_bytes || 0) + (a.tx_bytes || 0);
+    if (tot > maxAppBytes) maxAppBytes = tot;
+  });
+  appsData.sort((a, b) => {
+    const aR = a.mode ? 1 : 0;
+    const bR = b.mode ? 1 : 0;
+    if (aR !== bR) return bR - aR;
+    const aB = (a.rx_bytes || 0) + (a.tx_bytes || 0);
+    const bB = (b.rx_bytes || 0) + (b.tx_bytes || 0);
+    if (bB !== aB) return bB - aB;
+    return String(a.name).localeCompare(String(b.name));
+  });
+}
+
+function refreshEverything() {
+  if (!window.AndroidBridge) return;
+  try {
+    telemetry = JSON.parse(window.AndroidBridge.getTelemetryJson());
+    appsData = JSON.parse(window.AndroidBridge.getAppsFirewallJson());
+    sortAndComputeApps();
+    connsData = JSON.parse(window.AndroidBridge.getLiveConnectionsJson());
+    lastSocketsSig = connsData.map(c => `${c.uid}:${c.remote_ip}:${c.remote_port}:${c.state}`).join('|');
+    updateMetrics();
+    renderWorkspace();
+  } catch (e) {}
+}
+
+function pollFast() {
+  if (!window.AndroidBridge) return;
+  try {
+    telemetry = JSON.parse(window.AndroidBridge.getTelemetryJson());
+    connsData = JSON.parse(window.AndroidBridge.getLiveConnectionsJson());
+    updateMetrics();
+    if (currentTab === 'sockets') {
+      const sig = connsData.map(c => `${c.uid}:${c.remote_ip}:${c.remote_port}:${c.state}`).join('|');
+      if (sig !== lastSocketsSig) {
+        lastSocketsSig = sig;
+        renderWorkspace();
+      }
+    }
+  } catch (e) {}
+}
+
+/* =========================================================================
+   Game-Style Interactive Spotlight Live Demo Engine (5 Hands-On Missions)
+   ========================================================================= */
+const TOUR_KEY = 'bg6_ebpf_pro_tour_v1';
+let tourActive = false;
+let tourStep = 0;
+let tourLang = 'bn';
+let tourAuto = false;
+let tourAutoTm = null;
+let userTouchedEarly = false;
+
+const TOUR_STEPS = [
+  {
+    target: () => document.getElementById('first-cell-btn') || document.getElementById('tab-apps'),
+    cardPos: 'bottom',
+    bnTitle: '১/৫ · Ring-0 Mobile Data লক',
+    bnDesc: 'প্রথম অ্যাপটির ডানপাশের LTE বাটনে ট্যাপ করুন — সাথে সাথে Linux কার্নেলের Map #27-এ Mobile Data ব্লক হয়ে শুধু Wi-Fi চালু থাকবে!',
+    bnHint: '⚡ হাইলাইট করা LTE বাটনে ট্যাপ করুন',
+    enTitle: '1/5 · Ring-0 Mobile Data Lock',
+    enDesc: 'Tap the top app\'s LTE key to drop cellular packets in O(1) inside Kernel Map #27 while keeping Wi-Fi active.',
+    enHint: '⚡ Tap the highlighted LTE key',
+    autoAct: () => {
+      const btn = document.getElementById('first-cell-btn');
+      if (btn) btn.click(); else advanceTour();
+    }
+  },
+  {
+    target: () => document.getElementById('first-app-info') || document.getElementById('tab-apps'),
+    cardPos: 'bottom',
+    bnTitle: '২/৫ · Per-App Ring-0 ইন্সপেক্টর',
+    bnDesc: 'এবার ওই অ্যাপটির নামের উপর ট্যাপ করে লাইভ UID প্যাকেট কাউন্টার, BPF Rule Hex এবং ওপেন সকেট শিট খুলুন।',
+    bnHint: '⚡ অ্যাপ কার্ডের নামের অংশে ট্যাপ করুন',
+    enTitle: '2/5 · Per-App Ring-0 Inspector',
+    enDesc: 'Tap the app row body to inspect live UID packet counters, raw BPF rule bitmask, and per-UID sockets.',
+    enHint: '⚡ Tap the highlighted app info area',
+    autoAct: () => {
+      const info = document.getElementById('first-app-info');
+      if (info) info.click(); else advanceTour();
+    }
+  },
+  {
+    target: () => document.getElementById('dlg-mode-0') || document.getElementById('tab-apps'),
+    cardPos: 'top',
+    bnTitle: '৩/৫ · ৪-মোড হার্ডওয়্যার পলিসি',
+    bnDesc: 'এখান থেকে ৪টি কার্নেল ফায়ারওয়াল মোড বেছে নেওয়া যায়। অ্যাপটিকে আগের অবস্থায় ফেরাতে ✓ ALLOW ALL বাটনে ট্যাপ করুন!',
+    bnHint: '⚡ শিটের ভেতর ✓ ALLOW ALL ট্যাপ করুন',
+    enTitle: '3/5 · 4-Mode Hardware Policy',
+    enDesc: 'Choose between 4 kernel cgroup_skb policies here. Tap ✓ ALLOW ALL to restore full network access.',
+    enHint: '⚡ Tap ✓ ALLOW ALL inside the sheet',
+    autoAct: () => {
+      const b = document.getElementById('dlg-mode-0');
+      if (b) b.click(); else { closeAppInspector(); advanceTour(); }
+    }
+  },
+  {
+    target: () => document.getElementById('tab-sockets'),
+    cardPos: 'top',
+    bnTitle: '৪/৫ · লাইভ কার্নেল সকেট রাডার',
+    bnDesc: 'কোন অ্যাপ গোপনে কোন রিমোট IP ও Port-এ (QUIC / TLS 1.3) কথা বলছে তা দেখতে নিচের SOCKETS ট্যাবে ট্যাপ করুন।',
+    bnHint: '⚡ নিচের SOCKETS ট্যাবে ট্যাপ করুন',
+    enTitle: '4/5 · Live Kernel Socket Radar',
+    enDesc: 'Tap SOCKETS in the bottom dock to inspect live TCP, UDP, and QUIC endpoints and drop any IP in one tap.',
+    enHint: '⚡ Tap the SOCKETS tab below',
+    autoAct: () => switchTab('sockets')
+  },
+  {
+    target: () => document.getElementById('tab-bpf'),
+    cardPos: 'top',
+    bnTitle: '৫/৫ · Ring-0 BPF Maps ও ARM64 JIT',
+    bnDesc: 'সবশেষে BPF MAPS ট্যাবে ট্যাপ করে ৬টি পিন করা কার্নেল ম্যাপ (#27, #23, #29, #20) এবং ARM64 JIT স্ট্যাটাস দেখুন!',
+    bnHint: '⚡ নিচের BPF MAPS ট্যাবে ট্যাপ করুন',
+    enTitle: '5/5 · Ring-0 BPF Maps & ARM64 JIT',
+    enDesc: 'Finally, tap BPF MAPS to inspect all 6 pinned /sys/fs/bpf/netd_shared maps and ARM64 JIT telemetry.',
+    enHint: '⚡ Tap the BPF MAPS tab below',
+    autoAct: () => switchTab('bpf')
+  }
+];
+
+function promoteTourLayer() {
+  const layer = document.getElementById('tourLayer');
+  if (!layer) return;
+  try {
+    if (layer.matches(':popover-open')) layer.hidePopover();
+    layer.showPopover();
+  } catch (e) {
+    layer.style.display = 'block';
+  }
+}
+
+function startInteractiveDemo(autoMode) {
+  closeAppInspector();
+  if (document.getElementById('search-drawer').classList.contains('open')) {
+    toggleSearchDrawer();
+  }
+  appFilter = 'all';
+  switchTab('apps');
+  const surf = document.getElementById('list-surface');
+  if (surf) surf.scrollTop = 0;
+
+  tourActive = true;
+  tourStep = 0;
+  tourAuto = !!autoMode;
+  promoteTourLayer();
+  renderTourStep();
+  scheduleAutoStep();
+}
+
+function stopInteractiveDemo(markSeen) {
+  tourActive = false;
+  tourAuto = false;
+  clearTimeout(tourAutoTm);
+  const layer = document.getElementById('tourLayer');
+  if (layer) {
+    try { layer.hidePopover(); } catch (e) {}
+    layer.style.display = '';
+  }
+  const dlg = document.getElementById('dlg-app');
+  if (dlg) dlg.setAttribute('closedby', 'any');
+  if (markSeen) {
+    try { localStorage.setItem(TOUR_KEY, '1'); } catch (e) {}
+  }
+}
+
+function completeTour() {
+  stopInteractiveDemo(true);
+  toast(tourLang === 'bn' ? '✓ eBPF Shield লাইভ ডেমো সম্পন্ন!' : '✓ eBPF Shield Live Demo Complete!');
+}
+
+function advanceTour() {
+  if (!tourActive) return;
+  clearTimeout(tourAutoTm);
+  tourStep++;
+  if (tourStep >= TOUR_STEPS.length) {
+    completeTour();
+    return;
+  }
+  requestAnimationFrame(() => {
+    renderTourStep();
+    scheduleAutoStep();
+  });
+}
+
+function toggleTourLang() {
+  tourLang = (tourLang === 'bn') ? 'en' : 'bn';
+  renderTourStep();
+}
+
+function toggleTourAuto() {
+  tourAuto = !tourAuto;
+  renderTourStep();
+  if (tourAuto) scheduleAutoStep();
+  else clearTimeout(tourAutoTm);
+}
+
+function scheduleAutoStep() {
+  clearTimeout(tourAutoTm);
+  if (!tourActive || !tourAuto) return;
+  tourAutoTm = setTimeout(() => {
+    if (!tourActive || !tourAuto) return;
+    const st = TOUR_STEPS[tourStep];
+    if (st && st.autoAct) st.autoAct();
+  }, 1650);
+}
+
+function renderTourStep() {
+  if (!tourActive) return;
+  const st = TOUR_STEPS[tourStep];
+  if (!st) return;
+
+  document.getElementById('tourStepPill').textContent = `MISSION 0${tourStep + 1} / 0${TOUR_STEPS.length}`;
+  document.getElementById('tourTitle').textContent = tourLang === 'bn' ? st.bnTitle : st.enTitle;
+  document.getElementById('tourDesc').textContent = tourLang === 'bn' ? st.bnDesc : st.enDesc;
+  document.getElementById('tourHintText').textContent = tourLang === 'bn' ? st.bnHint : st.enHint;
+  document.getElementById('tourLangBtn').textContent = tourLang === 'bn' ? 'EN' : 'বাংলা';
+
+  const autoBtn = document.getElementById('tourAutoBtn');
+  autoBtn.textContent = tourAuto ? '⏸ AUTO' : '▶ AUTO';
+  autoBtn.classList.toggle('auto-on', tourAuto);
+
+  document.getElementById('tourDots').innerHTML = TOUR_STEPS.map((_, i) =>
+    `<span class="t-dot ${i === tourStep ? 'on' : ''}"></span>`
+  ).join('');
+
+  positionTourSpotlight();
+}
+
+function positionTourSpotlight() {
+  if (!tourActive) return;
+  const st = TOUR_STEPS[tourStep];
+  if (!st) return;
+  const el = st.target ? st.target() : null;
+  const spot = document.getElementById('tourSpotlight');
+  const cue = document.getElementById('tourCue');
+  const card = document.getElementById('tourCard');
+  if (!el || !spot || !card) return;
+
+  const r = el.getBoundingClientRect();
+  const pad = 5;
+  const sx = Math.max(4, r.left - pad);
+  const sy = Math.max(4, r.top - pad);
+  const sw = Math.min(window.innerWidth - 8, r.width + pad * 2);
+  const sh = r.height + pad * 2;
+
+  spot.style.left = sx + 'px';
+  spot.style.top = sy + 'px';
+  spot.style.width = sw + 'px';
+  spot.style.height = sh + 'px';
+
+  cue.style.left = (sx + sw * 0.5) + 'px';
+  cue.style.top = Math.max(24, sy - 4) + 'px';
+
+  if (st.cardPos === 'top') {
+    card.style.top = '58px';
+    card.style.bottom = 'auto';
+  } else {
+    const spaceBelow = window.innerHeight - (sy + sh);
+    if (spaceBelow > 185) {
+      card.style.top = Math.min(window.innerHeight - 185, sy + sh + 14) + 'px';
+      card.style.bottom = 'auto';
+    } else {
+      card.style.top = 'auto';
+      card.style.bottom = '70px';
+    }
+  }
+}
+
+function handleAndroidBack() {
+  const dlg = document.getElementById('dlg-app');
+  if (dlg && dlg.open) {
+    closeAppInspector();
+    return true;
+  }
+  if (tourActive) {
+    stopInteractiveDemo(true);
+    return true;
+  }
+  if (currentTab !== 'apps') {
+    switchTab('apps');
+    return true;
+  }
+  return false;
+}
+
+window.addEventListener('resize', () => {
+  drawWave();
+  if (tourActive) positionTourSpotlight();
+});
+
+document.getElementById('list-surface').addEventListener('scroll', () => {
+  if (tourActive && tourStep <= 1) positionTourSpotlight();
+}, { passive: true });
+
+document.getElementById('dlg-app').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget && !tourActive) {
+    closeAppInspector();
+  }
+});
+
+window.addEventListener('pointerdown', () => { userTouchedEarly = true; }, { once: true, passive: true });
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.AndroidBridge) {
+    try {
+      initInfo = JSON.parse(window.AndroidBridge.getInitState());
+    } catch (e) {}
+    if (window.AndroidBridge.syncSystemBars) {
+      window.AndroidBridge.syncSystemBars(isLight);
+    }
+  } else {
+    // Browser / preview fallback telemetry
+    initInfo = { custom_prog_id: 39, custom_jited_bytes: 376, uid_owner_map_id: 27, uid_stats_map_id: 23, ingress_discard_map_id: 29, wlan_ifindex: 28, lte_ifindex: 14 };
+    telemetry = { total_rx_bytes: 184549376, total_tx_bytes: 34812720, total_rx_pkts: 129410, total_tx_pkts: 41820, owner_cfg: 2560, blocked_ips: [], blocked_ports: [] };
+    appsData = [
+      { uid: 10184, name: 'Chrome', pkg: 'com.android.chrome', rx_bytes: 94200000, tx_bytes: 14100000, rx_pkts: 64120, tx_pkts: 19200, rule: 0, iif: 0, mode: 0, is_user: true },
+      { uid: 10192, name: 'YouTube', pkg: 'com.google.android.youtube', rx_bytes: 68400000, tx_bytes: 8200000, rx_pkts: 48200, tx_pkts: 9100, rule: 0, iif: 0, mode: 0, is_user: true },
+      { uid: 1000, name: 'Android System', pkg: 'android.system', rx_bytes: 4200000, tx_bytes: 1900000, rx_pkts: 4100, tx_pkts: 2300, rule: 0, iif: 0, mode: 0, is_user: false }
+    ];
+    sortAndComputeApps();
+  }
+
+  for (let i = 0; i < WAVE_POINTS; i++) {
+    rxWave[i] = 32 + Math.sin(i * 0.28) * 14 + Math.cos(i * 0.62) * 7;
+    txWave[i] = 17 + Math.cos(i * 0.31) * 9 + Math.sin(i * 0.52) * 4;
+  }
+
+  refreshEverything();
+  updateMetrics();
+  renderWorkspace();
+  setInterval(pollFast, 1250);
+
+  let seen = false;
+  try { seen = !!localStorage.getItem(TOUR_KEY); } catch (e) {}
+  if (!seen) {
+    setTimeout(() => {
+      if (!userTouchedEarly && !tourActive) {
+        startInteractiveDemo(false);
+      }
+    }, 280);
+  }
+});
+</script>
+</body>
+</html>

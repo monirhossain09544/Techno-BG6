@@ -1,6 +1,7 @@
 mod dt2w_daemon;
 mod ebpf_loader;
 mod gnss_engine;
+mod memory_jetsam;
 mod perf_scheduler;
 mod sys_util;
 mod wasm_engine;
@@ -11,10 +12,10 @@ use std::path::Path;
 
 fn print_whole_rust_dashboard() {
     println!("================================================================");
-    println!(" TECNO-BG6 WHOLE-RUST 2026 OS ENGINE (v8.0 — LLVM BOLT + Wasm)");
+    println!(" TECNO-BG6 WHOLE-RUST 2026 OS ENGINE (v8.5 — XNU/Jetsam + BOLT)");
     println!("================================================================");
 
-    println!("\n[1] Ring-0 In-Kernel #[no_std] Rust Engine (/proc/bg6_rust_engine):");
+    println!("\n[1] Ring-0 In-Kernel #[no_std] Rust XNU-VM Engine (/proc/bg6_rust_engine):");
     if let Ok(s) = fs::read_to_string("/proc/bg6_rust_engine")
         .or_else(|_| fs::read_to_string("/data/local/tmp/bg6_ring0_proc.txt"))
     {
@@ -23,7 +24,7 @@ fn print_whole_rust_dashboard() {
         println!("  unavailable");
     }
 
-    println!("\n[2] Live Userspace Rust + eBPF JIT + Wasm Telemetry:");
+    println!("\n[2] Live Userspace Rust + Apple-Jetsam + eBPF JIT + Wasm Telemetry:");
     if let Ok(s) = fs::read_to_string("/dev/bg6_rust_telemetry")
         .or_else(|_| fs::read_to_string("/data/local/tmp/bg6_rust_telemetry"))
     {

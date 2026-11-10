@@ -1,0 +1,2836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>V4L2 &amp; Sensor Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Hind+Siliguri:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --chassis: #000000;
+    --deck-bg: linear-gradient(180deg, #14161B 0%, #0C0D10 100%);
+    --deck-border: rgba(255, 255, 255, 0.16);
+    --key-bg: linear-gradient(180deg, #23262E 0%, #17191F 100%);
+    --key-active-bg: linear-gradient(180deg, #2B2310 0%, #1B160A 100%);
+    --key-border: rgba(255, 255, 255, 0.15);
+    --text: #FFFFFF;
+    --muted: #9496A1;
+    --amber: #FFB800;
+    --orange: #FF5500;
+    --green: #10B981;
+    --cyan: #38BDF8;
+    --red: #EF4444;
+  }
+  body.light {
+    --chassis: #ECEAE4;
+    --deck-bg: linear-gradient(180deg, #E4E1D9 0%, #D6D2C8 100%);
+    --deck-border: rgba(0, 0, 0, 0.16);
+    --key-bg: linear-gradient(180deg, #FAF9F5 0%, #E8E5DC 100%);
+    --key-active-bg: linear-gradient(180deg, #1E2026 0%, #121317 100%);
+    --key-border: rgba(0, 0, 0, 0.16);
+    --text: #111215;
+    --muted: #5C5B57;
+    --amber: #D97706;
+    --orange: #EA580C;
+    --green: #059669;
+  }
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+  }
+  html, body {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+  body {
+    background: var(--chassis);
+    color: var(--text);
+    font-family: "Plus Jakarta Sans", "Hind Siliguri", -apple-system, BlinkMacSystemFont, sans-serif;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    gap: clamp(4px, 0.7vh, 8px);
+    padding: clamp(2px, 0.5vh, 6px) clamp(8px, 2.4vw, 14px) clamp(4px, 0.8vh, 10px);
+    transition: background 0.18s ease, color 0.18s ease;
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+  .mono {
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "zero" 1;
+  }
+  .instrument-num {
+    font-family: "Chakra Petch", "JetBrains Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.4px;
+  }
+  .bn-font {
+    font-family: "Hind Siliguri", "Plus Jakarta Sans", sans-serif;
+  }
+
+  /* 1. TOP OPTICAL HEADER */
+  .top-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: clamp(30px, 4.1vh, 38px);
+    padding: 0 clamp(2px, 1vw, 6px);
+    min-width: 0;
+  }
+  .hdr-left, .hdr-right {
+    display: flex;
+    align-items: center;
+    gap: clamp(5px, 1.6vw, 8px);
+    min-width: 0;
+  }
+  .heif-badge {
+    border: 1.4px solid #FFB800;
+    color: #FFB800;
+    background: #171307;
+    padding: 2px clamp(5px, 1.5vw, 7px);
+    border-radius: 5px;
+    font-size: clamp(9.5px, 2.5vw, 11px);
+    font-weight: 700;
+    letter-spacing: 0.7px;
+    flex-shrink: 0;
+  }
+  body.light .heif-badge {
+    background: #141519;
+    color: #FFB800;
+    border-color: #141519;
+  }
+  .sensor-lamp {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #10B981;
+    flex-shrink: 0;
+  }
+  .dev-tag {
+    font-size: clamp(10px, 2.7vw, 12px);
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .dev-tag b {
+    color: var(--text);
+    font-weight: 700;
+  }
+  .hdr-metric {
+    font-size: clamp(10.5px, 2.8vw, 12.5px);
+    font-weight: 600;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .hdr-metric b {
+    color: var(--text);
+    font-weight: 700;
+  }
+  .demo-launch-btn {
+    height: clamp(24px, 3.4vh, 30px);
+    padding: 0 clamp(7px, 2vw, 10px);
+    border-radius: 999px;
+    border: 1.3px solid #FFB800;
+    background: linear-gradient(180deg, #2B220B 0%, #171205 100%);
+    color: #FFB800;
+    font-size: clamp(9.5px, 2.5vw, 11px);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 214, 102, 0.22);
+  }
+  .demo-launch-btn.playing {
+    border-color: #10B981;
+    background: linear-gradient(180deg, #0B291E 0%, #061711 100%);
+    color: #34D399;
+  }
+  body.light .demo-launch-btn {
+    background: #141519;
+    color: #FFB800;
+    border-color: #141519;
+  }
+  .finish-btn {
+    width: clamp(26px, 3.6vh, 32px);
+    height: clamp(26px, 3.6vh, 32px);
+    border-radius: 50%;
+    border: 1px solid var(--key-border);
+    background: var(--key-bg);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.16);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  /* 2. CRYSTAL-CLEAR HIGH-CONTRAST OPTICAL VIEWFINDER STAGE */
+  .viewfinder-frame {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    min-width: 0;
+    border-radius: clamp(12px, 3.2vw, 16px);
+    overflow: hidden;
+    background: #05070B;
+    border: 1.2px solid rgba(255, 255, 255, 0.20);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55);
+  }
+  body.light .viewfinder-frame {
+    border-color: rgba(0, 0, 0, 0.28);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.16);
+  }
+  #v4l2Canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Bottom Inside-Viewfinder Solid Crisp Instrument HUD */
+  .vf-bottom-hud {
+    position: absolute;
+    left: clamp(8px, 2.4vw, 12px);
+    right: clamp(8px, 2.4vw, 12px);
+    bottom: clamp(8px, 1.2vh, 12px);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(5px, 0.8vh, 8px);
+    pointer-events: none;
+  }
+  .halide-hist-tray {
+    width: 100%;
+    height: clamp(34px, 5.0vh, 46px);
+    background: rgba(10, 13, 19, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    pointer-events: auto;
+    cursor: pointer;
+  }
+  #histCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .vf-pill-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(4px, 1.5vw, 7px);
+    pointer-events: auto;
+  }
+  .vf-chip {
+    height: clamp(26px, 3.8vh, 33px);
+    background: #0D1017;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(3px, 1.1vw, 6px);
+    font-size: clamp(10.5px, 2.8vw, 12px);
+    font-weight: 700;
+    color: #FFFFFF;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .vf-chip.amber-focus {
+    border: 1.4px solid #FFB800;
+    color: #FFB800;
+    background: #191407;
+  }
+
+  /* 3. CAMERA M MIDDLE ICON & KINEMATIC STRIP */
+  .middle-icon-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: clamp(32px, 4.4vh, 42px);
+    padding: 0 clamp(6px, 2vw, 12px);
+  }
+  .kin-icon-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    width: clamp(32px, 8.8vw, 40px);
+    height: clamp(30px, 4.0vh, 36px);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+  }
+  .kin-icon-btn.active {
+    color: #FFB800;
+    background: rgba(255, 184, 0, 0.10);
+  }
+  body.light .kin-icon-btn.active {
+    color: #111215;
+    background: rgba(0, 0, 0, 0.09);
+  }
+  .kin-icon-btn.active::after {
+    content: "";
+    position: absolute;
+    bottom: 2px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #FFB800;
+  }
+
+  /* 4. LOWER TACTILE MACHINED CONTROL DECK */
+  .machined-deck {
+    background: var(--deck-bg);
+    border-top: 1px solid var(--deck-border);
+    border-radius: clamp(18px, 5vw, 24px) clamp(18px, 5vw, 24px) clamp(14px, 3.8vw, 18px) clamp(14px, 3.8vw, 18px);
+    padding: clamp(8px, 1.3vh, 13px) clamp(8px, 2.6vw, 13px);
+    box-shadow:
+      0 -6px 20px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.10);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(6px, 1.0vh, 10px);
+  }
+  .source-key-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(6px, 2vw, 9px);
+  }
+  .tactile-key {
+    height: clamp(38px, 5.5vh, 48px);
+    border-radius: clamp(9px, 2.6vw, 12px);
+    background: var(--key-bg);
+    border: 1px solid var(--key-border);
+    box-shadow:
+      0 4px 8px rgba(0, 0, 0, 0.45),
+      inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    cursor: pointer;
+  }
+  .tactile-key:active {
+    transform: translateY(1px);
+  }
+  .tactile-key.active {
+    background: var(--key-active-bg);
+    border: 1.4px solid #FFB800;
+    color: #FFB800;
+    box-shadow:
+      0 4px 10px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 210, 80, 0.24);
+  }
+  body.light .machined-deck {
+    box-shadow:
+      0 -4px 14px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  }
+  body.light .tactile-key {
+    box-shadow:
+      0 3px 6px rgba(0, 0, 0, 0.10),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  }
+  body.light .tactile-key.active {
+    border: 1.4px solid #111215;
+    color: #FFB800;
+    box-shadow:
+      0 4px 10px rgba(0, 0, 0, 0.24),
+      inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  }
+  body.light .lens-ring-btn,
+  body.light .finish-btn {
+    box-shadow:
+      0 3px 6px rgba(0, 0, 0, 0.10),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  }
+  .key-sub {
+    font-size: clamp(8.5px, 2.3vw, 10px);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  /* Halide Mark II Precision Optical Scale Wheel */
+  .halide-wheel-wrap {
+    position: relative;
+    width: 100%;
+    height: clamp(38px, 5.6vh, 50px);
+    cursor: ew-resize;
+    touch-action: none;
+  }
+  #wheelCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Bottom Pro Shutter & Lens Controls Row */
+  .shutter-deck-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 clamp(4px, 1.5vw, 8px);
+  }
+  .gnss-well {
+    width: clamp(46px, 6.6vh, 58px);
+    height: clamp(46px, 6.6vh, 58px);
+    border-radius: 12px;
+    background: radial-gradient(circle at 50% 45%, #12355B 0%, #06101E 100%);
+    border: 1.5px solid rgba(255, 255, 255, 0.24);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 3px;
+  }
+  .gnss-well-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(56, 189, 248, 0.18) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(56, 189, 248, 0.18) 1px, transparent 1px);
+    background-size: 10px 10px;
+  }
+  .gnss-well-dot {
+    position: absolute;
+    top: 38%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: #3B82F6;
+    border: 2px solid #FFFFFF;
+  }
+  .gnss-well-lbl {
+    position: relative;
+    font-size: clamp(7.5px, 2vw, 9px);
+    font-weight: 700;
+    color: #F8FAFC;
+    background: rgba(4, 8, 16, 0.84);
+    border-radius: 4px;
+    text-align: center;
+    padding: 1.5px 2px;
+  }
+
+  /* 3D Machined Concentric Shutter Button */
+  .shutter-ring-outer {
+    width: clamp(56px, 8.2vh, 72px);
+    height: clamp(56px, 8.2vh, 72px);
+    border-radius: 50%;
+    border: 3px solid #A1A1AA;
+    padding: 4px;
+    background: rgba(0, 0, 0, 0.35);
+    box-shadow:
+      0 6px 18px rgba(0, 0, 0, 0.65),
+      inset 0 1px 2px rgba(255, 255, 255, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+  }
+  .shutter-ring-outer:active {
+    transform: scale(0.93);
+  }
+  .shutter-dome {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: radial-gradient(circle at 38% 30%, #FFFFFF 0%, #E4E4E7 55%, #A1A1AA 100%);
+    box-shadow:
+      inset 0 2px 3px rgba(255, 255, 255, 0.9),
+      inset 0 -3px 6px rgba(0, 0, 0, 0.35),
+      0 2px 6px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .shutter-dome::after {
+    content: "";
+    width: 34%;
+    height: 34%;
+    border-radius: 50%;
+    border: 1.5px solid rgba(24, 24, 27, 0.22);
+  }
+
+  /* Right Lens & RAW Controls */
+  .lens-cluster {
+    display: flex;
+    align-items: center;
+    gap: clamp(6px, 1.8vw, 9px);
+  }
+  .lens-ring-btn {
+    width: clamp(36px, 5.0vh, 44px);
+    height: clamp(36px, 5.0vh, 44px);
+    border-radius: 50%;
+    background: var(--key-bg);
+    border: 1.4px solid var(--key-border);
+    box-shadow:
+      0 4px 10px rgba(0, 0, 0, 0.48),
+      inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    color: var(--text);
+    font-size: clamp(10px, 2.6vw, 11.5px);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .lens-ring-btn.active {
+    border-color: #FFB800;
+    color: #FFB800;
+  }
+  .lens-ring-btn.raw-accent {
+    border-color: rgba(56, 189, 248, 0.55);
+    color: #E0F2FE;
+  }
+  body.light .lens-ring-btn.active {
+    border-color: #B45309;
+    color: #B45309;
+  }
+  body.light .lens-ring-btn.raw-accent {
+    border-color: #0284C7;
+    color: #0F172A;
+  }
+
+  /* ==========================================================================
+     5. ULTRA-POLISHED 3-TAB PRO HARDWARE RAW INSPECTOR (<dialog id="exifSheet">)
+     Grounded in Camera M Metadata Sheet + Dropbox Segmented Inspector
+     ========================================================================== */
+  dialog.exif-drawer {
+    width: 100%;
+    max-width: 100%;
+    max-height: 85vh;
+    margin: auto 0 0 0;
+    border: none;
+    border-top: 1.5px solid rgba(255, 184, 0, 0.42);
+    border-radius: 22px 22px 0 0;
+    background: linear-gradient(180deg, #151923 0%, #0A0C12 100%);
+    color: #F8FAFC;
+    padding: 8px 14px 18px 14px;
+    box-shadow:
+      0 -14px 36px rgba(0, 0, 0, 0.82),
+      inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    outline: none;
+    overflow-y: auto;
+  }
+  dialog.exif-drawer[open] {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  dialog.exif-drawer:modal {
+    overscroll-behavior: contain;
+  }
+  dialog.exif-drawer::backdrop {
+    background: rgba(2, 4, 9, 0.68);
+    overflow: hidden;
+    overscroll-behavior: contain;
+  }
+
+  .drawer-grabber {
+    width: 38px;
+    height: 4px;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.26);
+    margin: 0 auto 2px auto;
+    flex-shrink: 0;
+  }
+  .pro-sheet-hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-bottom: 9px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+  }
+  .pro-sheet-title-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .pro-sheet-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #34D399;
+    letter-spacing: 0.7px;
+  }
+  .pro-sheet-led {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #10B981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.24);
+  }
+  .pro-sheet-title {
+    font-size: 14.5px;
+    font-weight: 700;
+    color: #FFFFFF;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pro-sheet-sub {
+    font-size: 10.5px;
+    color: #94A3B8;
+  }
+  .pro-sheet-badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .hw-tag {
+    padding: 3px 7px;
+    border-radius: 5px;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .hw-tag.amber {
+    background: #231B07;
+    border: 1px solid #FFB800;
+    color: #FFB800;
+  }
+  .hw-tag.cyan {
+    background: #082032;
+    border: 1px solid #38BDF8;
+    color: #38BDF8;
+  }
+  .sheet-close-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: #1E2330;
+    color: #E2E8F0;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  /* Dropbox-Grounded 3-Way Segmented Switcher */
+  .raw-seg-bar {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+    padding: 3px;
+    border-radius: 11px;
+    background: #080A0F;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+  .raw-seg-btn {
+    height: 31px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: #94A3B8;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+  }
+  .raw-seg-btn.active {
+    background: linear-gradient(180deg, #252B3B 0%, #171B26 100%);
+    border-color: rgba(255, 184, 0, 0.55);
+    color: #FFB800;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  .raw-tab-panel {
+    display: none;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 294px;
+  }
+  .raw-tab-panel.active {
+    display: flex;
+  }
+
+  /* Camera M 4-Column Hardware Spec Capsule */
+  .cam-m-capsule {
+    background: linear-gradient(180deg, #181D29 0%, #10141D 100%);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 13px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+  .cam-m-grid4 {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  }
+  .cam-m-cell {
+    padding: 8px 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .cam-m-cell:last-child {
+    border-right: none;
+  }
+  .cam-m-lbl {
+    font-size: 8.5px;
+    font-weight: 700;
+    color: #8A94A6;
+    letter-spacing: 0.6px;
+  }
+  .cam-m-val {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #FFFFFF;
+    white-space: nowrap;
+  }
+  .cam-m-subrow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: rgba(5, 7, 12, 0.55);
+    font-size: 10px;
+  }
+  .rgb-hal-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border-radius: 99px;
+    background: #141925;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #F8FAFC;
+    font-weight: 700;
+    font-size: 9.5px;
+  }
+  .dot-r { width: 6px; height: 6px; border-radius: 50%; background: #EF4444; }
+  .dot-g { width: 6px; height: 6px; border-radius: 50%; background: #10B981; }
+  .dot-b { width: 6px; height: 6px; border-radius: 50%; background: #38BDF8; }
+
+  /* Camera M 3-Channel Spectral Oscilloscope Frame */
+  .spectral-frame {
+    background: #07090F;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 12px;
+    padding: 7px 9px 6px 9px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .spectral-hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 9.5px;
+    font-weight: 700;
+    color: #94A3B8;
+  }
+  .spectral-legend {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .leg-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #E2E8F0;
+  }
+  #sheetCurveCanvas {
+    width: 100%;
+    height: 84px;
+    display: block;
+  }
+
+  /* 3 Color-Coded X / Y / Z Axis Telemetry Tiles */
+  .xyz-tile-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+  }
+  .xyz-tile {
+    background: #10141E;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    padding: 7px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    position: relative;
+    overflow: hidden;
+  }
+  .xyz-tile::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+  }
+  .xyz-tile.axis-x::before { background: #EF4444; }
+  .xyz-tile.axis-y::before { background: #10B981; }
+  .xyz-tile.axis-z::before { background: #38BDF8; }
+  .xyz-head {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #94A3B8;
+  }
+  .xyz-acc {
+    font-size: 13px;
+    font-weight: 700;
+    color: #FFFFFF;
+  }
+  .xyz-gyr {
+    font-size: 9.5px;
+    color: #94A3B8;
+  }
+
+  /* Tab 1: OBS :5050 Broadcast Console */
+  .obs-status-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(90deg, #092219 0%, #0E1522 100%);
+    border: 1px solid rgba(16, 185, 129, 0.42);
+    border-radius: 11px;
+    padding: 8px 11px;
+  }
+  .obs-live-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #34D399;
+  }
+  .obs-ip-pill {
+    background: #070A10;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #FFB800;
+  }
+  .obs-spec-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+  }
+  .obs-spec-box {
+    background: #10141E;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 9px;
+    padding: 7px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .terminal-card {
+    background: #07090E;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 11px;
+    overflow: hidden;
+  }
+  .terminal-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: #111520;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+    font-size: 9.5px;
+    font-weight: 700;
+    color: #94A3B8;
+  }
+  .terminal-body {
+    padding: 9px 11px;
+    font-size: 11px;
+    line-height: 1.5;
+    color: #E2E8F0;
+    word-break: break-all;
+    user-select: text;
+  }
+  .tok-bin { color: #FFB800; font-weight: 700; }
+  .tok-flg { color: #38BDF8; }
+  .tok-url { color: #34D399; font-weight: 700; }
+
+  .pro-copy-btn {
+    height: 38px;
+    width: 100%;
+    border-radius: 10px;
+    border: 1.3px solid #FFB800;
+    background: linear-gradient(180deg, #2C2209 0%, #191305 100%);
+    color: #FFB800;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 214, 102, 0.22);
+  }
+  .pro-copy-btn.copied {
+    border-color: #10B981;
+    background: linear-gradient(180deg, #0D2E22 0%, #071A13 100%);
+    color: #34D399;
+  }
+
+  /* Tab 2: 40-Byte IEEE-754 Packet Grid & Camera M GNSS Radar Card */
+  .hex-grid6 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .hex-cell {
+    background: #0D111A;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 9px;
+    padding: 6px 7px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .hex-off {
+    font-size: 8.5px;
+    font-weight: 700;
+    color: #64748B;
+  }
+  .hex-val {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #F8FAFC;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .gnss-map-card {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+    background: linear-gradient(180deg, #101827 0%, #090E18 100%);
+    border: 1px solid rgba(56, 189, 248, 0.30);
+    border-radius: 12px;
+    padding: 8px 10px;
+  }
+  #sheetMapCanvas {
+    width: 96px;
+    height: 68px;
+    border-radius: 8px;
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    display: block;
+  }
+  .gnss-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  /* ==========================================================================
+     6. GAME-STYLE INTERACTIVE LIVE DEMO & TACTICAL SPOTLIGHT COACHMARK ENGINE
+     Persistent Non-Modal Top-Layer Tour (popover="manual") + Crisp Cutout
+     ========================================================================== */
+  .tour-spotlight {
+    position: fixed;
+    left: -200px;
+    top: -200px;
+    width: 0;
+    height: 0;
+    border-radius: 13px;
+    border: 2px solid #FFB800;
+    box-shadow: 0 0 0 9999px rgba(3, 5, 10, 0.62);
+    pointer-events: none;
+    z-index: 940;
+    opacity: 0;
+    transition:
+      left 0.24s cubic-bezier(0.2, 0.85, 0.2, 1),
+      top 0.24s cubic-bezier(0.2, 0.85, 0.2, 1),
+      width 0.24s cubic-bezier(0.2, 0.85, 0.2, 1),
+      height 0.24s cubic-bezier(0.2, 0.85, 0.2, 1),
+      opacity 0.18s ease,
+      border-color 0.18s ease;
+  }
+  .tour-spotlight.active {
+    opacity: 1;
+  }
+  .tour-spotlight.cleared {
+    border-color: #10B981;
+    box-shadow: 0 0 0 9999px rgba(3, 5, 10, 0.24);
+  }
+  .sp-c {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-color: #FFFFFF;
+    border-style: solid;
+  }
+  .sp-c.tl { top: -4px; left: -4px; border-width: 2.5px 0 0 2.5px; border-radius: 4px 0 0 0; }
+  .sp-c.tr { top: -4px; right: -4px; border-width: 2.5px 2.5px 0 0; border-radius: 0 4px 0 0; }
+  .sp-c.bl { bottom: -4px; left: -4px; border-width: 0 0 2.5px 2.5px; border-radius: 0 0 0 4px; }
+  .sp-c.br { bottom: -4px; right: -4px; border-width: 0 2.5px 2.5px 0; border-radius: 0 0 4px 0; }
+
+  @keyframes cueBounce {
+    0%, 100% { transform: translate(-50%, 0); }
+    50% { transform: translate(-50%, -5px); }
+  }
+  .tour-cue {
+    position: fixed;
+    left: -200px;
+    top: -200px;
+    transform: translate(-50%, 0);
+    background: #FFB800;
+    color: #090B10;
+    border: 1.5px solid #FFFFFF;
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 955;
+    opacity: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.75);
+    animation: cueBounce 1.15s ease-in-out infinite;
+  }
+  .tour-cue.active {
+    opacity: 1;
+  }
+  .tour-cue.cleared {
+    background: #10B981;
+    color: #04130D;
+  }
+
+  /* Persistent Top-Layer Game Mission Card */
+  .tour-card {
+    position: fixed;
+    inset: auto;
+    left: clamp(10px, 3vw, 14px);
+    right: clamp(10px, 3vw, 14px);
+    top: 46px;
+    width: auto;
+    margin: 0;
+    padding: 10px 12px;
+    border: 1.4px solid rgba(255, 184, 0, 0.65);
+    border-radius: 15px;
+    background: linear-gradient(180deg, #161B26 0%, #0B0E15 100%);
+    color: #F8FAFC;
+    box-shadow:
+      0 12px 28px rgba(0, 0, 0, 0.82),
+      inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    z-index: 970;
+    outline: none;
+  }
+  .tour-card[popover]:is(:popover-open, .\:popover-open),
+  .tour-card.tour-fallback-open {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .tour-card.cleared {
+    border-color: #10B981;
+  }
+
+  .tour-hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .tour-mission-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2.5px 8px;
+    border-radius: 6px;
+    background: #241C08;
+    border: 1px solid rgba(255, 184, 0, 0.55);
+    color: #FFB800;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+  }
+  .tour-hdr-actions {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .tour-mini-btn {
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: #1B202E;
+    color: #E2E8F0;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .tour-mini-btn.auto-on {
+    border-color: #10B981;
+    background: #0B291E;
+    color: #34D399;
+  }
+
+  .tour-prog-row {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 4px;
+  }
+  .tour-seg {
+    height: 3.5px;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.14);
+  }
+  .tour-seg.done { background: #10B981; }
+  .tour-seg.cur { background: #FFB800; }
+
+  .tour-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #FFFFFF;
+    line-height: 1.28;
+  }
+  .tour-desc {
+    font-size: 11.5px;
+    color: #CBD5E1;
+    line-height: 1.42;
+  }
+
+  .tour-ftr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.09);
+  }
+  .tour-status-hint {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #FFB800;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tour-status-hint.ok {
+    color: #34D399;
+  }
+  .tour-nav-btns {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+  }
+  .tour-prev-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: #1B202E;
+    color: #E2E8F0;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .tour-next-btn {
+    height: 28px;
+    padding: 0 11px;
+    border-radius: 7px;
+    border: 1px solid #FFB800;
+    background: #FFB800;
+    color: #090B10;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+  }
+
+  /* Top Celebration Toast when Tutorial Finishes */
+  .tour-done-toast {
+    position: fixed;
+    inset: auto;
+    top: 10px;
+    left: 14px;
+    right: 14px;
+    width: auto;
+    margin: 0;
+    padding: 9px 12px;
+    border-radius: 12px;
+    border: 1.4px solid #10B981;
+    background: #082017;
+    color: #ECFDF5;
+    font-size: 11.5px;
+    font-weight: 700;
+    z-index: 990;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.78);
+  }
+  .tour-done-toast[popover]:is(:popover-open, .\:popover-open),
+  .tour-done-toast.tour-fallback-open {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+</style>
+</head>
+<body>
+  <h1 class="sr-only">Ring-0 V4L2 Virtual Camera and 6-DOF IIO SensorHub Studio</h1>
+
+  <!-- 1. TOP OPTICAL HEADER -->
+  <div class="top-header">
+    <div class="hdr-left">
+      <span class="heif-badge mono" id="topFmtBadge">YUYV</span>
+      <span class="sensor-lamp"></span>
+      <span class="dev-tag mono"><b>/dev/video50</b> &bull; 640p</span>
+    </div>
+    <div class="hdr-right">
+      <span class="hdr-metric instrument-num">IIO <b id="hdrIioTxt">72.4K</b></span>
+      <button type="button" class="demo-launch-btn instrument-num" id="demoBtn" onclick="toggleInteractiveDemo()" title="Start Interactive Live Tutorial">
+        <span>&#9654;</span>
+        <span id="demoBtnLbl">DEMO</span>
+      </button>
+      <button type="button" class="finish-btn" onclick="toggleTheme()" title="Switch Anodized Finish" aria-label="Switch Anodized Finish">&#9680;</button>
+    </div>
+  </div>
+
+  <!-- 2. DOMINANT VIEWFINDER STAGE WITH CAMERA M + HALIDE OVERLAYS -->
+  <div class="viewfinder-frame">
+    <canvas id="v4l2Canvas" width="540" height="420"></canvas>
+
+    <!-- Bottom Solid Crisp 92-Bar Fine Histogram & 4 Optical Readout Chips -->
+    <div class="vf-bottom-hud">
+      <div class="halide-hist-tray" onclick="openExifSheet(0)">
+        <canvas id="histCanvas" width="440" height="34"></canvas>
+      </div>
+      <div class="vf-pill-row instrument-num">
+        <div class="vf-chip amber-focus" onclick="cycleFps()">
+          <span>&#9670;</span>
+          <span id="chipFps">1/60s</span>
+        </div>
+        <div class="vf-chip" onclick="burstSteps(25)">
+          <span style="color:#FFB800;">&#9646;</span>
+          <span id="chipSteps" style="color:#FFB800;">1,428</span>
+        </div>
+        <div class="vf-chip" onclick="cycleScrubAxis()">
+          <span style="color:#38BDF8;">&#9698;</span>
+          <span id="chipGLoad">1.00G</span>
+        </div>
+        <div class="vf-chip" onclick="openExifSheet(2)">
+          <span style="color:#46C97D;">&#9679;</span>
+          <span id="chipSpeed">5.4K</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. CAMERA M ICON & KINEMATIC STRIP -->
+  <div class="middle-icon-bar">
+    <button type="button" class="kin-icon-btn active" id="kinBtn4" onclick="selectMode(4, 5.4)" title="GNSS Auto-Sync">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="3.5"/>
+        <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+      </svg>
+    </button>
+
+    <button type="button" class="kin-icon-btn" id="kinBtn1" onclick="selectMode(1, 5.4)" title="Walking Gait 1.85Hz">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="13" cy="4.5" r="2"/>
+        <path d="M10 21l2-7 3 3v4M9 14l3-5 4 2M12 9l-3 3"/>
+      </svg>
+    </button>
+
+    <button type="button" class="kin-icon-btn" id="kinBtn2" onclick="selectMode(2, 12.5)" title="Running Cadence 2.75Hz">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="15" cy="4.5" r="2"/>
+        <path d="M7 21l4-6 3 2 2 4M5 12l5-3 4 2 3-2M10 9l-2 6"/>
+      </svg>
+    </button>
+
+    <button type="button" class="kin-icon-btn" id="kinBtn3" onclick="selectMode(3, 48.0)" title="Vehicle Driving 48 km/h">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="9"/>
+        <circle cx="12" cy="12" r="2.5"/>
+        <path d="M12 9.5V3M9.8 13.2L4.2 16.5M14.2 13.2l5.6 3.3"/>
+      </svg>
+    </button>
+
+    <button type="button" class="kin-icon-btn" id="kinBtn5" onclick="selectMode(5, 0.0)" title="3D Manual Gimbal">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round">
+        <path d="M12 2.5L20 7v10l-8 4.5L4 17V7l8-4.5z"/>
+        <path d="M12 21.5V12M12 12l8-5M12 12L4 7"/>
+      </svg>
+    </button>
+
+    <button type="button" class="kin-icon-btn active" id="gridBtn" onclick="toggleGrid()" title="Toggle 3x3 Grid">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/>
+        <line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/>
+      </svg>
+    </button>
+
+    <button type="button" class="kin-icon-btn" id="waveSheetBtn" onclick="openExifSheet(0)" title="Open Ring-0 Pro Inspector">
+      <svg width="24" height="20" viewBox="0 0 28 22" fill="none">
+        <path d="M2 19 C6 19, 7 4, 10 4 C13 4, 14 19, 18 19" stroke="#3B82F6" stroke-width="2.1" fill="none"/>
+        <path d="M5 19 C9 19, 11 3, 14 3 C17 3, 19 19, 23 19" stroke="#10B981" stroke-width="2.1" fill="none"/>
+        <path d="M9 19 C13 19, 15 6, 18 6 C21 6, 23 19, 26 19" stroke="#EF4444" stroke-width="2.1" fill="none"/>
+        <line x1="1" y1="20" x2="27" y2="20" stroke="#A1A1AA" stroke-width="1.3"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- 4. LOWER TACTILE MACHINED HARDWARE DECK -->
+  <div class="machined-deck">
+    <div class="source-key-row instrument-num">
+      <button type="button" class="tactile-key active" id="srcKey0" onclick="selectPattern(0)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="7"/><line x1="2" y1="12" x2="7" y2="12"/><line x1="17" y1="12" x2="22" y2="12"/>
+        </svg>
+        <span class="key-sub">HORIZON</span>
+      </button>
+
+      <button type="button" class="tactile-key" id="srcKey1" onclick="selectPattern(1)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="16" rx="2"/><line x1="8" y1="4" x2="8" y2="20"/><line x1="13" y1="4" x2="13" y2="20"/><line x1="18" y1="4" x2="18" y2="20"/>
+        </svg>
+        <span class="key-sub">SMPTE</span>
+      </button>
+
+      <button type="button" class="tactile-key" id="srcKey2" onclick="selectPattern(2)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="12" x2="18" y2="6"/>
+        </svg>
+        <span class="key-sub">VECTOR</span>
+      </button>
+
+      <button type="button" class="tactile-key" id="srcKey3" onclick="selectPattern(3)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M2 8.5a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16.5a5 5 0 0 1 7 0"/><circle cx="12" cy="20" r="1"/>
+        </svg>
+        <span class="key-sub">OBS:5050</span>
+      </button>
+    </div>
+
+    <div class="halide-wheel-wrap" id="wheelWrap">
+      <canvas id="wheelCanvas" width="440" height="48"></canvas>
+    </div>
+
+    <div class="shutter-deck-row">
+      <div class="gnss-well" onclick="openExifSheet(2)">
+        <div class="gnss-well-grid"></div>
+        <div class="gnss-well-dot"></div>
+        <div class="gnss-well-lbl mono" id="wellCoordTxt">23.81&deg;N</div>
+      </div>
+
+      <button type="button" class="shutter-ring-outer" id="shutterBtn" onclick="triggerImpulse()" title="Inject V4L2 Frame &amp; Step Burst" aria-label="Trigger V4L2 Frame and Step Impulse">
+        <div class="shutter-dome"></div>
+      </button>
+
+      <div class="lens-cluster instrument-num">
+        <button type="button" class="lens-ring-btn active" id="lensRateBtn" onclick="cycleFps()">60Hz</button>
+        <button type="button" class="lens-ring-btn raw-accent" id="rawBtn" onclick="openExifSheet(0)">RAW</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. ULTRA-POLISHED 3-TAB PRO HARDWARE RAW INSPECTOR (Native Modal <dialog closedby="any">) -->
+  <dialog id="exifSheet" class="exif-drawer" closedby="any" aria-labelledby="exifSheetTitle">
+    <div class="drawer-grabber"></div>
+
+    <div class="pro-sheet-hdr">
+      <div class="pro-sheet-title-wrap">
+        <div class="pro-sheet-eyebrow mono">
+          <span class="pro-sheet-led"></span>
+          <span>RING-0 HARDWARE TELEMETRY</span>
+        </div>
+        <h2 class="pro-sheet-title" id="exifSheetTitle">V4L2 &amp; IIO Pro Inspector</h2>
+        <div class="pro-sheet-sub mono">TECNO BG6 &bull; /dev/video50 &amp; iio:device0</div>
+      </div>
+
+      <div class="pro-sheet-badges mono">
+        <span class="hw-tag amber">YUYV</span>
+        <span class="hw-tag cyan">0x81</span>
+        <button type="button" class="sheet-close-btn" onclick="closeExifSheet()" aria-label="Close Pro Inspector" autofocus>&#10005;</button>
+      </div>
+    </div>
+
+    <!-- Dropbox-Grounded 3-Tab Segmented Switcher -->
+    <div class="raw-seg-bar instrument-num" role="tablist" aria-label="Inspector Telemetry Views">
+      <button type="button" role="tab" aria-selected="true" class="raw-seg-btn active" id="rawTabBtn0" onclick="switchRawTab(0)">
+        <span>6-DOF XYZ</span>
+      </button>
+      <button type="button" role="tab" aria-selected="false" class="raw-seg-btn" id="rawTabBtn1" onclick="switchRawTab(1)">
+        <span>OBS :5050</span>
+      </button>
+      <button type="button" role="tab" aria-selected="false" class="raw-seg-btn" id="rawTabBtn2" onclick="switchRawTab(2)">
+        <span>40B HEX / GPS</span>
+      </button>
+    </div>
+
+    <!-- TAB 0: 6-DOF SPECTRAL & AXIS TELEMETRY (Camera M Exact Pro Style) -->
+    <div class="raw-tab-panel active" id="rawPanel0" role="tabpanel">
+      <div class="cam-m-capsule instrument-num">
+        <div class="cam-m-grid4">
+          <div class="cam-m-cell">
+            <span class="cam-m-lbl mono">FRAME</span>
+            <span class="cam-m-val">640&times;480</span>
+          </div>
+          <div class="cam-m-cell">
+            <span class="cam-m-lbl mono">OPTICS</span>
+            <span class="cam-m-val">f/1.8 V4L2</span>
+          </div>
+          <div class="cam-m-cell">
+            <span class="cam-m-lbl mono">STEPS</span>
+            <span class="cam-m-val" id="sheetSteps" style="color:#FFB800;">1,428</span>
+          </div>
+          <div class="cam-m-cell">
+            <span class="cam-m-lbl mono">SHUTTER</span>
+            <span class="cam-m-val" id="sheetShutter">1/60s</span>
+          </div>
+        </div>
+        <div class="cam-m-subrow mono">
+          <span style="color:#94A3B8;">iio_push_to_buffers()</span>
+          <span id="sheetBytes" style="color:#38BDF8;font-weight:700;">872.4 MB TX</span>
+          <span class="rgb-hal-pill">
+            <span class="dot-r"></span><span class="dot-g"></span><span class="dot-b"></span>
+            <span>HAL_SEN_DATA</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="spectral-frame">
+        <div class="spectral-hdr mono">
+          <div class="spectral-legend">
+            <span class="leg-item"><span class="dot-r"></span>AX</span>
+            <span class="leg-item"><span class="dot-g"></span>AY</span>
+            <span class="leg-item"><span class="dot-b"></span>AZ</span>
+          </div>
+          <span style="color:#FFB800;">25Hz RING-0 WAVEFORM</span>
+        </div>
+        <canvas id="sheetCurveCanvas" width="360" height="84"></canvas>
+      </div>
+
+      <div class="xyz-tile-grid instrument-num">
+        <div class="xyz-tile axis-x">
+          <span class="xyz-head mono">X-LATERAL</span>
+          <span class="xyz-acc" id="axisAx">+0.12 m/s&sup2;</span>
+          <span class="xyz-gyr mono" id="axisGx">GYR +0.04</span>
+        </div>
+        <div class="xyz-tile axis-y">
+          <span class="xyz-head mono">Y-FORWARD</span>
+          <span class="xyz-acc" id="axisAy">+1.85 m/s&sup2;</span>
+          <span class="xyz-gyr mono" id="axisGy">GYR -0.02</span>
+        </div>
+        <div class="xyz-tile axis-z">
+          <span class="xyz-head mono">Z-GRAVITY</span>
+          <span class="xyz-acc" id="axisAz">+9.81 m/s&sup2;</span>
+          <span class="xyz-gyr mono" id="axisGz">GYR +0.01</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 1: OBS STUDIO / FFMPEG VIRTUAL CAMERA NETWORK PIPE -->
+    <div class="raw-tab-panel" id="rawPanel1" role="tabpanel">
+      <div class="obs-status-banner mono">
+        <span class="obs-live-tag">
+          <span class="pro-sheet-led"></span>
+          <span>LISTENING &bull; TCP :5050</span>
+        </span>
+        <span class="obs-ip-pill" id="obsIpBadge">10.139.196.127:5050</span>
+      </div>
+
+      <div class="obs-spec-row instrument-num">
+        <div class="obs-spec-box">
+          <span class="cam-m-lbl mono">PIXEL FMT</span>
+          <span class="cam-m-val" style="color:#FFB800;">YUYV 4:2:2</span>
+        </div>
+        <div class="obs-spec-box">
+          <span class="cam-m-lbl mono">CADENCE</span>
+          <span class="cam-m-val" id="obsFpsSpec">640p @ 60Hz</span>
+        </div>
+        <div class="obs-spec-box">
+          <span class="cam-m-lbl mono">FRAMES TX</span>
+          <span class="cam-m-val" id="obsFramesTx" style="color:#34D399;">1,420</span>
+        </div>
+      </div>
+
+      <div class="terminal-card mono">
+        <div class="terminal-top">
+          <span>OBS STUDIO / FFMPEG DIRECT PIPE</span>
+          <span style="color:#38BDF8;">char 81:0</span>
+        </div>
+        <div class="terminal-body" id="sheetObsCmd">
+          <span class="tok-bin">ffmpeg</span> <span class="tok-flg">-re -i</span> input.mp4 <span class="tok-flg">-pix_fmt</span> yuyv422 <span class="tok-flg">-s</span> 640x480 <span class="tok-flg">-f</span> rawvideo <span class="tok-url">tcp://10.139.196.127:5050</span>
+        </div>
+      </div>
+
+      <button type="button" class="pro-copy-btn instrument-num" id="copyObsBtn" onclick="copyObsCommand()">
+        <span>&#9112;</span>
+        <span id="copyObsLbl">COPY FFMPEG STREAM COMMAND</span>
+      </button>
+    </div>
+
+    <!-- TAB 2: 40-BYTE UNISOC SENSORHUB HEX PACKET & EMBEDDED GNSS RADAR MAP -->
+    <div class="raw-tab-panel" id="rawPanel2" role="tabpanel">
+      <div class="hex-grid6 mono">
+        <div class="hex-cell">
+          <span class="hex-off">[00] CMD_ID</span>
+          <span class="hex-val" style="color:#FFB800;">0x81 (129)</span>
+        </div>
+        <div class="hex-cell">
+          <span class="hex-off">[01..02] HDL</span>
+          <span class="hex-val" id="hexHandleTxt" style="color:#34D399;">0x0001 ACC</span>
+        </div>
+        <div class="hex-cell">
+          <span class="hex-off">[32..39] CLK</span>
+          <span class="hex-val" id="hexTs" style="color:#38BDF8;">BOOTTIME_NS</span>
+        </div>
+        <div class="hex-cell">
+          <span class="hex-off">[04..07] AX_F32</span>
+          <span class="hex-val" id="hexAx">8F C2 F5 3D</span>
+        </div>
+        <div class="hex-cell">
+          <span class="hex-off">[08..11] AY_F32</span>
+          <span class="hex-val" id="hexAy">CD CC EC 3F</span>
+        </div>
+        <div class="hex-cell">
+          <span class="hex-off">[12..15] AZ_F32</span>
+          <span class="hex-val" id="hexAz">7B 14 1D 41</span>
+        </div>
+      </div>
+
+      <div class="gnss-map-card">
+        <canvas id="sheetMapCanvas" width="96" height="68"></canvas>
+        <div class="gnss-meta">
+          <span class="mono" style="font-size:9.5px;font-weight:700;color:#38BDF8;">KERNEL GNSS GEOLOCATION SYNC</span>
+          <span class="instrument-num" id="gpsLatLonTxt" style="font-size:13px;font-weight:700;color:#FFFFFF;">23.8103&deg; N, 90.4125&deg; E</span>
+          <span class="mono" id="gpsKinTxt" style="font-size:10.5px;color:#34D399;">SPD 5.4 km/h &bull; HDG 042&deg; NE</span>
+          <span class="mono" style="font-size:9.5px;color:#94A3B8;">/mnt/phh/kernel_gps.conf</span>
+        </div>
+      </div>
+
+      <button type="button" class="pro-copy-btn instrument-num" id="copyHexBtn" onclick="copyHexPacket()">
+        <span>&#9112;</span>
+        <span id="copyHexLbl">COPY 40-BYTE SENSORHUB HEX</span>
+      </button>
+    </div>
+  </dialog>
+
+  <!-- 6. GAME-STYLE INTERACTIVE LIVE DEMO & TACTICAL SPOTLIGHT COACHMARK ENGINE -->
+  <div class="tour-spotlight" id="tourSpotlight" aria-hidden="true">
+    <span class="sp-c tl"></span>
+    <span class="sp-c tr"></span>
+    <span class="sp-c bl"></span>
+    <span class="sp-c br"></span>
+  </div>
+
+  <div class="tour-cue instrument-num" id="tourCue" aria-hidden="true">
+    <span id="tourCueTxt">&#9757; TAP KEY</span>
+  </div>
+
+  <!-- Persistent Non-Modal Tour Popover (modern-web-guidance: persistent-app-tours) -->
+  <div id="tourCard" class="tour-card" popover="manual" role="dialog" aria-labelledby="tourTitle">
+    <div class="tour-hdr">
+      <span class="tour-mission-pill instrument-num" id="tourStepBadge">MISSION 01 / 06</span>
+      <div class="tour-hdr-actions">
+        <button type="button" class="tour-mini-btn instrument-num" id="tourAutoBtn" onclick="toggleTourAutoplay()">
+          <span id="tourAutoLbl">&#9654; AUTO</span>
+        </button>
+        <button type="button" class="tour-mini-btn bn-font" id="tourLangBtn" onclick="toggleTourLang()">EN</button>
+        <button type="button" class="tour-mini-btn" id="tourSkipBtn" popovertarget="tourCard" popovertargetaction="hide" onclick="stopInteractiveDemo(true)" aria-label="Close Tutorial">&#10005;</button>
+      </div>
+    </div>
+
+    <div class="tour-prog-row" id="tourProgBar">
+      <span class="tour-seg cur"></span>
+      <span class="tour-seg"></span>
+      <span class="tour-seg"></span>
+      <span class="tour-seg"></span>
+      <span class="tour-seg"></span>
+      <span class="tour-seg"></span>
+    </div>
+
+    <h2 class="tour-title bn-font" id="tourTitle">১. ভার্চুয়াল ক্যামেরা টেস্ট প্যাটার্ন (SMPTE)</h2>
+    <p class="tour-desc bn-font" id="tourDesc">নিচের উজ্জ্বল [SMPTE] বাটনে ট্যাপ করুন — সাথে সাথে Ring-0 /dev/video50 ক্যামেরায় লাইভ ব্রডকাস্ট কালার বার চালু হবে।</p>
+
+    <div class="tour-ftr">
+      <span class="tour-status-hint bn-font" id="tourHintTxt">&#9889; হাইলাইট করা বাটনে ট্যাপ করুন</span>
+      <div class="tour-nav-btns">
+        <button type="button" class="tour-prev-btn" id="tourPrevBtn" onclick="prevTourStep()" aria-label="Previous Step">&#8592;</button>
+        <button type="button" class="tour-next-btn instrument-num" id="tourNextBtn" onclick="runStepAndAdvance()">TRY / NEXT &#8594;</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Celebration Toast -->
+  <div id="tourDoneToast" class="tour-done-toast bn-font" popover="manual" role="status">
+    <span id="tourDoneTxt">&#10003; লাইভ ট্রেনিং সম্পন্ন! ৩টি RAW ট্যাব ঘুরে দেখুন।</span>
+    <button type="button" class="tour-mini-btn" popovertarget="tourDoneToast" popovertargetaction="hide" onclick="hideDoneToast()">&#10005;</button>
+  </div>
+
+<script>
+  let isLight = false;
+  let showGrid = true;
+  let currentPattern = 0;
+  let currentFps = 60;
+  let currentMode = 4;
+  let scrubAxis = 0;
+  let activeRawTab = 0;
+
+  // Rock-solid hardware dial setpoints (never shake on their own!)
+  let manualPitch = 10.0, manualRoll = 0.0, manualYaw = 42.0;
+
+  // Fluid-damped optical attitude state (silky smooth, zero jitter)
+  let dispPitch = 10.0, dispRoll = 0.0, dispYaw = 42.0, dispG = 1.00;
+  let oscPhase = 0.0;
+  let impulseBoost = 0.0;
+  let tick = 0;
+  let isSheetOpen = false;
+
+  // Calm, stable 92-bar histogram state
+  const HIST_COUNT = 92;
+  const histCurrent = new Float32Array(HIST_COUNT);
+  for (let i = 0; i < HIST_COUNT; i++) {
+    const norm = i / HIST_COUNT;
+    histCurrent[i] =
+      Math.exp(-Math.pow((norm - 0.26) / 0.11, 2)) * 0.82 +
+      Math.exp(-Math.pow((norm - 0.70) / 0.15, 2)) * 0.44 + 0.06;
+  }
+
+  let state = {
+    kernel_ready: true,
+    iio_bound: true,
+    v4l2_frames_tx: 1420,
+    v4l2_bytes_tx: 872448000,
+    v4l2_fps: 60,
+    v4l2_pattern: 0,
+    iio_events_injected: 74200,
+    step_count: 1428,
+    mode: 4,
+    gnss_lat: 23.810331,
+    gnss_lon: 90.412521,
+    gnss_speed_kmh: 5.4,
+    gnss_bearing_deg: 42.0,
+    lan_ip: "10.139.196.127",
+    hal_callbacks: 3200,
+    imu: {
+      ax: 0.12, ay: 1.85, az: 9.81,
+      gx: 0.04, gy: -0.02, gz: 0.01,
+      mx: 21.4, my: 28.9, mz: -26.5,
+      pitch_deg: 10.0, roll_deg: 0.0, yaw_deg: 42.0,
+      qw: 0.93, g_force: 1.00
+    }
+  };
+
+  /* ==========================================================================
+     GAME-STYLE INTERACTIVE LIVE DEMO & SPOTLIGHT TUTORIAL ENGINE
+     ========================================================================== */
+  const TOUR_STORAGE_KEY = 'bg6_v4l2_game_tutorial_v5';
+  const supportsPopover = ('popover' in HTMLElement.prototype);
+  let tourActive = false;
+  let tourStepIdx = 0;
+  let tourLang = 'bn';
+  let tourAutoplay = false;
+  let tourAutoTimer = null;
+  let tourStepLock = false;
+  let wheelAnimTimer = null;
+
+  const TOUR_STEPS = [
+    {
+      targetId: 'srcKey1',
+      cueBn: '👆 SMPTE ট্যাপ করুন',
+      cueEn: '👆 TAP SMPTE',
+      cuePos: 'above',
+      titleBn: '১. ভার্চুয়াল ক্যামেরা টেস্ট প্যাটার্ন (SMPTE)',
+      titleEn: '1. Broadcast Color Bars (/dev/video50)',
+      descBn: 'নিচের উজ্জ্বল [SMPTE] বাটনে ট্যাপ করুন — সাথে সাথে Ring-0 ভার্চুয়াল ক্যামেরায় লাইভ ব্রডকাস্ট কালার বার চালু হবে।',
+      descEn: 'Tap the highlighted [SMPTE] key below to inject live broadcast RP-219 calibration bars into /dev/video50.',
+      hintBn: '⚡ নিচের [SMPTE] বাটনে সরাসরি ট্যাপ করুন',
+      hintEn: '⚡ Tap the highlighted [SMPTE] key',
+      demoExec: () => selectPattern(1)
+    },
+    {
+      targetId: 'srcKey2',
+      cueBn: '👆 VECTOR ট্যাপ করুন',
+      cueEn: '👆 TAP VECTOR',
+      cuePos: 'above',
+      titleBn: '২. ৬-অক্ষ পোলার ভেক্টরস্কোপ (VECTOR)',
+      titleEn: '2. 6-DOF Polar Vectorscope',
+      descBn: 'এবার [VECTOR] বাটনে ট্যাপ করে সেন্সরহাবের রিয়েল-টাইম 360° গেইট ট্র্যাজেক্টরি স্কোপ দেখুন।',
+      descEn: 'Tap [VECTOR] to inspect real-time 360° Lissajous 6-DOF biomechanical trajectory vectors.',
+      hintBn: '⚡ নিচের [VECTOR] বাটনে ট্যাপ করুন',
+      hintEn: '⚡ Tap the highlighted [VECTOR] key',
+      demoExec: () => selectPattern(2)
+    },
+    {
+      targetId: 'kinBtn2',
+      cueBn: '👆 RUN মোড ট্যাপ করুন',
+      cueEn: '👆 TAP RUN 2.75Hz',
+      cuePos: 'above',
+      titleBn: '৩. বায়োমেকানিক্যাল রানিং সেন্সর মোড',
+      titleEn: '3. Biomechanical Running Cadence',
+      descBn: 'দৌড়ানোর আইকনে ট্যাপ করুন — Rust ইঞ্জিন iio:device0 সেন্সরে লাইভ 2.75Hz দৌড়ের গতি ও কম্পন পাঠাবে।',
+      descEn: 'Tap the Running icon to synthesize 2.75Hz running gait waveforms into Unisoc iio:device0.',
+      hintBn: '⚡ দৌড়ানোর আইকনটিতে ট্যাপ করুন',
+      hintEn: '⚡ Tap the Running figure icon',
+      demoExec: () => selectMode(2, 12.5)
+    },
+    {
+      targetId: 'wheelWrap',
+      cueBn: '↔ বামে-ডানে স্লাইড করুন',
+      cueEn: '↔ DRAG WHEEL',
+      cuePos: 'above',
+      titleBn: '৪. থ্রিডি গিম্বল হুইল ঘুরিয়ে দেখুন',
+      titleEn: '4. Scrub the 3D Gimbal Pitch Wheel',
+      descBn: 'স্কেল হুইলটি আঙুল দিয়ে বামে বা ডানে ড্র্যাগ করুন — ভিউফাইন্ডারের 3D Horizon নিখুঁতভাবে কাত হবে!',
+      descEn: 'Drag the precision optical scale wheel left or right to tilt the 3D Horizon attitude live!',
+      hintBn: '⚡ হুইলটি বামে বা ডানে ড্র্যাগ করুন',
+      hintEn: '⚡ Drag the scale wheel left or right',
+      onEnter: () => {
+        if (currentPattern !== 0) selectPattern(0, true);
+        scrubAxis = 0;
+      },
+      demoExec: () => animateWheelShowcase()
+    },
+    {
+      targetId: 'shutterBtn',
+      cueBn: '👆 শাটার প্রেস করুন',
+      cueEn: '👆 PRESS SHUTTER',
+      cuePos: 'above',
+      titleBn: '৫. শাটার পালস ও পেডোমিটার বার্স্ট',
+      titleEn: '5. Trigger Shutter & Pedometer Burst',
+      descBn: 'মাঝখানের 3D শাটার ডোমে ট্যাপ করে এক ক্লিকে ১৫টি হার্ডওয়্যার পেডোমিটার স্টেপ ও ফ্রেম পালস ইনজেক্ট করুন।',
+      descEn: 'Press the machined 3D shutter dome to fire a +15 hardware step impulse into sprd-sensor.',
+      hintBn: '⚡ মাঝখানের গোল শাটার বাটনে ট্যাপ করুন',
+      hintEn: '⚡ Tap the center 3D shutter dome',
+      demoExec: () => triggerImpulse()
+    },
+    {
+      targetId: 'rawBtn',
+      cueBn: '👆 RAW ট্যাপ করুন',
+      cueEn: '👆 TAP RAW',
+      cuePos: 'above',
+      titleBn: '৬. প্রো RAW হার্ডওয়্যার ইন্সপেক্টর খুলুন',
+      titleEn: '6. Open 3-Tab Pro RAW Inspector',
+      descBn: 'ডান পাশের [RAW] বাটনে ট্যাপ করে নতুন ৩-ট্যাব স্পেকট্রাল গ্রাফ, OBS স্ট্রিম পাইপ ও 40-Byte হেক্স প্যাকেট দেখুন!',
+      descEn: 'Tap [RAW] to open the 3-Tab Spectral Graph, OBS :5050 Stream Pipe, and 40-Byte Hex/GNSS Inspector!',
+      hintBn: '⚡ ডান নিচের [RAW] বাটনে ট্যাপ করুন',
+      hintEn: '⚡ Tap the [RAW] ring button',
+      demoExec: () => openExifSheet(0)
+    }
+  ];
+
+  function openPopoverSafe(el) {
+    if (!el) return;
+    if (supportsPopover && typeof el.showPopover === 'function') {
+      try { el.showPopover(); } catch (e) {}
+    } else {
+      el.classList.add('tour-fallback-open');
+    }
+  }
+
+  function closePopoverSafe(el) {
+    if (!el) return;
+    if (supportsPopover && typeof el.hidePopover === 'function') {
+      try { el.hidePopover(); } catch (e) {}
+    }
+    el.classList.remove('tour-fallback-open');
+  }
+
+  function toggleInteractiveDemo() {
+    if (tourActive) {
+      stopInteractiveDemo(true);
+    } else {
+      startInteractiveDemo(true);
+    }
+  }
+
+  function startInteractiveDemo(resetToStart) {
+    if (isSheetOpen) closeExifSheet();
+    hideDoneToast();
+    if (resetToStart) {
+      selectPattern(0, true);
+      selectMode(4, 5.4, true);
+      tourStepIdx = 0;
+    }
+    tourActive = true;
+    tourStepLock = false;
+
+    const demoBtn = document.getElementById('demoBtn');
+    const demoLbl = document.getElementById('demoBtnLbl');
+    if (demoBtn) demoBtn.classList.add('playing');
+    if (demoLbl) demoLbl.textContent = 'EXIT';
+
+    const card = document.getElementById('tourCard');
+    openPopoverSafe(card);
+    document.getElementById('tourSpotlight').classList.add('active');
+    document.getElementById('tourCue').classList.add('active');
+
+    renderTourStep();
+
+    // MANDATORY (modern-web-guidance persistent-app-tours): route focus inside non-modal popover
+    const nextBtn = document.getElementById('tourNextBtn');
+    if (nextBtn) {
+      try { nextBtn.focus({ preventScroll: true }); } catch (e) {}
+    }
+  }
+
+  function stopInteractiveDemo(markSeen) {
+    tourActive = false;
+    tourAutoplay = false;
+    tourStepLock = false;
+    if (tourAutoTimer) { clearTimeout(tourAutoTimer); tourAutoTimer = null; }
+    if (wheelAnimTimer) { clearInterval(wheelAnimTimer); wheelAnimTimer = null; }
+
+    if (markSeen) {
+      try { localStorage.setItem(TOUR_STORAGE_KEY, '1'); } catch (e) {}
+    }
+
+    const demoBtn = document.getElementById('demoBtn');
+    const demoLbl = document.getElementById('demoBtnLbl');
+    if (demoBtn) demoBtn.classList.remove('playing');
+    if (demoLbl) demoLbl.textContent = 'DEMO';
+
+    const autoBtn = document.getElementById('tourAutoBtn');
+    const autoLbl = document.getElementById('tourAutoLbl');
+    if (autoBtn) autoBtn.classList.remove('auto-on');
+    if (autoLbl) autoLbl.innerHTML = '&#9654; AUTO';
+
+    document.getElementById('tourSpotlight').classList.remove('active', 'cleared');
+    document.getElementById('tourCue').classList.remove('active', 'cleared');
+    const card = document.getElementById('tourCard');
+    card.classList.remove('cleared');
+    closePopoverSafe(card);
+  }
+
+  function toggleTourLang() {
+    tourLang = tourLang === 'bn' ? 'en' : 'bn';
+    document.getElementById('tourLangBtn').textContent = tourLang === 'bn' ? 'EN' : 'বাংলা';
+    if (tourActive) renderTourStep();
+  }
+
+  function toggleTourAutoplay() {
+    tourAutoplay = !tourAutoplay;
+    const autoBtn = document.getElementById('tourAutoBtn');
+    const autoLbl = document.getElementById('tourAutoLbl');
+    autoBtn.classList.toggle('auto-on', tourAutoplay);
+    autoLbl.innerHTML = tourAutoplay ? '&#9208; AUTO ON' : '&#9654; AUTO';
+    if (tourAutoTimer) { clearTimeout(tourAutoTimer); tourAutoTimer = null; }
+    if (tourAutoplay && tourActive && !tourStepLock) {
+      tourAutoTimer = setTimeout(() => {
+        if (tourActive && tourAutoplay) runStepAndAdvance();
+      }, 950);
+    }
+  }
+
+  function renderTourStep() {
+    if (!tourActive) return;
+    const step = TOUR_STEPS[tourStepIdx];
+    if (!step) return;
+    if (step.onEnter) step.onEnter();
+
+    document.getElementById('tourSpotlight').classList.remove('cleared');
+    document.getElementById('tourCue').classList.remove('cleared');
+    document.getElementById('tourCard').classList.remove('cleared');
+
+    document.getElementById('tourStepBadge').textContent =
+      'MISSION 0' + (tourStepIdx + 1) + ' / 0' + TOUR_STEPS.length;
+
+    const segs = document.querySelectorAll('#tourProgBar .tour-seg');
+    segs.forEach((s, idx) => {
+      s.className = 'tour-seg' + (idx < tourStepIdx ? ' done' : (idx === tourStepIdx ? ' cur' : ''));
+    });
+
+    const isBn = tourLang === 'bn';
+    document.getElementById('tourTitle').textContent = isBn ? step.titleBn : step.titleEn;
+    document.getElementById('tourDesc').textContent = isBn ? step.descBn : step.descEn;
+
+    const hintEl = document.getElementById('tourHintTxt');
+    hintEl.classList.remove('ok');
+    hintEl.textContent = isBn ? step.hintBn : step.hintEn;
+
+    document.getElementById('tourCueTxt').textContent = isBn ? step.cueBn : step.cueEn;
+    document.getElementById('tourPrevBtn').style.visibility = tourStepIdx === 0 ? 'hidden' : 'visible';
+    document.getElementById('tourNextBtn').innerHTML =
+      tourStepIdx === TOUR_STEPS.length - 1 ? 'OPEN RAW &#10003;' : 'DEMO / NEXT &#8594;';
+
+    updateSpotlightGeometry();
+
+    if (tourAutoTimer) { clearTimeout(tourAutoTimer); tourAutoTimer = null; }
+    if (tourAutoplay) {
+      tourAutoTimer = setTimeout(() => {
+        if (tourActive && tourAutoplay && !tourStepLock) runStepAndAdvance();
+      }, 1750);
+    }
+  }
+
+  function updateSpotlightGeometry() {
+    if (!tourActive) return;
+    const step = TOUR_STEPS[tourStepIdx];
+    if (!step) return;
+    const target = document.getElementById(step.targetId);
+    if (!target) return;
+
+    const r = target.getBoundingClientRect();
+    const pad = 5;
+    const sp = document.getElementById('tourSpotlight');
+    const sx = Math.max(2, Math.round(r.left - pad));
+    const sy = Math.max(2, Math.round(r.top - pad));
+    const sw = Math.round(r.width + pad * 2);
+    const sh = Math.round(r.height + pad * 2);
+
+    sp.style.left = sx + 'px';
+    sp.style.top = sy + 'px';
+    sp.style.width = sw + 'px';
+    sp.style.height = sh + 'px';
+    sp.style.borderRadius = (step.targetId === 'shutterBtn' || step.targetId === 'rawBtn') ? '999px' : '13px';
+
+    // Position floating gesture cue cleanly above target (clamped inside viewport)
+    const cue = document.getElementById('tourCue');
+    const cueX = Math.max(68, Math.min(window.innerWidth - 68, Math.round(r.left + r.width / 2)));
+    const cueY = Math.max(8, sy - 29);
+    cue.style.left = cueX + 'px';
+    cue.style.top = cueY + 'px';
+
+    // Smart auto-docking for #tourCard so it NEVER overlaps target or clips screen height
+    const card = document.getElementById('tourCard');
+    const targetMidY = r.top + r.height / 2;
+    if (targetMidY > window.innerHeight * 0.48) {
+      const hdrBottom = document.querySelector('.top-header').getBoundingClientRect().bottom;
+      card.style.top = Math.max(42, Math.round(hdrBottom + 8)) + 'px';
+      card.style.bottom = 'auto';
+    } else {
+      card.style.top = 'auto';
+      card.style.bottom = '16px';
+    }
+  }
+
+  function notifyTourAction(actionStepIdx) {
+    if (!tourActive || tourStepLock || tourStepIdx !== actionStepIdx) return;
+    tourStepLock = true;
+    if (tourAutoTimer) { clearTimeout(tourAutoTimer); tourAutoTimer = null; }
+
+    document.getElementById('tourSpotlight').classList.add('cleared');
+    document.getElementById('tourCue').classList.add('cleared');
+    document.getElementById('tourCard').classList.add('cleared');
+
+    const isBn = tourLang === 'bn';
+    document.getElementById('tourCueTxt').textContent = isBn ? '✓ সম্পন্ন!' : '✓ CLEAR!';
+    const hintEl = document.getElementById('tourHintTxt');
+    hintEl.classList.add('ok');
+    hintEl.textContent = isBn ? '✓ দুর্দান্ত! পরের ধাপে যাচ্ছে...' : '✓ Great! Advancing...';
+
+    if (actionStepIdx === TOUR_STEPS.length - 1) {
+      // Final step (RAW Inspector opened!) — finish cleanly and show celebratory top toast
+      setTimeout(() => {
+        stopInteractiveDemo(true);
+        showDoneToast();
+      }, 420);
+    } else {
+      setTimeout(() => {
+        if (!tourActive) return;
+        tourStepIdx++;
+        tourStepLock = false;
+        renderTourStep();
+      }, 680);
+    }
+  }
+
+  function runStepAndAdvance() {
+    if (!tourActive || tourStepLock) return;
+    const step = TOUR_STEPS[tourStepIdx];
+    if (step && step.demoExec) step.demoExec();
+  }
+
+  function prevTourStep() {
+    if (!tourActive || tourStepLock || tourStepIdx <= 0) return;
+    tourStepIdx--;
+    renderTourStep();
+  }
+
+  function animateWheelShowcase() {
+    if (wheelAnimTimer) clearInterval(wheelAnimTimer);
+    let f = 0;
+    const base = manualPitch;
+    wheelAnimTimer = setInterval(() => {
+      f++;
+      manualPitch = Math.round((base - Math.sin((f / 16) * Math.PI) * 14.0) * 2) / 2;
+      selectMode(5, 0.0, true);
+      if (f >= 16) {
+        clearInterval(wheelAnimTimer);
+        wheelAnimTimer = null;
+        notifyTourAction(3);
+      }
+    }, 28);
+  }
+
+  function showDoneToast() {
+    const toast = document.getElementById('tourDoneToast');
+    document.getElementById('tourDoneTxt').textContent =
+      tourLang === 'bn'
+        ? '✓ লাইভ ট্রেনিং সম্পন্ন! নিচের ৩টি প্রো RAW ট্যাব ঘুরে দেখুন।'
+        : '✓ Live Training Complete! Explore all 3 Pro RAW tabs below.';
+    openPopoverSafe(toast);
+    setTimeout(hideDoneToast, 3600);
+  }
+
+  function hideDoneToast() {
+    closePopoverSafe(document.getElementById('tourDoneToast'));
+  }
+
+  // Keep #tourCard synced if dismissed natively
+  document.getElementById('tourCard').addEventListener('toggle', (e) => {
+    if (e.newState === 'closed' && tourActive) {
+      stopInteractiveDemo(true);
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    if (tourActive) updateSpotlightGeometry();
+  });
+
+  /* ==========================================================================
+     PRO HARDWARE RAW INSPECTOR (<dialog id="exifSheet">) & CONTROLS
+     ========================================================================== */
+  const exifDialog = document.getElementById('exifSheet');
+
+  // Fallback for browsers without declarative closedby="any" support (modern-web-guidance: dialog / light-dismiss-a-dialog)
+  if (exifDialog && !('closedBy' in HTMLDialogElement.prototype)) {
+    const isOutsideDialog = (e, dlg) => {
+      const r = dlg.getBoundingClientRect();
+      return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+    };
+    let pressedOutside = false;
+    exifDialog.addEventListener('pointerdown', (e) => {
+      pressedOutside = isOutsideDialog(e, exifDialog);
+    });
+    exifDialog.addEventListener('pointerup', (e) => {
+      if (pressedOutside && isOutsideDialog(e, exifDialog)) {
+        exifDialog.close();
+      }
+    });
+  }
+
+  if (exifDialog) {
+    exifDialog.addEventListener('close', () => {
+      isSheetOpen = false;
+      exifDialog.returnValue = '';
+    });
+  }
+
+  function openExifSheet(tabIndex) {
+    if (typeof tabIndex === 'number') switchRawTab(tabIndex);
+    isSheetOpen = true;
+    if (exifDialog && !exifDialog.open) {
+      exifDialog.showModal();
+    }
+    pollTelemetry();
+    notifyTourAction(5);
+  }
+
+  function closeExifSheet() {
+    isSheetOpen = false;
+    if (exifDialog && exifDialog.open) {
+      exifDialog.close();
+    }
+  }
+
+  function switchRawTab(idx) {
+    activeRawTab = idx;
+    for (let i = 0; i < 3; i++) {
+      const btn = document.getElementById('rawTabBtn' + i);
+      const panel = document.getElementById('rawPanel' + i);
+      if (btn) {
+        btn.classList.toggle('active', i === idx);
+        btn.setAttribute('aria-selected', i === idx ? 'true' : 'false');
+      }
+      if (panel) panel.classList.toggle('active', i === idx);
+    }
+  }
+
+  function copyWithFeedback(label, text, btnId, lblId, defaultLbl) {
+    let ok = false;
+    if (window.AndroidBridge && window.AndroidBridge.copyToClipboard) {
+      try { ok = window.AndroidBridge.copyToClipboard(label, text); } catch (e) {}
+    }
+    if (!ok && navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(() => {});
+    }
+    const btn = document.getElementById(btnId);
+    const lbl = document.getElementById(lblId);
+    if (btn && lbl) {
+      btn.classList.add('copied');
+      lbl.textContent = '✓ COPIED TO CLIPBOARD';
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        lbl.textContent = defaultLbl;
+      }, 1600);
+    }
+  }
+
+  function copyObsCommand() {
+    const ip = state.lan_ip || '10.139.196.127';
+    const cmd = 'ffmpeg -re -i input.mp4 -pix_fmt yuyv422 -s 640x480 -f rawvideo tcp://' + ip + ':5050';
+    copyWithFeedback('FFmpeg V4L2 Pipe', cmd, 'copyObsBtn', 'copyObsLbl', 'COPY FFMPEG STREAM COMMAND');
+  }
+
+  function copyHexPacket() {
+    const imu = state.imu || {};
+    const pkt =
+      '81 01 00 00 ' +
+      floatToHexLE(imu.ax || 0) + ' ' +
+      floatToHexLE(imu.ay || 0) + ' ' +
+      floatToHexLE(imu.az || 9.81) + ' ' +
+      floatToHexLE(imu.gx || 0) + ' ' +
+      floatToHexLE(imu.gy || 0) + ' ' +
+      floatToHexLE(imu.gz || 0);
+    copyWithFeedback('40B SensorHub Packet', pkt, 'copyHexBtn', 'copyHexLbl', 'COPY 40-BYTE SENSORHUB HEX');
+  }
+
+  function toggleTheme() {
+    isLight = !isLight;
+    document.body.classList.toggle('light', isLight);
+    if (window.AndroidBridge && window.AndroidBridge.syncSystemBars) {
+      window.AndroidBridge.syncSystemBars(isLight);
+    }
+  }
+
+  function toggleGrid() {
+    showGrid = !showGrid;
+    document.getElementById('gridBtn').classList.toggle('active', showGrid);
+  }
+
+  function selectPattern(pat, silentTour) {
+    currentPattern = pat;
+    for (let i = 0; i < 4; i++) {
+      const k = document.getElementById('srcKey' + i);
+      if (k) k.classList.toggle('active', i === pat);
+    }
+    const badges = ['YUYV', 'SMPTE', 'VECTOR', 'OBS:5050'];
+    document.getElementById('topFmtBadge').textContent = badges[pat] || 'YUYV';
+    if (window.AndroidBridge && window.AndroidBridge.setV4l2Config) {
+      window.AndroidBridge.setV4l2Config(currentPattern, currentFps);
+    }
+    if (!silentTour) {
+      if (pat === 1) notifyTourAction(0);
+      if (pat === 2) notifyTourAction(1);
+    }
+  }
+
+  function cycleFps() {
+    currentFps = currentFps === 60 ? 30 : 60;
+    document.getElementById('chipFps').textContent = '1/' + currentFps + 's';
+    document.getElementById('lensRateBtn').textContent = currentFps + 'Hz';
+    document.getElementById('sheetShutter').textContent = '1/' + currentFps + 's';
+    document.getElementById('obsFpsSpec').textContent = '640p @ ' + currentFps + 'Hz';
+    if (window.AndroidBridge && window.AndroidBridge.setV4l2Config) {
+      window.AndroidBridge.setV4l2Config(currentPattern, currentFps);
+    }
+  }
+
+  function selectMode(mode, spd, silentTour) {
+    currentMode = mode;
+    for (let m of [1, 2, 3, 4, 5]) {
+      const b = document.getElementById('kinBtn' + m);
+      if (b) b.classList.toggle('active', m === mode);
+    }
+    if (mode === 5) {
+      if (window.AndroidBridge && window.AndroidBridge.setManualGimbal) {
+        window.AndroidBridge.setManualGimbal(manualPitch, manualRoll, manualYaw, 0.0);
+      }
+    } else if (window.AndroidBridge && window.AndroidBridge.setKinematicMode) {
+      window.AndroidBridge.setKinematicMode(mode, spd, manualYaw);
+    }
+    if (!silentTour && mode === 2) {
+      notifyTourAction(2);
+    }
+  }
+
+  function cycleScrubAxis() {
+    scrubAxis = (scrubAxis + 1) % 3;
+  }
+
+  function burstSteps(n) {
+    impulseBoost = 1.0;
+    if (window.AndroidBridge && window.AndroidBridge.triggerStepBurst) {
+      window.AndroidBridge.triggerStepBurst(n);
+    }
+  }
+
+  function triggerImpulse() {
+    burstSteps(15);
+    if (window.AndroidBridge && window.AndroidBridge.setV4l2Config) {
+      window.AndroidBridge.setV4l2Config(currentPattern, currentFps);
+    }
+    notifyTourAction(4);
+  }
+
+  // Interactive touch scrubbing on Halide Precision Wheel (100% locked when untouched)
+  (function initWheelScrub() {
+    const wrap = document.getElementById('wheelWrap');
+    let dragging = false;
+    let startX = 0;
+    let startVal = 0;
+
+    const getVal = () => scrubAxis === 0 ? manualPitch : (scrubAxis === 1 ? manualRoll : manualYaw);
+    const setVal = (v) => {
+      if (scrubAxis === 0) manualPitch = Math.round(Math.max(-60, Math.min(60, v)) * 2) / 2;
+      else if (scrubAxis === 1) manualRoll = Math.round(Math.max(-45, Math.min(45, v)) * 2) / 2;
+      else manualYaw = Math.round(((v % 360) + 360) % 360);
+      selectMode(5, 0.0, true);
+    };
+
+    wrap.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      startX = e.clientX;
+      startVal = getVal();
+      try { wrap.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    wrap.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - startX;
+      setVal(startVal - dx * 0.20);
+      if (Math.abs(dx) >= 10) {
+        notifyTourAction(3);
+      }
+    });
+    wrap.addEventListener('pointerup', () => { dragging = false; });
+    wrap.addEventListener('pointercancel', () => { dragging = false; });
+  })();
+
+  function formatCompact(n) {
+    if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+    return n.toString();
+  }
+
+  function floatToHexLE(val) {
+    const buf = new ArrayBuffer(4);
+    new DataView(buf).setFloat32(0, val, true);
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
+  }
+
+  function fmtSigned(v) {
+    const num = Number(v || 0);
+    return (num >= 0 ? '+' : '') + num.toFixed(2);
+  }
+
+  function pollTelemetry() {
+    if (window.AndroidBridge && window.AndroidBridge.getStudioTelemetryJson) {
+      try {
+        const raw = window.AndroidBridge.getStudioTelemetryJson();
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.imu) state = parsed;
+      } catch (e) {}
+    }
+
+    const imu = state.imu || {};
+    dispG += ((imu.g_force || 1.0) - dispG) * 0.25;
+
+    document.getElementById('hdrIioTxt').textContent = formatCompact(state.iio_events_injected || 0);
+    document.getElementById('chipSteps').textContent = (state.step_count || 0).toLocaleString();
+    document.getElementById('chipGLoad').textContent = dispG.toFixed(2) + 'G';
+    document.getElementById('chipSpeed').textContent = (state.gnss_speed_kmh || 5.4).toFixed(1) + 'K';
+    document.getElementById('wellCoordTxt').innerHTML = (state.gnss_lat || 23.81).toFixed(2) + '&deg;N';
+
+    if (isSheetOpen) {
+      const ip = state.lan_ip || '10.139.196.127';
+      document.getElementById('sheetSteps').textContent = (state.step_count || 0).toLocaleString();
+      document.getElementById('sheetBytes').textContent = ((state.v4l2_bytes_tx || 0) / 1e6).toFixed(1) + ' MB TX';
+
+      document.getElementById('axisAx').innerHTML = fmtSigned(imu.ax) + ' m/s&sup2;';
+      document.getElementById('axisAy').innerHTML = fmtSigned(imu.ay) + ' m/s&sup2;';
+      document.getElementById('axisAz').innerHTML = fmtSigned(imu.az !== undefined ? imu.az : 9.81) + ' m/s&sup2;';
+      document.getElementById('axisGx').textContent = 'GYR ' + fmtSigned(imu.gx);
+      document.getElementById('axisGy').textContent = 'GYR ' + fmtSigned(imu.gy);
+      document.getElementById('axisGz').textContent = 'GYR ' + fmtSigned(imu.gz);
+
+      document.getElementById('obsIpBadge').textContent = ip + ':5050';
+      document.getElementById('obsFramesTx').textContent = (state.v4l2_frames_tx || 0).toLocaleString();
+      document.getElementById('sheetObsCmd').innerHTML =
+        '<span class="tok-bin">ffmpeg</span> <span class="tok-flg">-re -i</span> input.mp4 ' +
+        '<span class="tok-flg">-pix_fmt</span> yuyv422 <span class="tok-flg">-s</span> 640x480 ' +
+        '<span class="tok-flg">-f</span> rawvideo <span class="tok-url">tcp://' + ip + ':5050</span>';
+
+      document.getElementById('hexAx').textContent = floatToHexLE(imu.ax || 0);
+      document.getElementById('hexAy').textContent = floatToHexLE(imu.ay || 0);
+      document.getElementById('hexAz').textContent = floatToHexLE(imu.az !== undefined ? imu.az : 9.81);
+      document.getElementById('hexTs').textContent = formatCompact(state.iio_events_injected || 0) + ' EVT';
+
+      const lat = (state.gnss_lat || 23.8103).toFixed(4);
+      const lon = (state.gnss_lon || 90.4125).toFixed(4);
+      const spd = (state.gnss_speed_kmh || 5.4).toFixed(1);
+      const hdg = Math.round(state.gnss_bearing_deg || manualYaw).toString().padStart(3, '0');
+      document.getElementById('gpsLatLonTxt').innerHTML = lat + '&deg; N, ' + lon + '&deg; E';
+      document.getElementById('gpsKinTxt').innerHTML = 'SPD ' + spd + ' km/h &bull; HDG ' + hdg + '&deg;';
+    }
+  }
+
+  // Supersampled HiDPI Retina Canvas Synchronizer (Zero Upscale Blur!)
+  function syncCanvas(c) {
+    const dpr = Math.max(window.devicePixelRatio || 2, 2.5);
+    const rect = c.getBoundingClientRect();
+    const cssW = Math.max(10, Math.round(rect.width));
+    const cssH = Math.max(10, Math.round(rect.height));
+    const targetW = Math.round(cssW * dpr);
+    const targetH = Math.round(cssH * dpr);
+    if (c.width !== targetW || c.height !== targetH) {
+      c.width = targetW;
+      c.height = targetH;
+    }
+    const ctx = c.getContext('2d', { alpha: false });
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    return { ctx, w: cssW, h: cssH };
+  }
+
+  function syncAlphaCanvas(c) {
+    const dpr = Math.max(window.devicePixelRatio || 2, 2.5);
+    const rect = c.getBoundingClientRect();
+    const cssW = Math.max(10, Math.round(rect.width));
+    const cssH = Math.max(10, Math.round(rect.height));
+    const targetW = Math.round(cssW * dpr);
+    const targetH = Math.round(cssH * dpr);
+    if (c.width !== targetW || c.height !== targetH) {
+      c.width = targetW;
+      c.height = targetH;
+    }
+    const ctx = c.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx, w: cssW, h: cssH };
+  }
+
+  function snap(v) {
+    return Math.round(v) + 0.5;
+  }
+
+  function drawSpectralChannel(ctx, w, h, phaseShift, freqMult, ampScale, yCenter, strokeHex, rgbaTop) {
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, rgbaTop);
+    grad.addColorStop(1, 'rgba(0, 0, 0, 0.0)');
+
+    const pts = 96;
+    ctx.beginPath();
+    ctx.moveTo(0, h);
+    for (let i = 0; i <= pts; i++) {
+      const norm = i / pts;
+      const x = norm * w;
+      const ph = norm * Math.PI * 4.5 * freqMult - oscPhase + phaseShift;
+      const wave = Math.sin(ph) * 0.72 + Math.cos(ph * 1.9 + phaseShift) * 0.28;
+      const y = yCenter - wave * ampScale;
+      ctx.lineTo(x, y);
+    }
+    ctx.lineTo(w, h);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    ctx.strokeStyle = strokeHex;
+    ctx.lineWidth = 1.7;
+    ctx.beginPath();
+    for (let i = 0; i <= pts; i++) {
+      const norm = i / pts;
+      const x = norm * w;
+      const ph = norm * Math.PI * 4.5 * freqMult - oscPhase + phaseShift;
+      const wave = Math.sin(ph) * 0.72 + Math.cos(ph * 1.9 + phaseShift) * 0.28;
+      const y = yCenter - wave * ampScale;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  function renderStudio() {
+    tick++;
+    impulseBoost *= 0.94;
+
+    const modeFreq = currentMode === 5 ? 0.0 : (currentMode === 2 ? 0.065 : (currentMode === 3 ? 0.022 : 0.038));
+    const modeAmp = currentMode === 5 ? 2.5 : (currentMode === 2 ? 22.0 : (currentMode === 3 ? 8.0 : 13.5));
+    oscPhase += modeFreq;
+
+    const targetPitch = currentMode === 5 ? manualPitch : (manualPitch + Math.sin(oscPhase * 0.5) * 0.6);
+    const targetRoll = currentMode === 5 ? manualRoll : (manualRoll + Math.cos(oscPhase * 0.5) * 0.4);
+    dispPitch += (targetPitch - dispPitch) * 0.08;
+    dispRoll += (targetRoll - dispRoll) * 0.08;
+    dispYaw += (manualYaw - dispYaw) * 0.08;
+
+    // 1. RENDER CRYSTAL-CLEAR OPTICAL VIEWFINDER (#v4l2Canvas)
+    const vc = document.getElementById('v4l2Canvas');
+    if (vc) {
+      const { ctx, w, h } = syncCanvas(vc);
+      const hudEl = document.querySelector('.vf-bottom-hud');
+      const hudReserve = hudEl ? hudEl.offsetHeight + 14 : Math.round(h * 0.18);
+      const topReserve = 28;
+      const optH = Math.max(120, h - topReserve - hudReserve);
+      const optCy = Math.round(topReserve + optH * 0.49);
+      const minOpt = Math.min(w, optH);
+      const bwBox = Math.max(38, Math.round(minOpt * 0.175));
+
+      ctx.fillStyle = '#05070B';
+      ctx.fillRect(0, 0, w, h);
+
+      if (currentPattern === 1) {
+        const cols = ['#E4E4E7', '#FACC15', '#06B6D4', '#22C55E', '#D946EF', '#EF4444', '#2563EB', '#09090B'];
+        const colW = w / 8;
+        const barH = Math.round((h - hudReserve) * 0.72);
+        for (let i = 0; i < 8; i++) {
+          ctx.fillStyle = cols[i];
+          const x0 = Math.round(i * colW);
+          const x1 = Math.round((i + 1) * colW);
+          ctx.fillRect(x0, 0, x1 - x0, barH);
+        }
+        const rev = ['#2563EB', '#09090B', '#D946EF', '#09090B', '#06B6D4', '#09090B', '#E4E4E7', '#18181B'];
+        const revH = Math.round((h - hudReserve) * 0.10);
+        for (let i = 0; i < 8; i++) {
+          ctx.fillStyle = rev[i];
+          const x0 = Math.round(i * colW);
+          const x1 = Math.round((i + 1) * colW);
+          ctx.fillRect(x0, barH, x1 - x0, revH);
+        }
+
+        const rampY = barH + revH + Math.max(8, Math.round(optH * 0.03));
+        const lg = ctx.createLinearGradient(16, 0, w - 16, 0);
+        lg.addColorStop(0, '#090B10');
+        lg.addColorStop(1, '#FFFFFF');
+        ctx.fillStyle = lg;
+        ctx.fillRect(16, rampY, w - 32, 8);
+
+        const sweepSpan = Math.max(40, w - 80);
+        const sweepX = 16 + ((tick * 2.5) % sweepSpan);
+        ctx.fillStyle = '#FFB800';
+        ctx.fillRect(Math.round(sweepX), rampY, 48, 8);
+
+        const sw = Math.min(196, Math.round(w * 0.56));
+        const sx = Math.round(w / 2 - sw / 2), sy = Math.max(34, optCy - bwBox - 52);
+        ctx.fillStyle = '#090B10';
+        ctx.fillRect(sx, sy, sw, 42);
+        ctx.strokeStyle = '#FFB800';
+        ctx.lineWidth = 1.2;
+        ctx.strokeRect(sx + 0.5, sy + 0.5, sw - 1, 41);
+
+        ctx.fillStyle = '#FFB800';
+        ctx.font = '700 12.5px "JetBrains Mono", monospace';
+        ctx.textAlign = 'center';
+        const ff = (Math.floor(tick / 2) % 60).toString().padStart(2, '0');
+        const ss = (Math.floor(tick / 120) % 60).toString().padStart(2, '0');
+        ctx.fillText('TC 01:14:' + ss + ':' + ff, w / 2, sy + 18);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '600 9px "JetBrains Mono", monospace';
+        ctx.fillText('SMPTE RP-219 • YUYV 640p', w / 2, sy + 33);
+        ctx.textAlign = 'left';
+      } else if (currentPattern === 2) {
+        const cx = Math.round(w / 2), cy = optCy;
+        const maxR = Math.round(minOpt * 0.39);
+
+        for (let d = 0; d < 360; d += 6) {
+          const rad = (d * Math.PI) / 180;
+          const isCard = d % 30 === 0;
+          ctx.strokeStyle = isCard ? 'rgba(255, 184, 0, 0.70)' : 'rgba(255, 255, 255, 0.20)';
+          ctx.lineWidth = isCard ? 1.4 : 0.9;
+          ctx.beginPath();
+          ctx.moveTo(cx + Math.cos(rad) * (maxR - (isCard ? 8 : 4)), cy + Math.sin(rad) * (maxR - (isCard ? 8 : 4)));
+          ctx.lineTo(cx + Math.cos(rad) * maxR, cy + Math.sin(rad) * maxR);
+          ctx.stroke();
+        }
+        for (let f of [0.33, 0.66, 1.0]) {
+          ctx.strokeStyle = f === 1.0 ? 'rgba(255, 184, 0, 0.50)' : 'rgba(255, 255, 255, 0.14)';
+          ctx.lineWidth = 1.0;
+          ctx.beginPath();
+          ctx.arc(cx, cy, Math.round(maxR * f), 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = '#10B981';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        for (let i = 0; i <= 90; i++) {
+          const t = oscPhase - i * 0.06;
+          const px = cx + Math.sin(t) * (modeAmp * 1.4 + 6);
+          const py = cy + Math.sin(t * 2.0) * (modeAmp * 0.9 + 4);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+
+        const vx = cx + Math.sin(oscPhase) * (modeAmp * 1.4 + 6);
+        const vy = cy + Math.sin(oscPhase * 2.0) * (modeAmp * 0.9 + 4);
+        ctx.strokeStyle = '#FFB800';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(vx, vy); ctx.stroke();
+        ctx.fillStyle = '#FFB800';
+        ctx.beginPath(); ctx.arc(vx, vy, 4.5, 0, Math.PI * 2); ctx.fill();
+      } else {
+        const horY = Math.round(optCy + dispPitch * (optH * 0.0034));
+        const groundDepth = Math.max(160, h - horY + 32);
+
+        ctx.save();
+        ctx.translate(w / 2, horY);
+        ctx.rotate((dispRoll * Math.PI) / 180);
+
+        ctx.fillStyle = '#090D14';
+        ctx.fillRect(-w, 0, w * 2, groundDepth + 60);
+
+        ctx.strokeStyle = 'rgba(255, 184, 0, 0.22)';
+        ctx.lineWidth = 1.0;
+        const rayNear = w * 0.064;
+        const rayFar = w * 0.25;
+        for (let i = -7; i <= 7; i++) {
+          ctx.beginPath();
+          ctx.moveTo(i * rayNear, 0);
+          ctx.lineTo(i * rayFar, groundDepth);
+          ctx.stroke();
+        }
+        for (let r = 1; r <= 7; r++) {
+          const d = Math.round(Math.pow(r / 7, 1.65) * groundDepth);
+          ctx.beginPath();
+          ctx.moveTo(-w, d + 0.5);
+          ctx.lineTo(w, d + 0.5);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = '#FFB800';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(-w * 0.43, 0); ctx.lineTo(-(bwBox + 10), 0);
+        ctx.moveTo(bwBox + 10, 0); ctx.lineTo(w * 0.43, 0);
+        ctx.stroke();
+        ctx.restore();
+
+        const amp = modeAmp + impulseBoost * 14.0;
+        ctx.strokeStyle = '#10B981';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        const samples = 160;
+        for (let i = 0; i <= samples; i++) {
+          const norm = i / samples;
+          const x = norm * w;
+          const ph = norm * Math.PI * 6.0 - oscPhase;
+          const wave = Math.sin(ph) * 0.78 + Math.sin(ph * 2.0 + 0.6) * 0.22;
+          const y = optCy - wave * amp;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      if (showGrid) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+        ctx.lineWidth = 1.0;
+        const gx1 = snap(w / 3), gx2 = snap((w * 2) / 3);
+        const gy1 = snap(h / 3), gy2 = snap((h * 2) / 3);
+        ctx.beginPath();
+        ctx.moveTo(gx1, 0); ctx.lineTo(gx1, h);
+        ctx.moveTo(gx2, 0); ctx.lineTo(gx2, h);
+        ctx.moveTo(0, gy1); ctx.lineTo(w, gy1);
+        ctx.moveTo(0, gy2); ctx.lineTo(w, gy2);
+        ctx.stroke();
+      }
+
+      const topCx = Math.round(w / 2);
+      const topStep = Math.max(4.6, Math.min(7.2, (w * 0.54) / 30));
+      ctx.fillStyle = '#FFB800';
+      ctx.beginPath(); ctx.arc(topCx, 8, 2.0, 0, Math.PI * 2); ctx.fill();
+      for (let i = -15; i <= 15; i++) {
+        const tx = snap(topCx + i * topStep);
+        const isZero = i === 0;
+        const isMaj = i % 5 === 0;
+        ctx.strokeStyle = isZero ? '#FF5500' : (isMaj ? '#FFB800' : 'rgba(255, 184, 0, 0.48)');
+        ctx.lineWidth = isZero ? 1.8 : 1.0;
+        ctx.beginPath();
+        ctx.moveTo(tx, 13);
+        ctx.lineTo(tx, isMaj ? 22 : 18);
+        ctx.stroke();
+      }
+
+      const leftTop = topReserve + 14;
+      const leftBot = Math.max(leftTop + 80, h - hudReserve - 12);
+      const numTicks = 24;
+      for (let i = 0; i <= numTicks; i++) {
+        const ty = snap(leftTop + (i / numTicks) * (leftBot - leftTop));
+        const isMaj = i % 4 === 0;
+        ctx.strokeStyle = isMaj ? 'rgba(255, 184, 0, 0.80)' : 'rgba(255, 184, 0, 0.30)';
+        ctx.lineWidth = 1.0;
+        ctx.beginPath();
+        ctx.moveTo(9, ty);
+        ctx.lineTo(isMaj ? 18 : 14, ty);
+        ctx.stroke();
+      }
+      const normPitch = Math.max(0, Math.min(1, 0.5 - dispPitch / 60.0));
+      const actY = Math.round(leftTop + normPitch * (leftBot - leftTop));
+      ctx.strokeStyle = '#FF5500';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(8, actY + 0.5);
+      ctx.lineTo(23, actY + 0.5);
+      ctx.stroke();
+
+      ctx.fillStyle = '#FFB800';
+      ctx.font = '700 12.5px "Chakra Petch", monospace';
+      ctx.fillText((manualPitch >= 0 ? '+' : '') + manualPitch.toFixed(1) + '°', 27, actY + 3);
+      ctx.fillStyle = 'rgba(255, 184, 0, 0.88)';
+      ctx.font = '600 8.5px "JetBrains Mono", monospace';
+      ctx.fillText('PITCH', 27, actY + 14);
+
+      const fcx = Math.round(w / 2), fcy = optCy;
+      const bw = bwBox, bh = bwBox, cl = Math.max(9, Math.round(bw * 0.21));
+
+      ctx.strokeStyle = 'rgba(255, 184, 0, 0.85)';
+      ctx.lineWidth = 1.3;
+      ctx.strokeRect(snap(fcx - bw), snap(fcy - bh), bw * 2, bh * 2);
+
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(fcx - bw, fcy - bh + cl); ctx.lineTo(fcx - bw, fcy - bh); ctx.lineTo(fcx - bw + cl, fcy - bh);
+      ctx.moveTo(fcx + bw - cl, fcy - bh); ctx.lineTo(fcx + bw, fcy - bh); ctx.lineTo(fcx + bw, fcy - bh + cl);
+      ctx.moveTo(fcx - bw, fcy + bh - cl); ctx.lineTo(fcx - bw, fcy + bh); ctx.lineTo(fcx - bw + cl, fcy + bh);
+      ctx.moveTo(fcx + bw - cl, fcy + bh); ctx.lineTo(fcx + bw, fcy + bh); ctx.lineTo(fcx + bw, fcy + bh - cl);
+      ctx.stroke();
+
+      ctx.save();
+      ctx.translate(fcx, fcy);
+      ctx.rotate((dispRoll * Math.PI) / 180);
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 1.3;
+      const cr = Math.max(10, Math.round(bw * 0.22));
+      const arm = Math.max(18, Math.round(bw * 0.40));
+      ctx.beginPath(); ctx.arc(0, 0, cr, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-arm, 0); ctx.lineTo(-Math.round(cr * 0.6), 0);
+      ctx.moveTo(Math.round(cr * 0.6), 0); ctx.lineTo(arm, 0);
+      ctx.moveTo(0, -arm); ctx.lineTo(0, -Math.round(cr * 0.6));
+      ctx.moveTo(0, Math.round(cr * 0.6)); ctx.lineTo(0, arm);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 2. RENDER CALM, PIXEL-SHARP 92-BAR HALIDE HISTOGRAM (#histCanvas)
+    const hc = document.getElementById('histCanvas');
+    if (hc) {
+      const { ctx, w, h } = syncAlphaCanvas(hc);
+      ctx.clearRect(0, 0, w, h);
+      const step = w / HIST_COUNT;
+      const shift = currentPattern * 0.08 + (currentMode - 1) * 0.03;
+      for (let i = 0; i < HIST_COUNT; i++) {
+        const norm = i / HIST_COUNT;
+        const target =
+          Math.exp(-Math.pow((norm - (0.24 + shift * 0.4)) / 0.11, 2)) * 0.84 +
+          Math.exp(-Math.pow((norm - (0.72 - shift * 0.25)) / 0.14, 2)) * 0.46 +
+          impulseBoost * 0.18 + 0.06;
+        histCurrent[i] += (target - histCurrent[i]) * 0.08;
+        const barH = Math.max(2, Math.min(h - 2, Math.round(histCurrent[i] * (h - 3))));
+        const bx = Math.round(i * step);
+        ctx.fillStyle = i === HIST_COUNT - 1 ? '#FFB800' : '#F4F4F6';
+        ctx.fillRect(bx, h - barH, 1.8, barH);
+      }
+    }
+
+    // 3. RENDER 100% LOCKED, RAZOR-SHARP PRECISION SCALE WHEEL (#wheelCanvas)
+    const wc = document.getElementById('wheelCanvas');
+    if (wc) {
+      const { ctx, w, h } = syncAlphaCanvas(wc);
+      const cx = Math.round(w / 2);
+      ctx.clearRect(0, 0, w, h);
+
+      const curVal = scrubAxis === 0 ? manualPitch : (scrubAxis === 1 ? manualRoll : manualYaw);
+      const axisNames = ['PITCH', 'ROLL', 'AZIMUTH'];
+      const rgbBase = isLight ? '17, 18, 21' : '255, 255, 255';
+
+      const pxPerDeg = 6.0;
+      const startDeg = Math.floor(curVal - (w / 2) / pxPerDeg);
+      const endDeg = Math.ceil(curVal + (w / 2) / pxPerDeg);
+
+      ctx.font = '600 10.5px "Chakra Petch", monospace';
+      ctx.textAlign = 'center';
+
+      for (let d = startDeg; d <= endDeg; d++) {
+        const rawX = cx + (d - curVal) * pxPerDeg;
+        const distNorm = Math.abs(rawX - cx) / (w * 0.48);
+        if (distNorm >= 1.0) continue;
+
+        const edgeFade = Math.max(0, 1 - Math.pow(distNorm, 2.2));
+        const isMaj = d % 10 === 0;
+        const isMid = d % 5 === 0;
+        const x = snap(rawX);
+
+        const tickAlpha = (isMaj ? 0.95 : (isMid ? 0.58 : 0.34)) * edgeFade;
+        ctx.strokeStyle = 'rgba(' + rgbBase + ', ' + tickAlpha.toFixed(3) + ')';
+        ctx.lineWidth = isMaj ? 1.5 : 1.0;
+        ctx.beginPath();
+        ctx.moveTo(x, h - (isMaj ? 13 : (isMid ? 9 : 6)));
+        ctx.lineTo(x, h - 1);
+        ctx.stroke();
+
+        if (isMaj && Math.abs(rawX - cx) > 18) {
+          const lblAlpha = 0.68 * edgeFade;
+          ctx.fillStyle = 'rgba(' + rgbBase + ', ' + lblAlpha.toFixed(3) + ')';
+          ctx.fillText((d >= 0 && scrubAxis !== 2 ? '+' : '') + d + '°', Math.round(rawX), h - 17);
+        }
+      }
+
+      ctx.fillStyle = isLight ? '#D97706' : '#FFB800';
+      ctx.font = '700 12.5px "Chakra Petch", monospace';
+      ctx.fillText(
+        axisNames[scrubAxis] + ' ' + (curVal >= 0 && scrubAxis !== 2 ? '+' : '') + curVal.toFixed(1) + '°',
+        cx, 12
+      );
+
+      ctx.strokeStyle = isLight ? '#111215' : '#FFFFFF';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(cx, 16);
+      ctx.lineTo(cx, h);
+      ctx.stroke();
+    }
+
+    // 4. RENDER PRO RAW INSPECTOR CANVASES WHEN OPEN
+    if (isSheetOpen) {
+      if (activeRawTab === 0) {
+        const sc = document.getElementById('sheetCurveCanvas');
+        if (sc) {
+          const { ctx, w, h } = syncAlphaCanvas(sc);
+          ctx.clearRect(0, 0, w, h);
+
+          // Crisp Oscilloscope Graticule Grid
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+          ctx.lineWidth = 1.0;
+          for (let g = 1; g <= 3; g++) {
+            const gy = snap((h * g) / 4);
+            ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke();
+          }
+          for (let gx = 1; gx <= 5; gx++) {
+            const x = snap((w * gx) / 6);
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+          }
+
+          // Camera M 3-Channel Overlapping Translucent Spectral Curves (AX Red, AY Emerald, AZ Cyan)
+          const dynAmp = Math.min(20, 9 + modeAmp * 0.45 + impulseBoost * 8);
+          drawSpectralChannel(ctx, w, h, 2.1, 1.0, dynAmp * 0.72, h * 0.62, '#EF4444', 'rgba(239, 68, 68, 0.34)');
+          drawSpectralChannel(ctx, w, h, 0.9, 1.15, dynAmp * 0.95, h * 0.52, '#10B981', 'rgba(16, 185, 129, 0.34)');
+          drawSpectralChannel(ctx, w, h, 0.0, 0.85, dynAmp * 0.82, h * 0.40, '#38BDF8', 'rgba(56, 189, 248, 0.34)');
+        }
+      } else if (activeRawTab === 2) {
+        const mc = document.getElementById('sheetMapCanvas');
+        if (mc) {
+          const { ctx, w, h } = syncCanvas(mc);
+          ctx.fillStyle = '#071426';
+          ctx.fillRect(0, 0, w, h);
+
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.16)';
+          ctx.lineWidth = 1.0;
+          for (let x = 12; x < w; x += 14) {
+            ctx.beginPath(); ctx.moveTo(snap(x), 0); ctx.lineTo(snap(x), h); ctx.stroke();
+          }
+          for (let y = 10; y < h; y += 14) {
+            ctx.beginPath(); ctx.moveTo(0, snap(y)); ctx.lineTo(w, snap(y)); ctx.stroke();
+          }
+
+          const cx = Math.round(w / 2), cy = Math.round(h / 2 + 3);
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.32)';
+          ctx.beginPath(); ctx.arc(cx, cy, 14, 0, Math.PI * 2); ctx.stroke();
+          ctx.beginPath(); ctx.arc(cx, cy, 26, 0, Math.PI * 2); ctx.stroke();
+
+          // Heading Cone
+          const hdgRad = (((state.gnss_bearing_deg || manualYaw) - 90) * Math.PI) / 180;
+          ctx.fillStyle = 'rgba(56, 189, 248, 0.28)';
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.arc(cx, cy, 26, hdgRad - 0.42, hdgRad + 0.42);
+          ctx.closePath();
+          ctx.fill();
+
+          // Center GNSS Beacon Pin
+          ctx.fillStyle = '#38BDF8';
+          ctx.beginPath(); ctx.arc(cx, cy, 4.5, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.lineWidth = 1.8;
+          ctx.stroke();
+        }
+      }
+    }
+
+    if (tourActive) {
+      updateSpotlightGeometry();
+    }
+
+    requestAnimationFrame(renderStudio);
+  }
+
+  setInterval(pollTelemetry, 350);
+  pollTelemetry();
+  requestAnimationFrame(renderStudio);
+
+  // First-time Game Onboarding Auto-Start (instant DOMContentLoaded, never blocks on network fonts)
+  let userTouchedEarly = false;
+  window.addEventListener('pointerdown', () => { userTouchedEarly = true; }, { once: true });
+  document.addEventListener('DOMContentLoaded', () => {
+    let seen = false;
+    try { seen = !!localStorage.getItem(TOUR_STORAGE_KEY); } catch (e) {}
+    if (!seen) {
+      setTimeout(() => {
+        if (!tourActive && !userTouchedEarly) startInteractiveDemo(true);
+      }, 280);
+    }
+  });
+</script>
+</body>
+</html>

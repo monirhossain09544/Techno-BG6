@@ -5,10 +5,12 @@ use core::panic::PanicInfo;
 use core::sync::atomic::{AtomicI32, AtomicU32, AtomicU64, Ordering};
 
 // ============================================================================
-// TECNO-BG6 Ring-0 #[no_std] In-Kernel Rust Engine (Linux 5.4.210 vmlinux)
+// TECNO-BG6 Ring-0 #[no_std] In-Kernel Rust Engine v8.5 (Linux 5.4.210 vmlinux)
 // Target: aarch64-unknown-none-softfloat (+reserve-x18, SCS-compatible, 0 FPU)
-// Design: 100% Lock-Free Atomics, Zero Heap, Zero Panics, Zero Vtables,
-//         Zero R_AARCH64_ABS64 Relocations, KASLR & Clang-CFI Safe!
+// Subsystems:
+//   1. Q16.16 Fixed-Point TinyML Input/Scheduler Classifier
+//   2. Apple-XNU Style Working-Set VM Governor (Executable Code Pinning,
+//      0..200 Dynamic LZ4-ZRAM Swappiness, & 90Hz Scroll kswapd Micro-Batching)
 // ============================================================================
 
 const EV_SYN: u16 = 0x00;
@@ -65,6 +67,18 @@ static TINYML_CLASS: AtomicU32 = AtomicU32::new(CLASS_DEEP_IDLE);
 static REC_TOP_BOOST: AtomicI32 = AtomicI32::new(10);
 static REC_UCLAMP_MIN: AtomicU32 = AtomicU32::new(5);
 static REC_GPU_FLOOR_MHZ: AtomicU32 = AtomicU32::new(384);
+
+// Ring-0 Apple-XNU Working-Set VM Governor Atomics
+static LRU_GEN_ENABLED: AtomicU32 = AtomicU32::new(7);
+static LRU_GEN_MIN_TTL_MS: AtomicU32 = AtomicU32::new(1000);
+static VM_FREE_MB: AtomicU32 = AtomicU32::new(512);
+static VM_FILE_MB: AtomicU32 = AtomicU32::new(1024);
+static VM_ANON_MB: AtomicU32 = AtomicU32::new(1024);
+static VM_SWAP_FREE_MB: AtomicU32 = AtomicU32::new(3072);
+static VM_EFF_SWAPPINESS: AtomicU32 = AtomicU32::new(135);
+static VM_EXEC_PROTECTED: AtomicU64 = AtomicU64::new(0);
+static VM_SCROLL_SHIELD_HITS: AtomicU64 = AtomicU64::new(0);
+static JETSAM_RECLAIMED_KB: AtomicU64 = AtomicU64::new(0);
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
@@ -157,11 +171,14 @@ fn eval_ring0_tinyml_q16(
         CLASS_DEEP_IDLE
     };
 
-    let (boost, uclamp, gpu_mhz) = match class {
-        CLASS_GAMING_TURBO => (35, 32, 512),
-        CLASS_SCROLL_90HZ => (28, 25, 384),
-        CLASS_LIGHT_UI => (15, 12, 384),
-        _ => (5, 2, 256),
+    let (boost, uclamp, gpu_mhz) = if class == CLASS_GAMING_TURBO {
+        (35, 32, 512)
+    } else if class == CLASS_SCROLL_90HZ {
+        (28, 25, 384)
+    } else if class == CLASS_LIGHT_UI {
+        (15, 12, 384)
+    } else {
+        (5, 2, 256)
     };
 
     let adj_boost = if temp_mc > 44000 {
@@ -185,59 +202,53 @@ pub extern "C" fn bg6_rust_on_input_event(ev_type: u16, ev_code: u16, ev_val: i3
         return;
     }
 
-    match ev_type {
-        EV_ABS => {
-            TOUCH_EVENTS_TOTAL.fetch_add(1, Ordering::Relaxed);
-            match ev_code {
-                ABS_MT_POSITION_X => CUR_X.store(ev_val, Ordering::Relaxed),
-                ABS_MT_POSITION_Y => CUR_Y.store(ev_val, Ordering::Relaxed),
-                ABS_MT_TRACKING_ID => {
-                    if ev_val >= 0 {
-                        TOUCH_DOWN.store(1, Ordering::Relaxed);
-                        PREV_X.store(CUR_X.load(Ordering::Relaxed), Ordering::Relaxed);
-                        PREV_Y.store(CUR_Y.load(Ordering::Relaxed), Ordering::Relaxed);
-                        PREV_FRAME_NS.store(now_ns, Ordering::Relaxed);
-                    } else {
-                        TOUCH_DOWN.store(0, Ordering::Relaxed);
-                    }
-                }
-                _ => {}
+    if ev_type == EV_ABS {
+        TOUCH_EVENTS_TOTAL.fetch_add(1, Ordering::Relaxed);
+        if ev_code == ABS_MT_POSITION_X {
+            CUR_X.store(ev_val, Ordering::Relaxed);
+        } else if ev_code == ABS_MT_POSITION_Y {
+            CUR_Y.store(ev_val, Ordering::Relaxed);
+        } else if ev_code == ABS_MT_TRACKING_ID {
+            if ev_val >= 0 {
+                TOUCH_DOWN.store(1, Ordering::Relaxed);
+                PREV_X.store(CUR_X.load(Ordering::Relaxed), Ordering::Relaxed);
+                PREV_Y.store(CUR_Y.load(Ordering::Relaxed), Ordering::Relaxed);
+                PREV_FRAME_NS.store(now_ns, Ordering::Relaxed);
+            } else {
+                TOUCH_DOWN.store(0, Ordering::Relaxed);
             }
         }
-        EV_KEY => {
-            KEY_EVENTS_TOTAL.fetch_add(1, Ordering::Relaxed);
-            if ev_code == BTN_TOUCH {
-                TOUCH_DOWN.store(if ev_val != 0 { 1 } else { 0 }, Ordering::Relaxed);
-            }
+    } else if ev_type == EV_KEY {
+        KEY_EVENTS_TOTAL.fetch_add(1, Ordering::Relaxed);
+        if ev_code == BTN_TOUCH {
+            TOUCH_DOWN.store(if ev_val != 0 { 1 } else { 0 }, Ordering::Relaxed);
+        }
+        LAST_TOUCH_NS.store(now_ns, Ordering::Relaxed);
+    } else if ev_type == EV_SYN && ev_code == SYN_REPORT {
+        if TOUCH_DOWN.load(Ordering::Relaxed) != 0 {
+            TOUCH_FRAMES_TOTAL.fetch_add(1, Ordering::Relaxed);
+            WINDOW_FRAMES.fetch_add(1, Ordering::Relaxed);
             LAST_TOUCH_NS.store(now_ns, Ordering::Relaxed);
-        }
-        EV_SYN if ev_code == SYN_REPORT => {
-            if TOUCH_DOWN.load(Ordering::Relaxed) != 0 {
-                TOUCH_FRAMES_TOTAL.fetch_add(1, Ordering::Relaxed);
-                WINDOW_FRAMES.fetch_add(1, Ordering::Relaxed);
-                LAST_TOUCH_NS.store(now_ns, Ordering::Relaxed);
 
-                let prev_ns = PREV_FRAME_NS.swap(now_ns, Ordering::Relaxed);
-                let cx = CUR_X.load(Ordering::Relaxed);
-                let cy = CUR_Y.load(Ordering::Relaxed);
-                let px = PREV_X.swap(cx, Ordering::Relaxed);
-                let py = PREV_Y.swap(cy, Ordering::Relaxed);
+            let prev_ns = PREV_FRAME_NS.swap(now_ns, Ordering::Relaxed);
+            let cx = CUR_X.load(Ordering::Relaxed);
+            let cy = CUR_Y.load(Ordering::Relaxed);
+            let px = PREV_X.swap(cx, Ordering::Relaxed);
+            let py = PREV_Y.swap(cy, Ordering::Relaxed);
 
-                if now_ns > prev_ns {
-                    let dt_us = (now_ns - prev_ns) / 1000;
-                    if dt_us >= 1 && dt_us < 250_000 {
-                        INTER_FRAME_US.store(dt_us as u32, Ordering::Relaxed);
-                        let dist_px = abs_i32(cx.wrapping_sub(px))
-                            .saturating_add(abs_i32(cy.wrapping_sub(py)));
-                        let vel_raw = (dist_px as u64).saturating_mul(1_000_000) / dt_us;
-                        let vel = if vel_raw > 20_000 { 20_000 } else { vel_raw as u32 };
-                        let old_vel = TOUCH_VELOCITY_PX_S.load(Ordering::Relaxed);
-                        TOUCH_VELOCITY_PX_S.store((old_vel * 3 + vel * 5) >> 3, Ordering::Relaxed);
-                    }
+            if now_ns > prev_ns {
+                let dt_us = (now_ns - prev_ns) / 1000;
+                if dt_us >= 1 && dt_us < 250_000 {
+                    INTER_FRAME_US.store(dt_us as u32, Ordering::Relaxed);
+                    let dist_px = abs_i32(cx.wrapping_sub(px))
+                        .saturating_add(abs_i32(cy.wrapping_sub(py)));
+                    let vel_raw = (dist_px as u64).saturating_mul(1_000_000) / dt_us;
+                    let vel = if vel_raw > 20_000 { 20_000 } else { vel_raw as u32 };
+                    let old_vel = TOUCH_VELOCITY_PX_S.load(Ordering::Relaxed);
+                    TOUCH_VELOCITY_PX_S.store((old_vel * 3 + vel * 5) >> 3, Ordering::Relaxed);
                 }
             }
         }
-        _ => {}
     }
 }
 
@@ -280,6 +291,125 @@ pub extern "C" fn bg6_rust_on_sched_tick(nr_running: u32, load_av1: u32, now_ns:
     REC_GPU_FLOOR_MHZ.store(gpu, Ordering::Relaxed);
 
     score
+}
+
+// ============================================================================
+// Ring-0 Apple-XNU Working-Set VM Governor Entrypoints (called from mm/vmscan.c)
+// ============================================================================
+
+#[no_mangle]
+pub extern "C" fn bg6_rust_update_vm_telemetry(
+    free_mb: u32,
+    file_mb: u32,
+    anon_mb: u32,
+    swap_free_mb: u32,
+) {
+    VM_FREE_MB.store(free_mb, Ordering::Relaxed);
+    VM_FILE_MB.store(file_mb, Ordering::Relaxed);
+    VM_ANON_MB.store(anon_mb, Ordering::Relaxed);
+    VM_SWAP_FREE_MB.store(swap_free_mb, Ordering::Relaxed);
+}
+
+#[no_mangle]
+pub extern "C" fn bg6_rust_vm_effective_swappiness(base_swappiness: u32, is_kswapd: u32) -> u32 {
+    let clamped_base = if base_swappiness > 200 { 200 } else { base_swappiness };
+    if ENGINE_ONLINE.load(Ordering::Acquire) == 0 || LRU_GEN_ENABLED.load(Ordering::Relaxed) == 0 {
+        return clamped_base;
+    }
+
+    let swap_free = VM_SWAP_FREE_MB.load(Ordering::Relaxed);
+    let free_mb = VM_FREE_MB.load(Ordering::Relaxed);
+    let class = TINYML_CLASS.load(Ordering::Relaxed);
+    let touch_down = TOUCH_DOWN.load(Ordering::Relaxed);
+
+    // Taper swappiness safely when 4GB LZ4 ZRAM nears capacity
+    if swap_free < 256 {
+        let low = if clamped_base > 65 { 65 } else { clamped_base };
+        if is_kswapd != 0 {
+            VM_EFF_SWAPPINESS.store(low, Ordering::Relaxed);
+        }
+        return low;
+    }
+
+    // Active 90Hz scroll / touch / gaming: shield RenderThread from direct-reclaim
+    // compression latency while letting background kswapd prefer RAM->ZRAM over eMMC code eviction
+    let interactive = touch_down != 0 || class == CLASS_SCROLL_90HZ || class == CLASS_GAMING_TURBO;
+    if interactive {
+        if is_kswapd == 0 {
+            VM_SCROLL_SHIELD_HITS.fetch_add(1, Ordering::Relaxed);
+            return 55;
+        }
+        let kswp = if clamped_base > 145 { clamped_base } else { 145 };
+        VM_EFF_SWAPPINESS.store(kswp, Ordering::Relaxed);
+        return kswp;
+    }
+
+    // Idle / Standby with healthy ZRAM headroom: strongly prefer fast LZ4 ZRAM compression
+    // of cold anonymous heap over evicting warm .odex/.so file-backed app code to eMMC
+    let eff = if swap_free >= 768 && free_mb >= 140 {
+        if clamped_base > 140 { clamped_base } else { 140 }
+    } else {
+        clamped_base
+    };
+    if is_kswapd != 0 {
+        VM_EFF_SWAPPINESS.store(eff, Ordering::Relaxed);
+    }
+    eff
+}
+
+#[no_mangle]
+pub extern "C" fn bg6_rust_vm_protect_exec_file(sc_priority: i32) -> u32 {
+    if ENGINE_ONLINE.load(Ordering::Acquire) == 0 || LRU_GEN_ENABLED.load(Ordering::Relaxed) == 0 {
+        return 0;
+    }
+    // Bypass protection under severe OOM scan priorities (priority < 7) or tight RAM/ZRAM
+    if sc_priority < 7 {
+        return 0;
+    }
+    let free_mb = VM_FREE_MB.load(Ordering::Relaxed);
+    let swap_free = VM_SWAP_FREE_MB.load(Ordering::Relaxed);
+    if free_mb >= 110 && swap_free >= 512 {
+        VM_EXEC_PROTECTED.fetch_add(1, Ordering::Relaxed);
+        1
+    } else {
+        0
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn bg6_rust_vm_is_scroll_critical() -> u32 {
+    if ENGINE_ONLINE.load(Ordering::Acquire) == 0 || LRU_GEN_ENABLED.load(Ordering::Relaxed) == 0 {
+        return 0;
+    }
+    let touch_down = TOUCH_DOWN.load(Ordering::Relaxed);
+    let class = TINYML_CLASS.load(Ordering::Relaxed);
+    let free_mb = VM_FREE_MB.load(Ordering::Relaxed);
+    if (touch_down != 0 || class == CLASS_SCROLL_90HZ) && free_mb >= 180 {
+        VM_SCROLL_SHIELD_HITS.fetch_add(1, Ordering::Relaxed);
+        1
+    } else {
+        0
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn bg6_rust_get_lru_gen_enabled() -> u32 {
+    LRU_GEN_ENABLED.load(Ordering::Relaxed)
+}
+
+#[no_mangle]
+pub extern "C" fn bg6_rust_set_lru_gen_enabled(val: u32) {
+    LRU_GEN_ENABLED.store(if val > 7 { 7 } else { val }, Ordering::Relaxed);
+}
+
+#[no_mangle]
+pub extern "C" fn bg6_rust_get_min_ttl_ms() -> u32 {
+    LRU_GEN_MIN_TTL_MS.load(Ordering::Relaxed)
+}
+
+#[no_mangle]
+pub extern "C" fn bg6_rust_set_min_ttl_ms(val: u32) {
+    LRU_GEN_MIN_TTL_MS.store(if val > 10_000 { 10_000 } else { val }, Ordering::Relaxed);
 }
 
 // 100% panic-free raw pointer cursor writer (zero slice bounds-check panics!)
@@ -389,24 +519,33 @@ pub extern "C" fn bg6_rust_proc_render(buf_ptr: *mut u8, buf_cap: usize, now_ns:
     let last_t = LAST_TOUCH_NS.load(Ordering::Relaxed);
     let idle_ms = if now_ns > last_t { (now_ns - last_t) / 1_000_000 } else { 0 };
 
-    let class_name: &[u8] = match TINYML_CLASS.load(Ordering::Relaxed) {
-        CLASS_DEEP_IDLE => b"DEEP_IDLE",
-        CLASS_LIGHT_UI => b"LIGHT_UI",
-        CLASS_SCROLL_90HZ => b"SCROLL_90HZ",
-        CLASS_GAMING_TURBO => b"GAMING_TURBO",
-        CLASS_BLACK_STANDBY => b"BLACK_STANDBY",
-        _ => b"UNKNOWN",
+    let cls = TINYML_CLASS.load(Ordering::Relaxed);
+    let class_name: &[u8] = if cls == CLASS_DEEP_IDLE {
+        b"DEEP_IDLE"
+    } else if cls == CLASS_LIGHT_UI {
+        b"LIGHT_UI"
+    } else if cls == CLASS_SCROLL_90HZ {
+        b"SCROLL_90HZ"
+    } else if cls == CLASS_GAMING_TURBO {
+        b"GAMING_TURBO"
+    } else if cls == CLASS_BLACK_STANDBY {
+        b"BLACK_STANDBY"
+    } else {
+        b"UNKNOWN"
     };
 
-    let mode_name: &[u8] = match ENGINE_MODE.load(Ordering::Relaxed) {
-        MODE_AUTO => b"auto",
-        MODE_GAMING => b"gaming",
-        MODE_POWERSAVE => b"powersave",
-        MODE_STANDBY => b"standby",
-        _ => b"auto",
+    let md = ENGINE_MODE.load(Ordering::Relaxed);
+    let mode_name: &[u8] = if md == MODE_GAMING {
+        b"gaming"
+    } else if md == MODE_POWERSAVE {
+        b"powersave"
+    } else if md == MODE_STANDBY {
+        b"standby"
+    } else {
+        b"auto"
     };
 
-    w.kv_str(b"engine", b"bg6_kernel_ring0_nostd v8.0.0");
+    w.kv_str(b"engine", b"bg6_kernel_ring0_nostd v8.5.0-xnu-vm");
     w.kv_str(b"target", b"aarch64-unknown-none-softfloat");
     w.kv_str(b"abi_guard", b"scs_x18=verified cfi_clang=active fp_simd=zero");
     w.kv_u64(b"online", ENGINE_ONLINE.load(Ordering::Relaxed) as u64);
@@ -434,6 +573,16 @@ pub extern "C" fn bg6_rust_proc_render(buf_ptr: *mut u8, buf_cap: usize, now_ns:
     w.kv_i32(b"rec_top_boost", REC_TOP_BOOST.load(Ordering::Relaxed));
     w.kv_u64(b"rec_uclamp_min", REC_UCLAMP_MIN.load(Ordering::Relaxed) as u64);
     w.kv_u64(b"rec_gpu_floor_mhz", REC_GPU_FLOOR_MHZ.load(Ordering::Relaxed) as u64);
+    w.kv_u64(b"lru_gen_enabled", LRU_GEN_ENABLED.load(Ordering::Relaxed) as u64);
+    w.kv_u64(b"lru_gen_min_ttl_ms", LRU_GEN_MIN_TTL_MS.load(Ordering::Relaxed) as u64);
+    w.kv_u64(b"vm_free_mb", VM_FREE_MB.load(Ordering::Relaxed) as u64);
+    w.kv_u64(b"vm_file_mb", VM_FILE_MB.load(Ordering::Relaxed) as u64);
+    w.kv_u64(b"vm_anon_mb", VM_ANON_MB.load(Ordering::Relaxed) as u64);
+    w.kv_u64(b"vm_swap_free_mb", VM_SWAP_FREE_MB.load(Ordering::Relaxed) as u64);
+    w.kv_u64(b"vm_eff_swappiness", VM_EFF_SWAPPINESS.load(Ordering::Relaxed) as u64);
+    w.kv_u64(b"vm_exec_protected", VM_EXEC_PROTECTED.load(Ordering::Relaxed));
+    w.kv_u64(b"vm_scroll_shield_hits", VM_SCROLL_SHIELD_HITS.load(Ordering::Relaxed));
+    w.kv_u64(b"jetsam_reclaimed_kb", JETSAM_RECLAIMED_KB.load(Ordering::Relaxed));
 
     let len = w.pos;
     unsafe {
@@ -460,7 +609,7 @@ unsafe fn ptr_starts_with(p: *const u8, len: usize, prefix: &[u8]) -> bool {
 }
 
 #[inline(always)]
-unsafe fn ptr_parse_i32(p: *const u8, len: usize) -> Option<i32> {
+unsafe fn ptr_parse_i64(p: *const u8, len: usize) -> Option<i64> {
     if len == 0 {
         return None;
     }
@@ -488,8 +637,7 @@ unsafe fn ptr_parse_i32(p: *const u8, len: usize) -> Option<i32> {
     if digits == 0 {
         return None;
     }
-    let res = if neg { -acc } else { acc };
-    Some(clamp_i64(res, i32::MIN as i64, i32::MAX as i64) as i32)
+    Some(if neg { acc.wrapping_neg() } else { acc })
 }
 
 #[no_mangle]
@@ -535,20 +683,26 @@ pub extern "C" fn bg6_rust_proc_command(cmd_ptr: *const u8, cmd_len: usize) -> i
                     ENGINE_MODE.store(MODE_AUTO, Ordering::Relaxed);
                 }
             } else if ptr_starts_with(tp, tlen, b"thermal_mc=") {
-                if let Some(t) = ptr_parse_i32(tp.add(11), tlen - 11) {
-                    THERMAL_MC.store(t, Ordering::Relaxed);
+                if let Some(t) = ptr_parse_i64(tp.add(11), tlen - 11) {
+                    THERMAL_MC.store(clamp_i64(t, -50_000, 150_000) as i32, Ordering::Relaxed);
                 }
             } else if ptr_starts_with(tp, tlen, b"ebpf_pkt=") {
-                if let Some(p) = ptr_parse_i32(tp.add(9), tlen - 9) {
+                if let Some(p) = ptr_parse_i64(tp.add(9), tlen - 9) {
                     EBPF_PKT_RATE.store(if p > 0 { p as u32 } else { 0 }, Ordering::Relaxed);
                 }
             } else if ptr_starts_with(tp, tlen, b"ebpf_wake=") {
-                if let Some(w) = ptr_parse_i32(tp.add(10), tlen - 10) {
+                if let Some(w) = ptr_parse_i64(tp.add(10), tlen - 10) {
                     EBPF_WAKE_RATE.store(if w > 0 { w as u32 } else { 0 }, Ordering::Relaxed);
                 }
             } else if ptr_starts_with(tp, tlen, b"wasm_rev=") {
-                if let Some(r) = ptr_parse_i32(tp.add(9), tlen - 9) {
+                if let Some(r) = ptr_parse_i64(tp.add(9), tlen - 9) {
                     WASM_POLICY_REV.store(if r > 0 { r as u32 } else { 0 }, Ordering::Relaxed);
+                }
+            } else if ptr_starts_with(tp, tlen, b"jetsam_kb=") {
+                if let Some(kb) = ptr_parse_i64(tp.add(10), tlen - 10) {
+                    if kb >= 0 {
+                        JETSAM_RECLAIMED_KB.store(kb as u64, Ordering::Relaxed);
+                    }
                 }
             }
         }

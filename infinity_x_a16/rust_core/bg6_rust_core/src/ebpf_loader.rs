@@ -1,6 +1,6 @@
+#![allow(dead_code)]
 use std::ffi::CString;
-use std::fs::{self, OpenOptions};
-use std::os::unix::io::IntoRawFd;
+use std::fs;
 
 // ============================================================================
 // Pure-Rust ELF64 + SYS_bpf JIT Loader for Linux 5.4.210 (aarch64)
@@ -13,10 +13,12 @@ const SYS_PERF_EVENT_OPEN_AARCH64: libc::c_long = 241;
 const BPF_MAP_CREATE: libc::c_int = 0;
 const BPF_MAP_LOOKUP_ELEM: libc::c_int = 1;
 const BPF_PROG_LOAD: libc::c_int = 5;
+const BPF_OBJ_PIN: libc::c_int = 6;
 const BPF_PROG_ATTACH: libc::c_int = 8;
 const BPF_OBJ_GET_INFO_BY_FD: libc::c_int = 15;
 
 const BPF_MAP_TYPE_ARRAY: u32 = 2;
+const BPF_PROG_TYPE_SOCKET_FILTER: u32 = 1;
 const BPF_PROG_TYPE_KPROBE: u32 = 2;
 const BPF_PROG_TYPE_CGROUP_SKB: u32 = 8;
 
@@ -333,6 +335,25 @@ impl LiveEbpfRuntime {
         }
         let map_id = get_map_id(map_fd);
 
+        // Pin BG6_TELEMETRY_MAP to /sys/fs/bpf/netd_shared/map_bg6_rust_telemetry (0666)
+        let pin_path = "/sys/fs/bpf/netd_shared/map_bg6_rust_telemetry";
+        let _ = fs::remove_file(pin_path);
+        if let Ok(c_pin) = CString::new(pin_path) {
+            #[repr(C)]
+            struct BpfPinAttr {
+                pathname: u64,
+                bpf_fd: u32,
+                file_flags: u32,
+            }
+            let mut pin_attr = BpfPinAttr {
+                pathname: c_pin.as_ptr() as u64,
+                bpf_fd: map_fd as u32,
+                file_flags: 0,
+            };
+            let _ = unsafe { sys_bpf(BPF_OBJ_PIN, &mut pin_attr) };
+            unsafe { libc::chmod(c_pin.as_ptr(), 0o666) };
+        }
+
         let load_sec = |sec_name: &str, prog_type: u32, prog_label: &str, exp_attach: u32| -> Result<i32, String> {
             let (sec_idx, sec) = secs
                 .iter()
@@ -426,30 +447,44 @@ impl LiveEbpfRuntime {
         let (ingress_prog_id, ingress_jited_bytes) = get_prog_info(ingress_fd);
         let (kprobe_prog_id, kprobe_jited_bytes) = get_prog_info(kprobe_fd);
 
-        // 1. Attach CGROUP_SKB egress & ingress (prefer /sys/fs/cgroup/apps so we never collide with netbpfload on root)
         let mut cgroup_attached = false;
-        for cg_path in ["/sys/fs/cgroup/apps", "/dev/cg2_bpf", "/sys/fs/cgroup"] {
-            if let Ok(cg_file) = OpenOptions::new().read(true).open(cg_path) {
-                let cg_fd = cg_file.into_raw_fd();
-                let mut a_eg = BpfAttachAttr {
-                    target_fd: cg_fd as u32,
-                    attach_bpf_fd: egress_fd as u32,
-                    attach_type: BPF_CGROUP_INET_EGRESS,
-                    attach_flags: BPF_F_ALLOW_MULTI,
+        // 1b. Attach #[no_std] Rust SOCKET_FILTER to global AF_PACKET hook (zero-copy return 0)
+        if let Ok(sf_fd) = load_sec(
+            "socket_filter/inspector",
+            BPF_PROG_TYPE_SOCKET_FILTER,
+            "bg6_rs_pkt_tap",
+            0,
+        ) {
+            let eth_p_all = (0x0003u16).to_be() as libc::c_int;
+            let pkt_sock = unsafe {
+                libc::socket(
+                    libc::AF_PACKET,
+                    libc::SOCK_RAW | libc::SOCK_CLOEXEC,
+                    eth_p_all,
+                )
+            };
+            if pkt_sock >= 0 {
+                const SO_ATTACH_BPF: libc::c_int = 50;
+                let rc = unsafe {
+                    libc::setsockopt(
+                        pkt_sock,
+                        libc::SOL_SOCKET,
+                        SO_ATTACH_BPF,
+                        &sf_fd as *const i32 as *const libc::c_void,
+                        4,
+                    )
                 };
-                let mut a_in = BpfAttachAttr {
-                    target_fd: cg_fd as u32,
-                    attach_bpf_fd: ingress_fd as u32,
-                    attach_type: BPF_CGROUP_INET_INGRESS,
-                    attach_flags: BPF_F_ALLOW_MULTI,
-                };
-                let r1 = unsafe { sys_bpf(BPF_PROG_ATTACH, &mut a_eg) };
-                let r2 = unsafe { sys_bpf(BPF_PROG_ATTACH, &mut a_in) };
-                unsafe { libc::close(cg_fd) };
-                if r1 == 0 && r2 == 0 {
+                if rc == 0 {
                     cgroup_attached = true;
-                    break;
+                    // Intentionally keep pkt_sock and sf_fd open for the lifetime of the daemon
+                } else {
+                    unsafe {
+                        libc::close(pkt_sock);
+                        libc::close(sf_fd);
+                    }
                 }
+            } else {
+                unsafe { libc::close(sf_fd) };
             }
         }
 
@@ -555,4 +590,427 @@ impl LiveEbpfRuntime {
             last_wake_ns: self.lookup_u64(7),
         }
     }
+}
+
+// ============================================================================
+// Root Ring-0 eBPF Firewall Enforcer Thread (runs as UID 0 in bg6_rust_core)
+// Directly manipulates /sys/fs/bpf/netd_shared/map_netd_* via SYS_bpf (#280)
+// ============================================================================
+
+const BPF_MAP_UPDATE_ELEM: libc::c_int = 2;
+const BPF_MAP_DELETE_ELEM: libc::c_int = 3;
+const BPF_OBJ_GET: libc::c_int = 7;
+
+const PENALTY_BOX_USER_MATCH: u32 = 2;     // 1 << 1
+const RESTRICTED_MATCH: u32 = 32;          // 1 << 5
+const IIF_MATCH: u32 = 128;                // 1 << 7
+const OEM_DENY_1_MATCH: u32 = 512;         // 1 << 9
+const OEM_DENY_2_MATCH: u32 = 1024;        // 1 << 10
+const OEM_DENY_3_MATCH: u32 = 2048;        // 1 << 11
+const BACKGROUND_MATCH: u32 = 4096;        // 1 << 12
+const PENALTY_BOX_ADMIN_MATCH: u32 = 8192; // 1 << 13
+
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+struct UidOwnerValue {
+    iif: u32,
+    rule: u32,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+struct IngressDiscardKey {
+    daddr: [u8; 16],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+struct IngressDiscardValue {
+    iif1: u32,
+    iif2: u32,
+}
+
+#[repr(C)]
+struct BpfObjAttr {
+    pathname: u64,
+    bpf_fd: u32,
+    file_flags: u32,
+}
+
+fn chmod_c(path: &str, mode: u32) {
+    if let Ok(cs) = CString::new(path) {
+        unsafe {
+            libc::chmod(cs.as_ptr(), mode as libc::mode_t);
+        }
+    }
+}
+
+fn bpf_obj_get_rw(path: &str) -> i32 {
+    chmod_c(path, 0o666);
+    let Ok(cs) = CString::new(path) else {
+        return -1;
+    };
+    let mut attr = BpfObjAttr {
+        pathname: cs.as_ptr() as u64,
+        bpf_fd: 0,
+        file_flags: 0,
+    };
+    unsafe { sys_bpf(BPF_OBJ_GET, &mut attr) }
+}
+
+fn map_lookup_any<K, V>(fd: i32, key: &K, val: &mut V) -> bool {
+    if fd < 0 {
+        return false;
+    }
+    let mut attr = BpfMapElemAttr {
+        map_fd: fd as u32,
+        _pad0: 0,
+        key: key as *const K as u64,
+        value: val as *mut V as u64,
+        flags: 0,
+    };
+    unsafe { sys_bpf(BPF_MAP_LOOKUP_ELEM, &mut attr) == 0 }
+}
+
+fn map_update_any<K, V>(fd: i32, key: &K, val: &V) -> bool {
+    if fd < 0 {
+        return false;
+    }
+    let mut attr = BpfMapElemAttr {
+        map_fd: fd as u32,
+        _pad0: 0,
+        key: key as *const K as u64,
+        value: val as *const V as u64,
+        flags: 0,
+    };
+    unsafe { sys_bpf(BPF_MAP_UPDATE_ELEM, &mut attr) == 0 }
+}
+
+fn map_delete_any<K>(fd: i32, key: &K) -> bool {
+    if fd < 0 {
+        return false;
+    }
+    let mut attr = BpfMapElemAttr {
+        map_fd: fd as u32,
+        _pad0: 0,
+        key: key as *const K as u64,
+        value: 0,
+        flags: 0,
+    };
+    unsafe { sys_bpf(BPF_MAP_DELETE_ELEM, &mut attr) == 0 }
+}
+
+fn detect_ifindex(ifname: &str, default_idx: u32) -> u32 {
+    let p = format!("/sys/class/net/{}/ifindex", ifname);
+    if let Ok(s) = fs::read_to_string(&p) {
+        if let Ok(v) = s.trim().parse::<u32>() {
+            if v > 0 {
+                return v;
+            }
+        }
+    }
+    default_idx
+}
+
+fn is_wlan_active() -> bool {
+    if let Ok(rt) = fs::read_to_string("/proc/net/route") {
+        if rt.lines().skip(1).any(|l| l.starts_with("wlan0")) {
+            return true;
+        }
+    }
+    false
+}
+
+fn parse_ipv4_discard_key(ip_str: &str) -> Option<IngressDiscardKey> {
+    let parts: Vec<&str> = ip_str.trim().split('.').collect();
+    if parts.len() != 4 {
+        return None;
+    }
+    let a = parts[0].parse::<u8>().ok()?;
+    let b = parts[1].parse::<u8>().ok()?;
+    let c = parts[2].parse::<u8>().ok()?;
+    let d = parts[3].parse::<u8>().ok()?;
+    let mut daddr = [0u8; 16];
+    daddr[10] = 0xff;
+    daddr[11] = 0xff;
+    daddr[12] = a;
+    daddr[13] = b;
+    daddr[14] = c;
+    daddr[15] = d;
+    Some(IngressDiscardKey { daddr })
+}
+
+fn apply_uid_mode_in_kernel(
+    uid_owner_fd: i32,
+    config_fd: i32,
+    uid: u32,
+    mode: i32,
+    wlan_ifindex: u32,
+    lte_ifindex: u32,
+    wlan_up: bool,
+) {
+    if config_fd >= 0 {
+        let cfg_key: u32 = 0;
+        let mut owner_cfg: u32 = 0;
+        let _ = map_lookup_any(config_fd, &cfg_key, &mut owner_cfg);
+        let needed = OEM_DENY_1_MATCH | OEM_DENY_3_MATCH;
+        if (owner_cfg & needed) != needed {
+            owner_cfg |= needed;
+            let _ = map_update_any(config_fd, &cfg_key, &owner_cfg);
+        }
+    }
+
+    let mut ov = UidOwnerValue::default();
+    let existed = map_lookup_any(uid_owner_fd, &uid, &mut ov);
+    if !existed || ov.rule == 0 {
+        ov.rule = RESTRICTED_MATCH | BACKGROUND_MATCH;
+    } else {
+        ov.rule |= RESTRICTED_MATCH;
+    }
+
+    // Clear only our firewall bits while preserving Android system bits
+    ov.rule &= !(OEM_DENY_1_MATCH
+        | OEM_DENY_2_MATCH
+        | OEM_DENY_3_MATCH
+        | PENALTY_BOX_USER_MATCH
+        | PENALTY_BOX_ADMIN_MATCH
+        | IIF_MATCH);
+    ov.iif = 0;
+
+    match mode {
+        1 => {
+            // BLOCK_ALL (Wi-Fi + Mobile Data)
+            ov.rule |= OEM_DENY_1_MATCH | OEM_DENY_3_MATCH | PENALTY_BOX_USER_MATCH;
+        }
+        2 => {
+            // WIFI_ONLY (Allow Wi-Fi wlan0, Block Mobile Data seth_lte0)
+            ov.rule |= IIF_MATCH;
+            ov.iif = wlan_ifindex;
+            if !wlan_up {
+                ov.rule |= OEM_DENY_1_MATCH | OEM_DENY_3_MATCH;
+            }
+        }
+        3 => {
+            // CELL_ONLY (Allow Mobile Data seth_lte0, Block Wi-Fi wlan0)
+            ov.rule |= IIF_MATCH;
+            ov.iif = lte_ifindex;
+            if wlan_up {
+                ov.rule |= OEM_DENY_1_MATCH | OEM_DENY_3_MATCH;
+            }
+        }
+        _ => {
+            // ALLOW_ALL
+        }
+    }
+
+    let _ = map_update_any(uid_owner_fd, &uid, &ov);
+}
+
+pub fn unlock_all_bpf_maps() {
+    chmod_c("/sys/fs/bpf", 0o777);
+    chmod_c("/sys/fs/bpf/netd_shared", 0o777);
+    for p in [
+        "/sys/fs/bpf/netd_shared/map_netd_uid_owner_map",
+        "/sys/fs/bpf/netd_shared/map_netd_app_uid_stats_map",
+        "/sys/fs/bpf/netd_shared/map_netd_iface_stats_map",
+        "/sys/fs/bpf/netd_shared/map_netd_iface_index_name_map",
+        "/sys/fs/bpf/netd_shared/map_netd_configuration_map",
+        "/sys/fs/bpf/netd_shared/map_netd_ingress_discard_map",
+        "/sys/fs/bpf/netd_shared/map_netd_blocked_ports_map",
+        "/sys/fs/bpf/netd_shared/map_netd_cookie_tag_map",
+        "/sys/fs/bpf/netd_shared/map_netd_stats_map_A",
+        "/sys/fs/bpf/netd_shared/map_netd_stats_map_B",
+        "/sys/fs/bpf/netd_shared/map_bg6_rust_telemetry",
+    ] {
+        chmod_c(p, 0o666);
+    }
+}
+
+pub fn spawn_ebpf_firewall_enforcer() {
+    std::thread::spawn(move || {
+        unsafe {
+            libc::umask(0);
+        }
+        unlock_all_bpf_maps();
+
+        for cmd_path in ["/dev/bg6_fw_cmd", "/data/local/tmp/bg6_fw_cmd.txt"] {
+            if ! std::path::Path::new(cmd_path).exists() {
+                let _ = fs::write(cmd_path, "");
+            }
+            chmod_c(cmd_path, 0o666);
+        }
+
+        let mut uid_owner_fd = bpf_obj_get_rw("/sys/fs/bpf/netd_shared/map_netd_uid_owner_map");
+        let mut config_fd = bpf_obj_get_rw("/sys/fs/bpf/netd_shared/map_netd_configuration_map");
+        let mut ingress_discard_fd =
+            bpf_obj_get_rw("/sys/fs/bpf/netd_shared/map_netd_ingress_discard_map");
+        let mut blocked_ports_fd =
+            bpf_obj_get_rw("/sys/fs/bpf/netd_shared/map_netd_blocked_ports_map");
+
+        let mut active_uid_modes: std::collections::HashMap<u32, i32> =
+            std::collections::HashMap::new();
+        let mut active_blocked_ips: std::collections::HashSet<String> =
+            std::collections::HashSet::new();
+        let mut ticks: u64 = 0;
+
+        loop {
+            ticks = ticks.wrapping_add(1);
+            if uid_owner_fd < 0 {
+                unlock_all_bpf_maps();
+                uid_owner_fd = bpf_obj_get_rw("/sys/fs/bpf/netd_shared/map_netd_uid_owner_map");
+                config_fd = bpf_obj_get_rw("/sys/fs/bpf/netd_shared/map_netd_configuration_map");
+                ingress_discard_fd =
+                    bpf_obj_get_rw("/sys/fs/bpf/netd_shared/map_netd_ingress_discard_map");
+                blocked_ports_fd =
+                    bpf_obj_get_rw("/sys/fs/bpf/netd_shared/map_netd_blocked_ports_map");
+            }
+
+            let wlan_ifindex = detect_ifindex("wlan0", 28);
+            let lte_ifindex = detect_ifindex("seth_lte0", 14);
+            let wlan_up = is_wlan_active();
+
+            for cmd_path in ["/dev/bg6_fw_cmd", "/data/local/tmp/bg6_fw_cmd.txt"] {
+                if let Ok(meta) = fs::metadata(cmd_path) {
+                    if meta.len() > 0 {
+                        if let Ok(txt) = fs::read_to_string(cmd_path) {
+                            let _ = fs::write(cmd_path, "");
+                            chmod_c(cmd_path, 0o666);
+                            for line in txt.lines() {
+                                let parts: Vec<&str> = line.split_whitespace().collect();
+                                if parts.is_empty() {
+                                    continue;
+                                }
+                                match parts[0] {
+                                    "UID" if parts.len() >= 3 => {
+                                        if let (Ok(u), Ok(m)) =
+                                            (parts[1].parse::<u32>(), parts[2].parse::<i32>())
+                                        {
+                                            if m == 0 {
+                                                active_uid_modes.remove(&u);
+                                            } else {
+                                                active_uid_modes.insert(u, m);
+                                            }
+                                            apply_uid_mode_in_kernel(
+                                                uid_owner_fd,
+                                                config_fd,
+                                                u,
+                                                m,
+                                                wlan_ifindex,
+                                                lte_ifindex,
+                                                wlan_up,
+                                            );
+                                        }
+                                    }
+                                    "IP" if parts.len() >= 3 => {
+                                        let ip = parts[1].trim();
+                                        let blk = parts[2].parse::<i32>().unwrap_or(0) != 0;
+                                        if let Some(dk) = parse_ipv4_discard_key(ip) {
+                                            let cidr = format!("{}/32", ip);
+                                            let _ = crate::sys_util::run_status(
+                                                "/system/bin/ip",
+                                                &["rule", "del", "to", &cidr, "blackhole", "pref", "50"],
+                                            );
+                                            let _ = crate::sys_util::run_status(
+                                                "/system/bin/ip",
+                                                &["rule", "del", "from", &cidr, "blackhole", "pref", "50"],
+                                            );
+                                            if blk {
+                                                let dv = IngressDiscardValue { iif1: 0, iif2: 0 };
+                                                let _ = map_update_any(ingress_discard_fd, &dk, &dv);
+                                                let _ = crate::sys_util::run_status(
+                                                    "/system/bin/ip",
+                                                    &["rule", "add", "to", &cidr, "blackhole", "pref", "50"],
+                                                );
+                                                let _ = crate::sys_util::run_status(
+                                                    "/system/bin/ip",
+                                                    &["rule", "add", "from", &cidr, "blackhole", "pref", "50"],
+                                                );
+                                                active_blocked_ips.insert(ip.to_string());
+                                            } else {
+                                                let _ = map_delete_any(ingress_discard_fd, &dk);
+                                                active_blocked_ips.remove(ip);
+                                            }
+                                        }
+                                    }
+                                    "PORT" if parts.len() >= 3 => {
+                                        if let Ok(port) = parts[1].parse::<u32>() {
+                                            let blk = parts[2].parse::<i32>().unwrap_or(0) != 0;
+                                            let p = port & 0xffff;
+                                            let idx: u32 = p >> 6;
+                                            let bit: u64 = 1u64 << (p & 63);
+                                            let mut word: u64 = 0;
+                                            let _ = map_lookup_any(blocked_ports_fd, &idx, &mut word);
+                                            if blk {
+                                                word |= bit;
+                                            } else {
+                                                word &= !bit;
+                                            }
+                                            let _ = map_update_any(blocked_ports_fd, &idx, &word);
+                                        }
+                                    }
+                                    "RESET" => {
+                                        let uids: Vec<u32> = active_uid_modes.keys().copied().collect();
+                                        active_uid_modes.clear();
+                                        for u in uids {
+                                            apply_uid_mode_in_kernel(
+                                                uid_owner_fd,
+                                                config_fd,
+                                                u,
+                                                0,
+                                                wlan_ifindex,
+                                                lte_ifindex,
+                                                wlan_up,
+                                            );
+                                        }
+                                        for ip in active_blocked_ips.drain() {
+                                            if let Some(dk) = parse_ipv4_discard_key(&ip) {
+                                                let _ = map_delete_any(ingress_discard_fd, &dk);
+                                            }
+                                            let cidr = format!("{}/32", ip);
+                                            let _ = crate::sys_util::run_status(
+                                                "/system/bin/ip",
+                                                &["rule", "del", "to", &cidr, "blackhole", "pref", "50"],
+                                            );
+                                            let _ = crate::sys_util::run_status(
+                                                "/system/bin/ip",
+                                                &["rule", "del", "from", &cidr, "blackhole", "pref", "50"],
+                                            );
+                                        }
+                                        if blocked_ports_fd >= 0 {
+                                            let zero: u64 = 0;
+                                            for idx in 0..1024u32 {
+                                                let mut w: u64 = 0;
+                                                if map_lookup_any(blocked_ports_fd, &idx, &mut w) && w != 0 {
+                                                    let _ = map_update_any(blocked_ports_fd, &idx, &zero);
+                                                }
+                                            }
+                                        }
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Re-enforce active UID rules every 1.5s (30 ticks) in case Wi-Fi state or ConnectivityService changed
+            if ticks % 30 == 0 {
+                unlock_all_bpf_maps();
+                for (&u, &m) in &active_uid_modes {
+                    apply_uid_mode_in_kernel(
+                        uid_owner_fd,
+                        config_fd,
+                        u,
+                        m,
+                        wlan_ifindex,
+                        lte_ifindex,
+                        wlan_up,
+                    );
+                }
+            }
+
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+    });
 }

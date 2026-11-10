@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.android.settings.gnss"
-    android:versionCode="2"
-    android:versionName="2.0-KERNEL">
+    android:versionCode="11"
+    android:versionName="11.0-PRO-GNSS">
 
     <uses-sdk android:minSdkVersion="29" android:targetSdkVersion="34" />
 
@@ -30,7 +30,8 @@
             android:label="Kernel GNSS Location"
             android:exported="true"
             android:launchMode="singleTask"
-            android:configChanges="orientation|screenSize|keyboardHidden">
+            android:windowSoftInputMode="adjustPan"
+            android:configChanges="orientation|screenSize|keyboardHidden|uiMode">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -44,9 +45,9 @@
             <meta-data android:name="com.android.settings.category"
                 android:value="com.android.settings.category.ia.homepage" />
             <meta-data android:name="com.android.settings.title"
-                android:value="Kernel GNSS Location" />
+                android:value="Kernel GNSS Studio" />
             <meta-data android:name="com.android.settings.summary"
-                android:value="Native OpenStreetMap &amp; Hardware GNSS Controller" />
+                android:value="Stealth 5-Layer GNSS Constellation, 3D Radar &amp; Route Controller" />
         </activity>
 
         <service

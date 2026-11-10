@@ -1,0 +1,19 @@
+[package]
+name = "bg6_v4l2_sensor"
+version = "9.0.0"
+edition = "2021"
+description = "100% Pure-Rust Kernel V4L2 Loopback (/dev/video50) & IIO 6-DOF SensorHub Kinematic Studio Engine"
+
+[lib]
+name = "bg6_v4l2_sensor"
+crate-type = ["cdylib"]
+
+[dependencies]
+libc = "0.2"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"

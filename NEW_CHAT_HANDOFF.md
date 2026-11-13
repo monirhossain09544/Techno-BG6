@@ -1,8 +1,9 @@
 # TECNO BG6 COMPLETE ENGINEERING PROJECT — FULL HANDOFF (`v10` HIOS13 KERNEL + `v8` WHOLE-RUST A16 QPR2 + `v7` + `v6` + `v5`)
 # (Paste this message into any new chat to continue the project even with zero prior server)
 
-> **Latest Session Update (2026-11-13 — Stock HiOS 13 `v10` Production Kernel, Snapshot Restore & Environment Compatibility Notes)**:
-> See [`docs/SESSION_2026_11_13_HIOS13_V10_NOTES.md`](docs/SESSION_2026_11_13_HIOS13_V10_NOTES.md) for the `v10` Stock HiOS 13 (`TP1A.220624.014 / 250722V2387`) kernel build & `boot_a` repack details (`bg6_boot_a_v10_ksu_avbf.img`), `.allowlist` v3 UID-remapping restore architecture (`BG6_Night_Root_Snapshot_20261113`), Clean Stock vs Custom Kernel compatibility findings, and current device housekeeping checklist.
+> **Latest Session Update (2026-11-14 — Complete `v9`/`v10` Stock HiOS 13 Kernel Patches, Dual-Mode Snapshot/Stock-Lock Suite & Full Rider `IAL403` / Keystore2 RKP Analysis)**:
+> - **Master Engineering & Forensics Report**: [`docs/SESSION_2026_11_13_14_COMPLETE_ANALYSIS_AND_FINDINGS.md`](docs/SESSION_2026_11_13_14_COMPLETE_ANALYSIS_AND_FINDINGS.md) — Complete record of controlled Locked-Stock vs Unlocked-`v10` hardware testing, `v9`/`v10` KernelSU patches (`patches/0005-*`, `patches/0006-*`), Linux `MS_SHARED` vs `--make-rslave` Zygote mount isolation, `<queries>` visibility (`pm hide` vs `pm uninstall`), `com.logistics.rider.foodpanda` (`v4.2646.3`) `libe761.so` / Incognia + Firebase Remote Config server enforcement, Keystore2 `persistent.sqlite` genuine `TECNO` RKP (`OID 1.3.6.1.4.1.11129.2.1.30`) vs `OnePlus TABLET` third-party keybox mismatch, `TEESimulator` `teeResponses` stale `KeyId` bug across `pm clear`, and the verified Dual-Mode workflow (`hios13_v10_snapshot_suite/`).
+> - **Quick Notes**: [`docs/SESSION_2026_11_13_HIOS13_V10_NOTES.md`](docs/SESSION_2026_11_13_HIOS13_V10_NOTES.md).
 
 ## LATEST A16 MILESTONE (`v8-whole-rust-a16-complete` — Nov 2026): 100% WHOLE-RUST KERNEL + SYSTEM ENGINE LIVE ON PHONE & GITHUB
 

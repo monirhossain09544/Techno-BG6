@@ -1,0 +1,616 @@
+From e1a8ab1a521a0dd528092c331798400d1226b589 Mon Sep 17 00:00:00 2001
+From: builder <builder@linux>
+Date: Thu, 12 Nov 2026 13:52:55 +0000
+Subject: [PATCH] TECNO-BG6: v9 production KernelSU v0.9.5 (11872) +
+ path_umount + reboot throne_tracker fix
+
+---
+ drivers/kernelsu/Makefile         |   4 +-
+ drivers/kernelsu/core_hook.c      |   7 +-
+ drivers/kernelsu/ksud.c           |   2 +
+ drivers/kernelsu/selinux/rules.c  |   9 +-
+ drivers/kernelsu/throne_tracker.c | 246 +++++++++++++++++++-----------
+ drivers/kernelsu/throne_tracker.h |   8 +-
+ fs/namespace.c                    |  34 +++++
+ include/linux/fs.h                |   1 +
+ 8 files changed, 207 insertions(+), 104 deletions(-)
+
+diff --git a/drivers/kernelsu/Makefile b/drivers/kernelsu/Makefile
+index 669297563..c4200273a 100644
+--- a/drivers/kernelsu/Makefile
++++ b/drivers/kernelsu/Makefile
+@@ -25,8 +25,8 @@ $(eval KSU_VERSION=$(shell expr 10000 + $(KSU_GIT_VERSION) + 200))
+ $(info -- KernelSU version: $(KSU_VERSION))
+ ccflags-y += -DKSU_VERSION=$(KSU_VERSION)
+ else # If there is no .git file, the default version will be passed.
+-$(warning "KSU_GIT_VERSION not defined! It is better to make KernelSU a git submodule!")
+-ccflags-y += -DKSU_VERSION=16
++$(info -- KernelSU version: 11872 (v0.9.5 release))
++ccflags-y += -DKSU_VERSION=11872
+ endif
+ 
+ ifeq ($(shell grep -q " current_sid(void)" $(srctree)/security/selinux/include/objsec.h; echo $$?),0)
+diff --git a/drivers/kernelsu/core_hook.c b/drivers/kernelsu/core_hook.c
+index 429ba3306..040f1f787 100644
+--- a/drivers/kernelsu/core_hook.c
++++ b/drivers/kernelsu/core_hook.c
+@@ -203,7 +203,7 @@ int ksu_handle_rename(struct dentry *old_dentry, struct dentry *new_dentry)
+ 	pr_info("renameat: %s -> %s, new path: %s\n", old_dentry->d_iname,
+ 		new_dentry->d_iname, buf);
+ 
+-	track_throne();
++	ksu_schedule_track_throne();
+ 
+ 	return 0;
+ }
+@@ -296,6 +296,9 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
+ 			if (!boot_complete_lock) {
+ 				boot_complete_lock = true;
+ 				pr_info("boot_complete triggered\n");
++				if (!ksu_is_manager_uid_valid()) {
++					track_throne();
++				}
+ 			}
+ 			break;
+ 		}
+@@ -469,11 +472,13 @@ static void try_umount(const char *mnt, bool check_mnt, int flags)
+ 
+ 	if (path.dentry != path.mnt->mnt_root) {
+ 		// it is not root mountpoint, maybe umounted by others already.
++		path_put(&path);
+ 		return;
+ 	}
+ 
+ 	// we are only interest in some specific mounts
+ 	if (check_mnt && !should_umount(&path)) {
++		path_put(&path);
+ 		return;
+ 	}
+ 
+diff --git a/drivers/kernelsu/ksud.c b/drivers/kernelsu/ksud.c
+index 68e473524..21eaaa469 100644
+--- a/drivers/kernelsu/ksud.c
++++ b/drivers/kernelsu/ksud.c
+@@ -24,6 +24,7 @@
+ #include "arch.h"
+ #include "klog.h" // IWYU pragma: keep
+ #include "ksud.h"
++#include "throne_tracker.h"
+ #include "kernel_compat.h"
+ #include "selinux/selinux.h"
+ 
+@@ -76,6 +77,7 @@ void on_post_fs_data(void)
+ 	done = true;
+ 	pr_info("on_post_fs_data!\n");
+ 	ksu_load_allow_list();
++	track_throne();
+ 	// sanity check, this may influence the performance
+ 	stop_input_hook();
+ 
+diff --git a/drivers/kernelsu/selinux/rules.c b/drivers/kernelsu/selinux/rules.c
+index 1ba6d853f..a828c151c 100644
+--- a/drivers/kernelsu/selinux/rules.c
++++ b/drivers/kernelsu/selinux/rules.c
+@@ -69,11 +69,10 @@ void apply_kernelsu_rules()
+ 	// we need to save allowlist in /data/adb/ksu
+ 	ksu_allow(db, "kernel", "adb_data_file", "dir", ALL);
+ 	ksu_allow(db, "kernel", "adb_data_file", "file", ALL);
+-	// we need to search /data/app
+-	ksu_allow(db, "kernel", "apk_data_file", "file", "open");
+-	ksu_allow(db, "kernel", "apk_data_file", "dir", "open");
+-	ksu_allow(db, "kernel", "apk_data_file", "dir", "read");
+-	ksu_allow(db, "kernel", "apk_data_file", "dir", "search");
++	// we need to search /data/app in ksu_workqueue ("kernel" domain)
++	ksu_allow(db, "kernel", "apk_data_file", "file", ALL);
++	ksu_allow(db, "kernel", "apk_data_file", "dir", ALL);
++	ksu_allow(db, "kernel", "kernel", "capability", "dac_read_search");
+ 	// we may need to do mount on shell
+ 	ksu_allow(db, "kernel", "shell_data_file", "file", ALL);
+ 	// we need to read /data/system/packages.list
+diff --git a/drivers/kernelsu/throne_tracker.c b/drivers/kernelsu/throne_tracker.c
+index c709a6921..ffa0542a0 100644
+--- a/drivers/kernelsu/throne_tracker.c
++++ b/drivers/kernelsu/throne_tracker.c
+@@ -1,10 +1,12 @@
+ #include <linux/err.h>
+ #include <linux/fs.h>
+ #include <linux/list.h>
++#include <linux/mutex.h>
+ #include <linux/slab.h>
+ #include <linux/string.h>
+ #include <linux/types.h>
+ #include <linux/version.h>
++#include <linux/workqueue.h>
+ 
+ #include "allowlist.h"
+ #include "klog.h" // IWYU pragma: keep
+@@ -15,7 +17,11 @@
+ 
+ uid_t ksu_manager_uid = KSU_INVALID_UID;
+ 
+-#define SYSTEM_PACKAGES_LIST_PATH "/data/system/packages.list.tmp"
++#define SYSTEM_PACKAGES_LIST_TMP_PATH "/data/system/packages.list.tmp"
++#define SYSTEM_PACKAGES_LIST_PATH "/data/system/packages.list"
++
++static struct work_struct ksu_throne_tracker_work;
++static DEFINE_MUTEX(ksu_throne_tracker_mutex);
+ 
+ struct uid_data {
+ 	struct list_head list;
+@@ -62,12 +68,12 @@ static int get_pkg_from_apk_path(char *pkg, const char *path)
+ 	return 0;
+ }
+ 
+-static void crown_manager(const char *apk, struct list_head *uid_data)
++static bool crown_manager(const char *apk, struct list_head *uid_data)
+ {
+ 	char pkg[KSU_MAX_PACKAGE_NAME];
+ 	if (get_pkg_from_apk_path(pkg, apk) < 0) {
+ 		pr_err("Failed to get package name from apk path: %s\n", apk);
+-		return;
++		return false;
+ 	}
+ 
+ 	pr_info("manager pkg: %s\n", pkg);
+@@ -77,7 +83,7 @@ static void crown_manager(const char *apk, struct list_head *uid_data)
+ 	if (strncmp(pkg, KSU_MANAGER_PACKAGE, sizeof(KSU_MANAGER_PACKAGE))) {
+ 		pr_info("manager package is inconsistent with kernel build: %s\n",
+ 			KSU_MANAGER_PACKAGE);
+-		return;
++		return false;
+ 	}
+ #endif
+ 	struct list_head *list = (struct list_head *)uid_data;
+@@ -87,12 +93,14 @@ static void crown_manager(const char *apk, struct list_head *uid_data)
+ 		if (strncmp(np->package, pkg, KSU_MAX_PACKAGE_NAME) == 0) {
+ 			pr_info("Crowning manager: %s(uid=%d)\n", pkg, np->uid);
+ 			ksu_set_manager_uid(np->uid);
+-			break;
++			return true;
+ 		}
+ 	}
++	pr_warn("Manager apk found (%s), but pkg %s not in packages.list yet\n", apk, pkg);
++	return false;
+ }
+ 
+-#define DATA_PATH_LEN 384 // 384 is enough for /data/app/<package>/base.apk
++#define DATA_PATH_LEN 384 // 384 is enough for /data/app/<random>/<package>/base.apk
+ 
+ struct data_path {
+ 	char dirpath[DATA_PATH_LEN];
+@@ -116,8 +124,7 @@ struct my_dir_context {
+ 	int depth;
+ 	int *stop;
+ };
+-// https://docs.kernel.org/filesystems/porting.html
+-// filldir_t (readdir callbacks) calling conventions have changed. Instead of returning 0 or -E... it returns bool now. false means "no more" (as -E... used to) and true - "keep going" (as 0 in old calling conventions). Rationale: callers never looked at specific -E... values anyway. -> iterate_shared() instances require no changes at all, all filldir_t ones in the tree converted.
++
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
+ #define FILLDIR_RETURN_TYPE bool
+ #define FILLDIR_ACTOR_CONTINUE true
+@@ -141,12 +148,16 @@ FILLDIR_RETURN_TYPE my_actor(struct dir_context *ctx, const char *name,
+ 		return FILLDIR_ACTOR_STOP;
+ 	}
+ 	if (my_ctx->stop && *my_ctx->stop) {
+-		pr_info("Stop searching\n");
+ 		return FILLDIR_ACTOR_STOP;
+ 	}
+ 
+-	if (!strncmp(name, "..", namelen) || !strncmp(name, ".", namelen))
+-		return FILLDIR_ACTOR_CONTINUE; // Skip "." and ".."
++	if ((namelen == 1 && name[0] == '.') ||
++	    (namelen == 2 && name[0] == '.' && name[1] == '.'))
++		return FILLDIR_ACTOR_CONTINUE;
++
++	// Skip oat/ and lib/ subdirectories inside package directories
++	if (namelen == 3 && (!strncmp(name, "oat", 3) || !strncmp(name, "lib", 3)))
++		return FILLDIR_ACTOR_CONTINUE;
+ 
+ 	if (snprintf(dirpath, DATA_PATH_LEN, "%s/%.*s", my_ctx->parent_dir,
+ 		     namelen, name) >= DATA_PATH_LEN) {
+@@ -155,52 +166,62 @@ FILLDIR_RETURN_TYPE my_actor(struct dir_context *ctx, const char *name,
+ 		return FILLDIR_ACTOR_CONTINUE;
+ 	}
+ 
+-	if (d_type == DT_DIR && my_ctx->depth > 0 &&
+-	    (my_ctx->stop && !*my_ctx->stop)) {
+-		struct data_path *data = kmalloc(sizeof(struct data_path), GFP_ATOMIC);
+-
+-		if (!data) {
+-			pr_err("Failed to allocate memory for %s\n", dirpath);
+-			return FILLDIR_ACTOR_CONTINUE;
+-		}
+-
+-		strscpy(data->dirpath, dirpath, DATA_PATH_LEN);
+-		data->depth = my_ctx->depth - 1;
+-		list_add_tail(&data->list, my_ctx->data_path_list);
+-	} else {
+-		if ((namelen == 8) && (strncmp(name, "base.apk", namelen) == 0)) {
+-			struct apk_path_hash *pos, *n;
++	if ((namelen == 8) && (strncmp(name, "base.apk", 8) == 0)) {
++		struct apk_path_hash *pos, *n;
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 8, 0)
+-			unsigned int hash = full_name_hash(dirpath, strlen(dirpath));
++		unsigned int hash = full_name_hash(dirpath, strlen(dirpath));
+ #else
+-			unsigned int hash = full_name_hash(NULL, dirpath, strlen(dirpath));
++		unsigned int hash = full_name_hash(NULL, dirpath, strlen(dirpath));
+ #endif
+-			list_for_each_entry(pos, &apk_path_hash_list, list) {
+-				if (hash == pos->hash) {
+-					pos->exists = true;
+-					return FILLDIR_ACTOR_CONTINUE;
+-				}
++		list_for_each_entry(pos, &apk_path_hash_list, list) {
++			if (hash == pos->hash) {
++				pos->exists = true;
++				return FILLDIR_ACTOR_CONTINUE;
+ 			}
++		}
+ 
+-			bool is_manager = is_manager_apk(dirpath);
+-			pr_info("Found new base.apk at path: %s, is_manager: %d\n",
+-				dirpath, is_manager);
+-			if (is_manager) {
+-				crown_manager(dirpath, my_ctx->private_data);
++		bool is_manager = is_manager_apk(dirpath);
++		pr_info("Found new base.apk at path: %s, is_manager: %d\n",
++			dirpath, is_manager);
++		if (is_manager) {
++			if (crown_manager(dirpath, my_ctx->private_data)) {
+ 				*my_ctx->stop = 1;
+-
+ 				// Manager found, clear APK cache list
+ 				list_for_each_entry_safe(pos, n, &apk_path_hash_list, list) {
+ 					list_del(&pos->list);
+ 					kfree(pos);
+ 				}
+-			} else {
+-				struct apk_path_hash *apk_data = kmalloc(sizeof(struct apk_path_hash), GFP_ATOMIC);
++			}
++		} else {
++			struct apk_path_hash *apk_data =
++				kmalloc(sizeof(struct apk_path_hash), GFP_ATOMIC);
++			if (apk_data) {
+ 				apk_data->hash = hash;
+ 				apk_data->exists = true;
+ 				list_add_tail(&apk_data->list, &apk_path_hash_list);
+ 			}
+ 		}
++		return FILLDIR_ACTOR_CONTINUE;
++	}
++
++	if ((d_type == DT_DIR || d_type == DT_UNKNOWN) && my_ctx->depth > 0 &&
++	    (my_ctx->stop && !*my_ctx->stop)) {
++		// When d_type is DT_UNKNOWN, skip obvious regular files (.apk, .idsig, .prof)
++		if (d_type == DT_UNKNOWN && namelen > 4 &&
++		    (!strncmp(name + namelen - 4, ".apk", 4) ||
++		     !strncmp(name + namelen - 5, ".prof", 5) ||
++		     (namelen > 6 && !strncmp(name + namelen - 6, ".idsig", 6))))
++			return FILLDIR_ACTOR_CONTINUE;
++
++		struct data_path *data = kmalloc(sizeof(struct data_path), GFP_ATOMIC);
++		if (!data) {
++			pr_err("Failed to allocate memory for %s\n", dirpath);
++			return FILLDIR_ACTOR_CONTINUE;
++		}
++
++		strscpy(data->dirpath, dirpath, DATA_PATH_LEN);
++		data->depth = my_ctx->depth - 1;
++		list_add_tail(&data->list, my_ctx->data_path_list);
+ 	}
+ 
+ 	return FILLDIR_ACTOR_CONTINUE;
+@@ -208,56 +229,73 @@ FILLDIR_RETURN_TYPE my_actor(struct dir_context *ctx, const char *name,
+ 
+ void search_manager(const char *path, int depth, struct list_head *uid_data)
+ {
+-	int i, stop = 0;
+-	struct list_head data_path_list;
+-	INIT_LIST_HEAD(&data_path_list);
++	int stop = 0;
++	struct list_head curr_list;
++	struct list_head next_list;
++	INIT_LIST_HEAD(&curr_list);
++	INIT_LIST_HEAD(&next_list);
+ 
+ 	// Initialize APK cache list
+-	struct apk_path_hash *pos, *n;
+-	list_for_each_entry(pos, &apk_path_hash_list, list) {
+-		pos->exists = false;
++	struct apk_path_hash *hpos, *hn;
++	list_for_each_entry(hpos, &apk_path_hash_list, list) {
++		hpos->exists = false;
+ 	}
+ 
+-	// First depth
+-	struct data_path data;
+-	strscpy(data.dirpath, path, DATA_PATH_LEN);
+-	data.depth = depth;
+-	list_add_tail(&data.list, &data_path_list);
++	struct data_path *root = kmalloc(sizeof(struct data_path), GFP_KERNEL);
++	if (!root) {
++		pr_err("Failed to allocate root data_path\n");
++		return;
++	}
++	strscpy(root->dirpath, path, DATA_PATH_LEN);
++	root->depth = depth;
++	list_add_tail(&root->list, &curr_list);
+ 
+-	for (i = depth; i > 0; i--) {
++	while (!list_empty(&curr_list)) {
+ 		struct data_path *pos, *n;
+-
+-		list_for_each_entry_safe(pos, n, &data_path_list, list) {
+-			struct my_dir_context ctx = { .ctx.actor = my_actor,
+-						      .data_path_list = &data_path_list,
+-						      .parent_dir = pos->dirpath,
+-						      .private_data = uid_data,
+-						      .depth = pos->depth,
+-						      .stop = &stop };
+-			struct file *file;
+-
++		list_for_each_entry_safe(pos, n, &curr_list, list) {
+ 			if (!stop) {
+-				file = ksu_filp_open_compat(pos->dirpath, O_RDONLY | O_NOFOLLOW, 0);
++				struct file *file = ksu_filp_open_compat(
++					pos->dirpath, O_RDONLY | O_NOFOLLOW | O_DIRECTORY, 0);
+ 				if (IS_ERR(file)) {
+-					pr_err("Failed to open directory: %s, err: %ld\n", pos->dirpath, PTR_ERR(file));
+-					return;
++					pr_debug("Skip open dir: %s, err: %ld\n",
++						 pos->dirpath, PTR_ERR(file));
++				} else {
++					struct my_dir_context ctx = {
++						.ctx.actor = my_actor,
++						.data_path_list = &next_list,
++						.parent_dir = pos->dirpath,
++						.private_data = uid_data,
++						.depth = pos->depth,
++						.stop = &stop
++					};
++					int rc = iterate_dir(file, &ctx.ctx);
++					if (rc < 0 && !stop) {
++						pr_err("iterate_dir %s failed: %d\n",
++						       pos->dirpath, rc);
++					}
++					filp_close(file, NULL);
+ 				}
+-
+-				iterate_dir(file, &ctx.ctx);
+-				filp_close(file, NULL);
+ 			}
+-
+ 			list_del(&pos->list);
+-			if (pos != &data)
++			kfree(pos);
++		}
++
++		if (stop) {
++			list_for_each_entry_safe(pos, n, &next_list, list) {
++				list_del(&pos->list);
+ 				kfree(pos);
++			}
++			break;
+ 		}
++
++		list_splice_init(&next_list, &curr_list);
+ 	}
+ 
+ 	// Remove stale cached APK entries
+-	list_for_each_entry_safe(pos, n, &apk_path_hash_list, list) {
+-		if (!pos->exists) {
+-			list_del(&pos->list);
+-			kfree(pos);
++	list_for_each_entry_safe(hpos, hn, &apk_path_hash_list, list) {
++		if (!hpos->exists) {
++			list_del(&hpos->list);
++			kfree(hpos);
+ 		}
+ 	}
+ }
+@@ -278,13 +316,19 @@ static bool is_uid_exist(uid_t uid, char *package, void *data)
+ 	return exist;
+ }
+ 
+-void track_throne()
++void track_throne(void)
+ {
++	mutex_lock(&ksu_throne_tracker_mutex);
++
+ 	struct file *fp =
+-		ksu_filp_open_compat(SYSTEM_PACKAGES_LIST_PATH, O_RDONLY, 0);
++		ksu_filp_open_compat(SYSTEM_PACKAGES_LIST_TMP_PATH, O_RDONLY, 0);
+ 	if (IS_ERR(fp)) {
+-		pr_err("%s: open " SYSTEM_PACKAGES_LIST_PATH " failed: %ld\n",
++		fp = ksu_filp_open_compat(SYSTEM_PACKAGES_LIST_PATH, O_RDONLY, 0);
++	}
++	if (IS_ERR(fp)) {
++		pr_err("%s: open packages.list(.tmp) failed: %ld\n",
+ 		       __func__, PTR_ERR(fp));
++		mutex_unlock(&ksu_throne_tracker_mutex);
+ 		return;
+ 	}
+ 
+@@ -303,11 +347,14 @@ void track_throne()
+ 		if (chr != '\n')
+ 			continue;
+ 
+-		count = ksu_kernel_read_compat(fp, buf, sizeof(buf),
++		count = ksu_kernel_read_compat(fp, buf, sizeof(buf) - 1,
+ 					       &line_start);
++		if (count <= 0)
++			break;
++		buf[count] = '\0';
+ 
+ 		struct uid_data *data =
+-			kzalloc(sizeof(struct uid_data), GFP_ATOMIC);
++			kzalloc(sizeof(struct uid_data), GFP_KERNEL);
+ 		if (!data) {
+ 			filp_close(fp, 0);
+ 			goto out;
+@@ -318,36 +365,38 @@ void track_throne()
+ 		char *package = strsep(&tmp, delim);
+ 		char *uid = strsep(&tmp, delim);
+ 		if (!uid || !package) {
++			kfree(data);
+ 			pr_err("update_uid: package or uid is NULL!\n");
+ 			break;
+ 		}
+ 
+ 		u32 res;
+ 		if (kstrtou32(uid, 10, &res)) {
++			kfree(data);
+ 			pr_err("update_uid: uid parse err\n");
+ 			break;
+ 		}
+ 		data->uid = res;
+-		strncpy(data->package, package, KSU_MAX_PACKAGE_NAME);
++		strncpy(data->package, package, KSU_MAX_PACKAGE_NAME - 1);
++		data->package[KSU_MAX_PACKAGE_NAME - 1] = '\0';
+ 		list_add_tail(&data->list, &uid_list);
+ 		// reset line start
+ 		line_start = pos;
+ 	}
+ 	filp_close(fp, 0);
+ 
+-	// now update uid list
+ 	struct uid_data *np;
+ 	struct uid_data *n;
+ 
+ 	// first, check if manager_uid exist!
+ 	bool manager_exist = false;
+-	list_for_each_entry (np, &uid_list, list) {
+-		// if manager is installed in work profile, the uid in packages.list is still equals main profile
+-		// don't delete it in this case!
++	if (ksu_is_manager_uid_valid()) {
+ 		int manager_uid = ksu_get_manager_uid() % 100000;
+-		if (np->uid == manager_uid) {
+-			manager_exist = true;
+-			break;
++		list_for_each_entry (np, &uid_list, list) {
++			if (np->uid == manager_uid) {
++				manager_exist = true;
++				break;
++			}
+ 		}
+ 	}
+ 
+@@ -357,7 +406,7 @@ void track_throne()
+ 			ksu_invalidate_manager_uid();
+ 		}
+ 		pr_info("Searching manager...\n");
+-		search_manager("/data/app", 2, &uid_list);
++		search_manager("/data/app", 3, &uid_list);
+ 		pr_info("Search manager finished\n");
+ 	}
+ 
+@@ -369,14 +418,25 @@ out:
+ 		list_del(&np->list);
+ 		kfree(np);
+ 	}
++	mutex_unlock(&ksu_throne_tracker_mutex);
++}
++
++static void do_ksu_throne_tracker_work(struct work_struct *work)
++{
++	track_throne();
++}
++
++void ksu_schedule_track_throne(void)
++{
++	ksu_queue_work(&ksu_throne_tracker_work);
+ }
+ 
+-void ksu_throne_tracker_init()
++void ksu_throne_tracker_init(void)
+ {
+-	// nothing to do
++	INIT_WORK(&ksu_throne_tracker_work, do_ksu_throne_tracker_work);
+ }
+ 
+-void ksu_throne_tracker_exit()
++void ksu_throne_tracker_exit(void)
+ {
+-	// nothing to do
++	flush_work(&ksu_throne_tracker_work);
+ }
+diff --git a/drivers/kernelsu/throne_tracker.h b/drivers/kernelsu/throne_tracker.h
+index 5d7f47700..0f70aa396 100644
+--- a/drivers/kernelsu/throne_tracker.h
++++ b/drivers/kernelsu/throne_tracker.h
+@@ -1,10 +1,12 @@
+ #ifndef __KSU_H_UID_OBSERVER
+ #define __KSU_H_UID_OBSERVER
+ 
+-void ksu_throne_tracker_init();
++void ksu_throne_tracker_init(void);
+ 
+-void ksu_throne_tracker_exit();
++void ksu_throne_tracker_exit(void);
+ 
+-void track_throne();
++void track_throne(void);
++
++void ksu_schedule_track_throne(void);
+ 
+ #endif
+diff --git a/fs/namespace.c b/fs/namespace.c
+index 5782cd55d..3d4e08f68 100644
+--- a/fs/namespace.c
++++ b/fs/namespace.c
+@@ -1671,6 +1671,40 @@ static inline bool may_mandlock(void)
+  * unixes. Our API is identical to OSF/1 to avoid making a mess of AMD
+  */
+ 
++static int can_umount(const struct path *path, int flags)
++{
++	struct mount *mnt = real_mount(path->mnt);
++
++	if (flags & ~(MNT_FORCE | MNT_DETACH | MNT_EXPIRE | UMOUNT_NOFOLLOW))
++		return -EINVAL;
++	if (!may_mount())
++		return -EPERM;
++	if (path->dentry != path->mnt->mnt_root)
++		return -EINVAL;
++	if (!check_mnt(mnt))
++		return -EINVAL;
++	if (mnt->mnt.mnt_flags & MNT_LOCKED) /* Check optimistically */
++		return -EINVAL;
++	if (flags & MNT_FORCE && !capable(CAP_SYS_ADMIN))
++		return -EPERM;
++	return 0;
++}
++
++int path_umount(struct path *path, int flags)
++{
++	struct mount *mnt = real_mount(path->mnt);
++	int ret;
++
++	ret = can_umount(path, flags);
++	if (!ret)
++		ret = do_umount(mnt, flags);
++
++	/* we mustn't call path_put() as that would clear mnt_expiry_mark */
++	dput(path->dentry);
++	mntput_no_expire(mnt);
++	return ret;
++}
++
+ int ksys_umount(char __user *name, int flags)
+ {
+ 	struct path path;
+diff --git a/include/linux/fs.h b/include/linux/fs.h
+index 024693bd6..641430308 100644
+--- a/include/linux/fs.h
++++ b/include/linux/fs.h
+@@ -2406,6 +2406,7 @@ extern struct vfsmount *kern_mount(struct file_system_type *);
+ extern void kern_unmount(struct vfsmount *mnt);
+ extern int may_umount_tree(struct vfsmount *);
+ extern int may_umount(struct vfsmount *);
++extern int path_umount(struct path *path, int flags);
+ extern long do_mount(const char *, const char __user *,
+ 		     const char *, unsigned long, void *);
+ extern struct vfsmount *collect_mounts(const struct path *);
+-- 
+2.43.0

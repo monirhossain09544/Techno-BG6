@@ -1,7 +1,10 @@
-# TECNO BG6 COMPLETE ENGINEERING PROJECT — FULL HANDOFF (`v8` WHOLE-RUST A16 QPR2 + `v7` + `v6` + `v5`)
+# TECNO BG6 COMPLETE ENGINEERING PROJECT — FULL HANDOFF (`v10` HIOS13 KERNEL + `v8` WHOLE-RUST A16 QPR2 + `v7` + `v6` + `v5`)
 # (Paste this message into any new chat to continue the project even with zero prior server)
 
-## LATEST MILESTONE (`v8-whole-rust-a16-complete` — Nov 2026): 100% WHOLE-RUST KERNEL + SYSTEM ENGINE LIVE ON PHONE & GITHUB
+> **Latest Session Update (2026-11-13 — Stock HiOS 13 `v10` Production Kernel, Snapshot Restore & Environment Compatibility Notes)**:
+> See [`docs/SESSION_2026_11_13_HIOS13_V10_NOTES.md`](docs/SESSION_2026_11_13_HIOS13_V10_NOTES.md) for the `v10` Stock HiOS 13 (`TP1A.220624.014 / 250722V2387`) kernel build & `boot_a` repack details (`bg6_boot_a_v10_ksu_avbf.img`), `.allowlist` v3 UID-remapping restore architecture (`BG6_Night_Root_Snapshot_20261113`), Clean Stock vs Custom Kernel compatibility findings, and current device housekeeping checklist.
+
+## LATEST A16 MILESTONE (`v8-whole-rust-a16-complete` — Nov 2026): 100% WHOLE-RUST KERNEL + SYSTEM ENGINE LIVE ON PHONE & GITHUB
 
 The phone (**TECNO SPARK Go 2024 / `TECNO-BG6`**, ADB serial `1099738415003670`, Unisoc T606 / `ums9230`) is running **Project Infinity-X v3.12 (`Android 16 QPR2 / BP4A.251205.006`)** powered by our **Whole-Rust 2026 OS Engine (`v8.0`)** (`infinity_x_a16/rust_core/`):
 1. **Ring-0 In-Kernel `#![no_std]` Rust Engine (`kernel_ring0/` -> `drivers/bg6_rust/` in `5.4.210-android12-9-gf8b17864a03c-ab602` `vmlinux`)**:
